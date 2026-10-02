@@ -27,6 +27,7 @@
 <header class="hero">
   <h1 class="hero__title">Arcade</h1>
   <p class="hero__sub">Games I build. Each one plays right here in the page.</p>
+  <button id="theme-toggle" class="btn btn--ghost hero__theme" type="button">Theme: Frutiger Aero</button>
 </header>
 
 <main class="panel">
@@ -40,5 +41,9 @@
 </footer>
 </div>
 <script type="module" src="./src/app.js"></script>
+<script type="module">
+  import { initThemeButton } from './src/theme-ui.js';
+  initThemeButton(window);
+</script>
 </body>
 </html>

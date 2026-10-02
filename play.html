@@ -24,6 +24,7 @@
     <p id="meta" class="player-meta"></p>
   </div>
   <button id="fullscreen" class="btn btn--aqua" type="button">Fullscreen</button>
+  <button id="theme-toggle" class="btn btn--ghost" type="button">Theme: Frutiger Aero</button>
 </header>
 <div id="stage" class="stage">
   <iframe id="frame" class="stage__frame" title="game" allow="fullscreen; autoplay; gamepad"></iframe>
@@ -38,6 +39,10 @@
   const response = await fetch('./games.config.json');
   const config = await response.json();
   initPlayer({ window, config, slug });
+</script>
+<script type="module">
+  import { initThemeButton } from './src/theme-ui.js';
+  initThemeButton(window);
 </script>
 </body>
 </html>
