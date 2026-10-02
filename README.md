@@ -99,8 +99,19 @@ to the facility that cares for it. The data lives in `vendor/seal-scroller/sourc
 | Yo-chan | Ringed seal (*Pusa hispida*) | [Okhotsk Tokkari Center](https://o-tower.co.jp/tokkaricenter.html), Hokkaido |
 
 The panel loads from `sources.json` independently of the feed and fails soft: if that file is
-missing the panel simply stays hidden and the scroller still works. It collapses to a bottom
-strip under 760px, where there is no room beside the feed.
+missing the panel simply stays collapsed and the scroller still works.
+
+**It starts collapsed**, behind a glass **Info** button in the top-right of the feed. Three
+ways to close it: the Info button again, the round `×` inside the panel, or `Escape`. When
+collapsed it is `visibility: hidden`, not merely transparent, so it cannot swallow a swipe on
+the feed underneath — a real bug when the panel was previously `hidden` but still occupying
+the layout. Under 760px, where there is no room beside the feed, the panel slides up from the
+bottom instead of across.
+
+`tests/seal-sources.test.js` covers the collapsed initial state, all three ways of closing,
+`aria-expanded` wiring, the three links, and that the feed still renders. The close-button test
+exists because rendering the sources used to overwrite the aside's `innerHTML` and silently
+delete the `×` button.
 
 **The panel credits the animals; it does not claim the photographs are of them.** The supplied
 photos include harbour seals and a harp seal pup as well as the three named animals, and there

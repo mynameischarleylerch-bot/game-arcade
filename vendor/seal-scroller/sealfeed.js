@@ -11,6 +11,9 @@ const hudEl = document.getElementById('hud');
 const dotsEl = document.getElementById('dots');
 const messageEl = document.getElementById('message');
 const sourcesEl = document.getElementById('sources');
+const sourcesBodyEl = document.getElementById('sources-body');
+const sourcesToggleEl = document.getElementById('sources-toggle');
+const sourcesCloseEl = document.getElementById('sources-close');
 
 const escapeHtml = (value) =>
   String(value).replace(/[&<>"']/g, (c) =>
@@ -98,7 +101,7 @@ function bindScroll(items) {
  * facility. Sources fail soft: a missing sources.json must not break the feed.
  */
 async function loadSources() {
-  if (!sourcesEl) return;
+  if (!sourcesEl || !sourcesBodyEl) return;
   let sources;
   try {
     const response = await fetch(SOURCES_URL);
@@ -109,8 +112,7 @@ async function loadSources() {
   }
   if (sources.length === 0) return;
 
-  sourcesEl.hidden = false;
-  sourcesEl.innerHTML = `
+  sourcesBodyEl.innerHTML = `
     <h2 class="sources__title">Where these seals live</h2>
     <ul class="sources__list">
       ${sources
@@ -127,6 +129,35 @@ async function loadSources() {
         )
         .join('')}
     </ul>`;
+
+  bindSourcesToggle();
+}
+
+/**
+ * The panel starts collapsed so it does not cover the feed. It opens and closes
+ * from two places: the Info button (which lives outside the panel and stays put)
+ * and the close button inside the panel. Escape closes it too.
+ */
+function bindSourcesToggle() {
+  if (!sourcesToggleEl) return;
+
+  const setOpen = (open) => {
+    sourcesEl.classList.toggle('is-open', open);
+    sourcesToggleEl.setAttribute('aria-expanded', String(open));
+    sourcesToggleEl.textContent = open ? 'Info ▾' : 'Info';
+  };
+
+  setOpen(false);
+
+  sourcesToggleEl.addEventListener('click', () => {
+    setOpen(!sourcesEl.classList.contains('is-open'));
+  });
+
+  sourcesCloseEl?.addEventListener('click', () => setOpen(false));
+
+  addEventListener('keydown', (event) => {
+    if (event.key === 'Escape' && sourcesEl.classList.contains('is-open')) setOpen(false);
+  });
 }
 
 async function main() {

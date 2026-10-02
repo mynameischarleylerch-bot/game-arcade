@@ -110,7 +110,19 @@
     padding: 2rem; color: var(--ink-soft);
   }
 
-  /* Sources panel — sits beside the feed on wide screens, below on narrow. */
+  /* Info button — opens the sources panel. Styled like the HUD pill. */
+  .hud--info {
+    position: fixed;
+    top: 0.9rem; right: 0.9rem; z-index: 7;
+    border: 1px solid rgba(255,255,255,.9);
+    cursor: pointer;
+    font: inherit;
+    color: var(--deep);
+  }
+  .hud--info:hover { border-color: var(--deep, #01579b); }
+  .hud--info:focus-visible { outline: 3px solid var(--deep, #01579b); outline-offset: 2px; }
+
+  /* Sources panel — collapsed by default, revealed by the Info button. */
   .sources {
     position: fixed;
     top: 4.2rem; left: 1rem; z-index: 6;
@@ -125,8 +137,25 @@
     box-shadow: 0 14px 32px rgba(1,87,155,.2), inset 0 1px 0 #fff;
     backdrop-filter: blur(14px) saturate(150%);
     -webkit-backdrop-filter: blur(14px) saturate(150%);
+    /* Collapsed: hidden from pointer events too, so it can never eat a swipe. */
+    visibility: hidden;
+    opacity: 0;
+    transform: translateX(-0.75rem);
+    transition: opacity 220ms ease, transform 220ms ease, visibility 220ms;
   }
-  .sources[hidden] { display: none; }
+  .sources.is-open { visibility: visible; opacity: 1; transform: translateX(0); }
+
+  .sources__close {
+    position: absolute; top: 0.4rem; right: 0.5rem;
+    width: 1.75rem; height: 1.75rem;
+    border-radius: 50%;
+    border: 1px solid rgba(1,87,155,.25);
+    background: rgba(255,255,255,.7);
+    color: var(--deep); font-size: 1.1rem; line-height: 1;
+    cursor: pointer;
+  }
+  .sources__close:hover { background: #fff; }
+  .sources__close:focus-visible { outline: 2px solid var(--deep); outline-offset: 2px; }
 
   .sources__title {
     margin: 0 0 0.7rem; font-size: 0.82rem; text-transform: uppercase;
@@ -149,27 +178,33 @@
   .sources__note { font-size: 0.76rem; color: var(--ink-soft); }
 
   @media (max-width: 760px) {
-    /* Too narrow to sit beside the feed; move it to the bottom as a strip. */
+    /* Too narrow to sit beside the feed; slide it up from the bottom instead. */
     .sources {
       top: auto; left: 0; right: 0; bottom: 0; width: auto;
-      max-height: 34dvh; border-radius: 16px 16px 0 0;
+      max-height: 62dvh; border-radius: 16px 16px 0 0;
+      transform: translateY(100%);
     }
-    .slide { height: 66dvh; }
-    .feed { height: 66dvh; }
+    .sources.is-open { transform: translateY(0); }
   }
 
   @media (prefers-reduced-motion: reduce) {
     .feed { scroll-snap-type: none; }
     .slide__img { animation: none; }
     .dot { transition: none; }
+    .sources { transition: none; }
   }
 </style>
 </head>
 <body>
   <div class="hud" id="hud">loading seals…</div>
+  <button class="hud hud--info" id="sources-toggle" type="button"
+          aria-expanded="false" aria-controls="sources">Info</button>
   <div class="dots" id="dots" aria-hidden="true"></div>
   <div class="feed" id="feed"></div>
-  <aside class="sources" id="sources" aria-label="Sources for the seals in this feed" hidden></aside>
+  <aside class="sources" id="sources" aria-label="Sources for the seals in this feed">
+    <button class="sources__close" id="sources-close" type="button" aria-label="Close sources">&times;</button>
+    <div class="sources__body" id="sources-body"></div>
+  </aside>
   <p class="message" id="message" hidden></p>
 
   <script type="module" src="./sealfeed.js"></script>
