@@ -70,9 +70,10 @@ slow CSS pan/zoom so it reads as a moving clip.
 
 ### Where the photos come from
 
-The photographs in `vendor/seal-scroller/media/stars/` were **supplied directly by karin**
-for this site. They are not Creative Commons and are committed for personal use only — do not
-redistribute them. `gifs.json` records the credit line and the file order.
+The photographs in `vendor/seal-scroller/media/stars/` were **supplied directly by The
+creator** for this site, and each slide credits them as "The creator". They are not Creative
+Commons and are committed for personal use only — do not redistribute them. `gifs.json`
+records the credit line and the file order.
 
 `scripts/fetch-seals.mjs` is **disabled**. It used to pull CC-licensed photos from
 [Openverse](https://openverse.org), and it exited non-zero rather than being deleted because

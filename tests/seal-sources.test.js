@@ -138,6 +138,18 @@ test('each slide can be liked independently', async () => {
   assert.equal(d.querySelector('.like[data-like="1"]').getAttribute('aria-pressed'), 'false');
 });
 
+test('every slide credits "The creator" and never names a person', async () => {
+  const { window } = await boot();
+  const d = window.document;
+  const credits = [...d.querySelectorAll('.slide__credit')];
+  assert.ok(credits.length > 0);
+  for (const credit of credits) {
+    const text = credit.textContent;
+    assert.match(text, /The creator/);
+    assert.doesNotMatch(text, /karin/i);
+  }
+});
+
 test('the photo sits in a smaller frame rather than filling the slide', async () => {
   const { window } = await boot();
   const d = window.document;
