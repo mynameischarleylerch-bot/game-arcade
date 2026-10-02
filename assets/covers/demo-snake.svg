@@ -1,0 +1,8 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="320" height="180" viewBox="0 0 320 180" role="img" aria-label="Demo Snake">
+  <rect width="320" height="180" fill="#161b22"/>
+  <g fill="#58a6ff">
+    <rect x="40" y="80" width="20" height="20"/><rect x="60" y="80" width="20" height="20"/><rect x="80" y="80" width="20" height="20"/><rect x="100" y="60" width="20" height="20"/>
+  </g>
+  <rect x="220" y="100" width="20" height="20" fill="#2f81f7"/>
+  <text x="16" y="30" fill="#e6edf3" font-family="monospace" font-size="16">demo snake</text>
+</svg>

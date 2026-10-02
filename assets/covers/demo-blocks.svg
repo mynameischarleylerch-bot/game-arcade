@@ -1,0 +1,13 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="320" height="180" viewBox="0 0 320 180" role="img" aria-label="Demo Blocks">
+  <rect width="320" height="180" fill="#161b22"/>
+  <g fill="#2f81f7">
+    <rect x="150" y="40" width="20" height="20"/>
+    <rect x="130" y="60" width="20" height="20"/><rect x="150" y="60" width="20" height="20"/><rect x="170" y="60" width="20" height="20"/>
+    <rect x="150" y="80" width="20" height="20"/>
+  </g>
+  <g fill="#30363d">
+    <rect x="40" y="120" width="20" height="20"/><rect x="60" y="120" width="20" height="20"/><rect x="80" y="120" width="20" height="20"/>
+    <rect x="40" y="140" width="20" height="20"/><rect x="60" y="140" width="20" height="20"/><rect x="80" y="140" width="20" height="20"/><rect x="100" y="140" width="20" height="20"/>
+  </g>
+  <text x="16" y="30" fill="#e6edf3" font-family="monospace" font-size="16">demo blocks</text>
+</svg>

@@ -15,6 +15,18 @@
       "controls": "Arrow keys / WASD",
       "year": 2026,
       "featured": true
+    },
+    {
+      "slug": "demo-blocks",
+      "title": "Demo Blocks",
+      "summary": "Second placeholder: stack falling pieces and clear lines.",
+      "repoUrl": "https://github.com/karin/demo-blocks",
+      "playUrl": "./vendor/demo-blocks/index.html",
+      "cover": "./assets/covers/demo-blocks.svg",
+      "tags": ["puzzle"],
+      "controls": "Arrows move, up rotates, space drops",
+      "year": 2026,
+      "featured": false
     }
   ]
 }

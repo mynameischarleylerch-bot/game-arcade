@@ -1,4 +1,136 @@
-<!doctype html><meta charset="utf-8"><title>fake</title>
-<body style="margin:0;background:#111;color:#0f0;font:16px monospace">
-<p id="hit">not yet</p>
-<script>addEventListener('keydown',e=>{if(e.key===' '){document.getElementById('hit').textContent='HIT';}})</script>
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Demo Snake</title>
+<style>
+  html, body { margin: 0; height: 100%; background: #0d1117; color: #e6edf3;
+               font: 14px ui-monospace, monospace; overflow: hidden; }
+  body { display: grid; place-items: center; }
+  canvas { background: #161b22; border: 1px solid #30363d; border-radius: 8px; touch-action: none; }
+  #hud { position: fixed; top: 10px; left: 12px; }
+</style>
+</head>
+<body>
+<div id="hud">score 0 · arrows/WASD to steer · space to pause</div>
+<canvas id="board" width="480" height="480"></canvas>
+<script>
+  // Grid-based Snake. Named constants only — no magic numbers.
+  const CELL = 20;
+  const COLS = 24;
+  const ROWS = 24;
+  const STEP_MS = 110;
+  const STEP_HALF_MS = 55;
+  const MAX_QUEUED_TURNS = 3;
+  const MIN_SNAKE_ALPHA = 0.45;
+  const START_CELLS = [{ x: 8, y: 12 }, { x: 7, y: 12 }, { x: 6, y: 12 }];
+
+  const canvas = document.getElementById('board');
+  const ctx = canvas.getContext('2d');
+  const hud = document.getElementById('hud');
+  const hudText = (score, suffix = 'arrows/WASD to steer · space to pause') =>
+    `score ${score} · ${suffix}`;
+
+  const DIRECTIONS = {
+    ArrowUp: { x: 0, y: -1 }, KeyW: { x: 0, y: -1 },
+    ArrowDown: { x: 0, y: 1 }, KeyS: { x: 0, y: 1 },
+    ArrowLeft: { x: -1, y: 0 }, KeyA: { x: -1, y: 0 },
+    ArrowRight: { x: 1, y: 0 }, KeyD: { x: 1, y: 0 },
+  };
+
+  let snake, dir, queued, food, score, timer, paused, over;
+
+  function reset() {
+    snake = START_CELLS.map((cell) => ({ ...cell }));
+    dir = { x: 1, y: 0 };
+    queued = [];
+    score = 0;
+    paused = false;
+    over = false;
+    placeFood();
+    hud.textContent = hudText(score);
+  }
+
+  function placeFood() {
+    do {
+      food = { x: Math.floor(Math.random() * COLS), y: Math.floor(Math.random() * ROWS) };
+    } while (snake.some((part) => part.x === food.x && part.y === food.y));
+  }
+
+  function step() {
+    if (queued.length) {
+      const next = queued.shift();
+      // No instant 180s: a turn back into yourself is not a legal direction.
+      if (next.x !== -dir.x || next.y !== -dir.y) dir = next;
+    }
+    const head = { x: (snake[0].x + dir.x + COLS) % COLS, y: (snake[0].y + dir.y + ROWS) % ROWS };
+    if (snake.some((part) => part.x === head.x && part.y === head.y)) return gameOver();
+    snake.unshift(head);
+    if (head.x === food.x && head.y === food.y) {
+      score += 1;
+      hud.textContent = hudText(score);
+      placeFood();
+    } else {
+      snake.pop();
+    }
+  }
+
+  function gameOver() {
+    over = true;
+    clearInterval(timer);
+    hud.textContent = `game over — score ${score} · press R to restart`;
+  }
+
+  function draw() {
+    ctx.clearRect(0, 0, canvas.width, canvas.height);
+    ctx.fillStyle = '#2f81f7';
+    ctx.fillRect(food.x * CELL, food.y * CELL, CELL, CELL);
+    ctx.fillStyle = '#58a6ff';
+    snake.forEach((part, index) => {
+      ctx.globalAlpha = Math.max(MIN_SNAKE_ALPHA, 1 - index / (snake.length + 4));
+      ctx.fillRect(part.x * CELL, part.y * CELL, CELL, CELL);
+    });
+    ctx.globalAlpha = 1;
+    if (paused && !over) hud.textContent = hudText(score, 'paused — space to resume');
+  }
+
+  function startTimer() {
+    clearInterval(timer);
+    timer = setInterval(step, STEP_MS);
+  }
+
+  addEventListener('keydown', (event) => {
+    const next = DIRECTIONS[event.code];
+    if (next) {
+      queued.push(next);
+      if (queued.length < MAX_QUEUED_TURNS) event.preventDefault();
+      return;
+    }
+    if (event.code === 'Space') {
+      if (over) {
+        reset();
+        startTimer();
+      } else if (paused) {
+        startTimer();
+        paused = false;
+        hud.textContent = hudText(score); // draw() only rewrites while paused, so reset it here
+      } else {
+        clearInterval(timer);
+        paused = true;
+      }
+      event.preventDefault();
+      return;
+    }
+    if (event.code === 'KeyR') {
+      reset();
+      startTimer();
+    }
+  });
+
+  reset();
+  startTimer();
+  setInterval(draw, STEP_HALF_MS);
+</script>
+</body>
+</html>

@@ -1,0 +1,234 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Demo Blocks</title>
+<style>
+  html, body { margin: 0; height: 100%; background: #0d1117; color: #e6edf3;
+               font: 14px ui-monospace, monospace; overflow: hidden; }
+  body { display: grid; place-items: center; }
+  canvas { background: #161b22; border: 1px solid #30363d; border-radius: 8px; touch-action: none; }
+  #hud { position: fixed; top: 10px; left: 12px; }
+</style>
+</head>
+<body>
+<div id="hud">score 0 · lines 0 · arrows move · up rotates · space drops · R restarts</div>
+<canvas id="board" width="200" height="360"></canvas>
+<script>
+  // Falling-block stacker. Pieces are NxN 0/1 matrices so rotation is a transpose
+  // rather than four hand-authored states per shape — one rule, no drift.
+  const CELL = 20;
+  const COLS = 10;
+  const ROWS = 18;
+  const DROP_MS = 700;
+  const SOFT_DROP_MS = 60;
+  const LOCK_DELAY_MS = 400;
+  const LINES_PER_LEVEL = 10;
+  const DROP_SPEEDUP = 0.85;
+  const MIN_LEVEL_SPEED_MS = 80;
+  const MAX_LEVEL = 15;
+
+  const SHAPES = {
+    I: [[0,0,0,0],[1,1,1,1],[0,0,0,0],[0,0,0,0]],
+    O: [[1,1],[1,1]],
+    T: [[0,1,0],[1,1,1],[0,0,0]],
+    S: [[0,1,1],[1,1,0],[0,0,0]],
+    Z: [[1,1,0],[0,1,1],[0,0,0]],
+    J: [[1,0,0],[1,1,1],[0,0,0]],
+    L: [[0,0,1],[1,1,1],[0,0,0]],
+  };
+  const SHAPE_KEYS = Object.keys(SHAPES);
+
+  const canvas = document.getElementById('board');
+  const ctx = canvas.getContext('2d');
+  const hud = document.getElementById('hud');
+  const hudText = (score, lines, extra = 'arrows move · up rotates · space drops · R restarts') =>
+    `score ${score} · lines ${lines} · ${extra}`;
+
+  let grid, piece, bag, score, lines, level, over, dropTimer, lockTimer, softDropping;
+
+  function rotateMatrix(matrix) {
+    const size = matrix.length;
+    const out = Array.from({ length: size }, () => Array(size).fill(0));
+    for (let y = 0; y < size; y++) {
+      for (let x = 0; x < size; x++) out[x][size - 1 - y] = matrix[y][x];
+    }
+    return out;
+  }
+
+  /** 7-bag: every shape appears once per reshuffle, so droughts stay fair. */
+  function refillBag() {
+    bag = [...SHAPE_KEYS];
+    for (let i = bag.length - 1; i > 0; i--) {
+      const j = Math.floor(Math.random() * (i + 1));
+      [bag[i], bag[j]] = [bag[j], bag[i]];
+    }
+  }
+
+  function spawnPiece() {
+    if (bag.length === 0) refillBag();
+    const key = bag.pop();
+    piece = { key, matrix: SHAPES[key].map((row) => [...row]), x: 0, y: 0 };
+    piece.x = Math.floor((COLS - piece.matrix.length) / 2);
+    dropTimer = 0;
+    softDropping = false;
+    if (collides(piece)) gameOver();
+  }
+
+  function collides(candidate) {
+    return candidate.matrix.some((row, y) =>
+      row.some((filled, x) => {
+        if (!filled) return false;
+        const bx = candidate.x + x;
+        const by = candidate.y + y;
+        if (bx < 0 || bx >= COLS || by >= ROWS) return true;
+        if (by < 0) return false; // above the ceiling is legal while spawning
+        return grid[by][bx] === 1;
+      }),
+    );
+  }
+
+  function move(dx, dy) {
+    const moved = { ...piece, x: piece.x + dx, y: piece.y + dy };
+    if (collides(moved)) return false;
+    piece = moved;
+    return true;
+  }
+
+  function rotatePiece() {
+    const rotated = { ...piece, matrix: rotateMatrix(piece.matrix) };
+    if (collides(rotated)) return false;
+    piece = rotated;
+    return true;
+  }
+
+  function lockPiece() {
+    piece.matrix.forEach((row, y) =>
+      row.forEach((filled, x) => {
+        const by = piece.y + y;
+        if (filled && by >= 0) grid[by][piece.x + x] = 1;
+      }),
+    );
+
+    // remaining holds the FULL rows (no empty cell), so it is the number of lines cleared.
+    const remaining = grid.filter((row) => !row.includes(0));
+    const cleared = remaining.length;
+    if (cleared > 0) {
+      for (let i = 0; i < cleared; i++) grid.unshift(Array(COLS).fill(0));
+      grid.length = ROWS;
+      lines += cleared;
+      score += cleared * 100 * level;
+      level = Math.min(MAX_LEVEL, 1 + Math.floor(lines / LINES_PER_LEVEL));
+    } else {
+      score += 1;
+    }
+
+    lockTimer = 0;
+    hud.textContent = hudText(score, lines);
+    spawnPiece();
+  }
+
+  function stepDown() {
+    if (move(0, 1)) {
+      if (softDropping) score += 1;
+      return;
+    }
+    // Grounded: start the lock delay so a last-moment rotate still feels fair.
+    if (lockTimer === 0) lockTimer = Date.now() + LOCK_DELAY_MS;
+  }
+
+  function currentDropMs() {
+    const base = Math.max(MIN_LEVEL_SPEED_MS, Math.round(DROP_MS * Math.pow(DROP_SPEEDUP, level - 1)));
+    return softDropping ? SOFT_DROP_MS : base;
+  }
+
+  function hardDrop() {
+    let dropped = 0;
+    while (move(0, 1)) dropped += 1;
+    score += dropped * 2;
+    lockPiece();
+  }
+
+  function reset() {
+    grid = Array.from({ length: ROWS }, () => Array(COLS).fill(0));
+    bag = [];
+    score = 0;
+    lines = 0;
+    level = 1;
+    over = false;
+    lockTimer = 0;
+    softDropping = false;
+    hud.textContent = hudText(score, lines);
+    refillBag();
+    spawnPiece();
+  }
+
+  function gameOver() {
+    over = true;
+    hud.textContent = `game over — score ${score} · lines ${lines} · press R to restart`;
+  }
+
+  function drawCell(bx, by, colour) {
+    ctx.fillStyle = colour;
+    ctx.fillRect(bx * CELL + 1, by * CELL + 1, CELL - 2, CELL - 2);
+  }
+
+  function draw() {
+    ctx.clearRect(0, 0, canvas.width, canvas.height);
+    for (let y = 0; y < ROWS; y++) {
+      for (let x = 0; x < COLS; x++) if (grid[y][x]) drawCell(x, y, '#30363d');
+    }
+    if (over || !piece) return;
+    piece.matrix.forEach((row, y) =>
+      row.forEach((filled, x) => {
+        if (!filled) return;
+        const by = piece.y + y;
+        if (by < 0) return;
+        drawCell(piece.x + x, by, '#2f81f7');
+      }),
+    );
+  }
+
+  addEventListener('keydown', (event) => {
+    if (over) {
+      if (event.code === 'KeyR') reset();
+      return;
+    }
+    switch (event.code) {
+      case 'ArrowLeft': case 'KeyA':
+        move(-1, 0); event.preventDefault(); break;
+      case 'ArrowRight': case 'KeyD':
+        move(1, 0); event.preventDefault(); break;
+      case 'ArrowDown': case 'KeyS':
+        softDropping = true; stepDown(); event.preventDefault(); break;
+      case 'ArrowUp': case 'KeyW': case 'KeyX':
+        rotatePiece(); event.preventDefault(); break;
+      case 'Space':
+        hardDrop(); event.preventDefault(); break;
+      case 'KeyR':
+        reset(); break;
+      default:
+        break; // every other key belongs to the browser, not this game
+    }
+  });
+
+  addEventListener('keyup', (event) => {
+    if (event.code === 'ArrowDown' || event.code === 'KeyS') softDropping = false;
+  });
+
+  reset();
+  setInterval(() => {
+    if (over) return;
+    dropTimer += 1;
+    const interval = currentDropMs();
+    if (dropTimer * 16 >= interval || softDropping) {
+      dropTimer = 0;
+      stepDown();
+    }
+    if (lockTimer && Date.now() >= lockTimer) lockPiece();
+    draw();
+  }, 16);
+</script>
+</body>
+</html>
