@@ -1,0 +1,37 @@
+{
+  "sources": [
+    {
+      "slug": "niko",
+      "name": "Niko",
+      "japanese": "ニコ",
+      "species": "Baikal seal",
+      "latin": "Pusa sibirica",
+      "facility": "Toba Aquarium",
+      "location": "Toba, Mie, Japan",
+      "url": "https://www.toba-aquarium.com/",
+      "note": "Born February 2020 — the first Baikal seal born at Toba Aquarium, and the one whose smile went viral."
+    },
+    {
+      "slug": "yuki",
+      "name": "Yuki",
+      "japanese": "ゆき",
+      "species": "Ringed seal",
+      "latin": "Pusa hispida",
+      "facility": "Osaka Aquarium Kaiyukan",
+      "location": "Osaka, Japan",
+      "url": "https://www.kaiyukan.com/",
+      "note": "A famously round ringed seal, roughly 1 m long and around 50 kg."
+    },
+    {
+      "slug": "yo-chan",
+      "name": "Yo-chan",
+      "japanese": "ヨーちゃん",
+      "species": "Ringed seal",
+      "latin": "Pusa hispida",
+      "facility": "Okhotsk Tokkari Center",
+      "location": "Monbetsu, Hokkaido, Japan",
+      "url": "https://o-tower.co.jp/tokkaricenter.html",
+      "note": "Resident ringed seal at Japan's only dedicated seal rescue and rehabilitation centre."
+    }
+  ]
+}

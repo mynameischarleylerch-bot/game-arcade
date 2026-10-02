@@ -2,6 +2,7 @@
 import { clampIndex, nextIndex, isAdjacent } from './scroll.js';
 
 const MANIFEST_URL = './gifs.json';
+const SOURCES_URL = './sources.json';
 const PRELOAD_RADIUS = 2;   // neighbours either side get eager loading
 const SCROLL_KEYS = { ArrowDown: 1, PageDown: 1, ArrowUp: -1, PageUp: -1 };
 
@@ -9,6 +10,7 @@ const feedEl = document.getElementById('feed');
 const hudEl = document.getElementById('hud');
 const dotsEl = document.getElementById('dots');
 const messageEl = document.getElementById('message');
+const sourcesEl = document.getElementById('sources');
 
 const escapeHtml = (value) =>
   String(value).replace(/[&<>"']/g, (c) =>
@@ -91,6 +93,42 @@ function bindScroll(items) {
   });
 }
 
+/**
+ * The animals this feed is about, shown beside the scroller with a link to each
+ * facility. Sources fail soft: a missing sources.json must not break the feed.
+ */
+async function loadSources() {
+  if (!sourcesEl) return;
+  let sources;
+  try {
+    const response = await fetch(SOURCES_URL);
+    if (!response.ok) return;
+    sources = (await response.json()).sources ?? [];
+  } catch {
+    return;
+  }
+  if (sources.length === 0) return;
+
+  sourcesEl.hidden = false;
+  sourcesEl.innerHTML = `
+    <h2 class="sources__title">Where these seals live</h2>
+    <ul class="sources__list">
+      ${sources
+        .map(
+          (source) => `
+        <li class="sources__item">
+          <a class="sources__name" href="${escapeHtml(source.url)}" target="_blank" rel="noopener noreferrer">
+            ${escapeHtml(source.name)}
+          </a>
+          <span class="sources__latin">${escapeHtml(source.latin)}</span>
+          <span class="sources__facility">${escapeHtml(source.facility)} · ${escapeHtml(source.location)}</span>
+          <span class="sources__note">${escapeHtml(source.note)}</span>
+        </li>`,
+        )
+        .join('')}
+    </ul>`;
+}
+
 async function main() {
   let manifest;
   try {
@@ -113,6 +151,7 @@ async function main() {
   renderSlides(items);
   setActive(0, items);
   bindScroll(items);
+  loadSources();
 }
 
 main();

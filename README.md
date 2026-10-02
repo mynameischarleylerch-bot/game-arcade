@@ -64,55 +64,48 @@ workflow publishes the repo root to `https://<user>.github.io/game-arcade/`.
 
 ## Seal Scroller
 
-A vertical, snap-scrolling feed of seals in the same Aero glass as the rest of the site.
-Arrow keys, page keys, mouse wheel and touch all work; the last seal wraps to the top.
+A vertical, snap-scrolling feed in the same Aero glass as the rest of the site. Arrow keys,
+page keys, mouse wheel and touch all work; the last seal wraps to the top. Each photo gets a
+slow CSS pan/zoom so it reads as a moving clip.
 
-The photos are **not GIFs**. They are still CC-licensed photographs from
-[Openverse](https://openverse.org), each given a slow CSS pan/zoom so it reads as a moving
-clip. GIFs were the original ask, but every GIF API needs a key this machine does not have —
-Giphy's public beta key returns `403 BANNED` and Tenor rejects unauthenticated calls — and
-redistributing downloaded GIFs conflicts with Giphy's terms. Openverse content exists for
-this kind of reuse, and every slide credits its creator and licence on screen.
+### Where the photos come from
 
-### Which seals
+The photographs in `vendor/seal-scroller/media/stars/` were **supplied directly by karin**
+for this site. They are not Creative Commons and are committed for personal use only — do not
+redistribute them. `gifs.json` records the credit line and the file order.
 
-Every photo is a **ringed-group seal of the genus *Pusa*** — ringed (*P. hispida*),
-bearded (*P. barbata*), hooded (*P. fasciata*), and the Caspian seal, which is what
-**bakail** refers to. Earlier versions of this feed mixed in harbour seal pups and fur
-seals; those are *Phoca* and *Otariidae*, not *Pusa*, so the search terms changed to name the
-genus and species directly rather than the word "seal".
+`scripts/fetch-seals.mjs` is **disabled**. It used to pull CC-licensed photos from
+[Openverse](https://openverse.org), and it exited non-zero rather than being deleted because
+leaving a stale script that writes into `media/` would be a trap. There is no automated
+refresh for this feed; to change the photos, replace the files in `media/stars/` and re-order
+the `items` array in `gifs.json`.
 
-One species may contribute at most 5 photos, so a single well-ranked species cannot fill the
-whole feed.
+An earlier version of this feed used those Openverse photos. Two problems with it: the
+searches surfaced wax seals, civic crests and museum artefacts alongside animals, and one
+photo was verified by eye as a **dead, human-handled seal** (belly-up, abdomen cut open,
+exposed tissue). That photo was removed. The lesson is recorded here because it generalises:
+obvious-to-the-eye content cannot be detected from a filename, a title or a search rank, and
+a filtered fetcher is not a content review.
 
-`scripts/fetch-seals.mjs` excludes several things on purpose:
+### Sources panel
 
-- **Wax and official seals, and museum artefacts** — searches legitimately return civic
-  crests, wax matrices, "medieval ring seal", and even seal-skin trousers. A rejected list
-  covers both documents and objects, plus clipart, maps and taxonomic diagrams.
-- **Anything that is not positively a ringed-group seal** — the title must actually name a
-  ringed, bearded or hooded seal. This is what stops an unrelated but legally reusable
-  photo from slipping in.
-- **`by-nd` ("no derivatives") images** — the feed crops and scales every photo, which is an
-  adaptation, so those licences cannot be used here.
-- **Uncredited photos** — anything without a creator is dropped, since attribution is
-  mandatory under the licences that remain.
-- **Unusable files** — under 25 KB, not a JPEG, under 320px on either edge (catches
-  placeholder thumbnails and mislabelled PNGs), or over 700 KB (the original unrestricted
-  run pulled 2.5 MB files and the feed hit 31 MB; it is now about 6 MB with no visible
-  difference).
+Beside the scroller, a glass panel lists the three animals this feed is about, each linking
+to the facility that cares for it. The data lives in `vendor/seal-scroller/sources.json`:
 
-Refresh or change the feed:
+| Seal | Species | Facility |
+|---|---|---|
+| Niko | Baikal seal (*Pusa sibirica*) | [Toba Aquarium](https://www.toba-aquarium.com/), Mie |
+| Yuki | Ringed seal (*Pusa hispida*) | [Osaka Aquarium Kaiyukan](https://www.kaiyukan.com/) |
+| Yo-chan | Ringed seal (*Pusa hispida*) | [Okhotsk Tokkari Center](https://o-tower.co.jp/tokkaricenter.html), Hokkaido |
 
-    node scripts/fetch-seals.mjs
+The panel loads from `sources.json` independently of the feed and fails soft: if that file is
+missing the panel simply stays hidden and the scroller still works. It collapses to a bottom
+strip under 760px, where there is no room beside the feed.
 
-The script is deterministic in shape but not in content — Openverse returns whatever is
-ranked at the time, so a re-run may swap which seals appear. `gifs.json` records the
-filenames, titles, creators and licences for the current set.
-
-Photos in `vendor/seal-scroller/media/` **are committed** (about 8 MB). That is deliberate:
-the Pages workflow publishes the git checkout, so gitignored photos would ship a live site
-with broken images while every local test still passed.
+**The panel credits the animals; it does not claim the photographs are of them.** The supplied
+photos include harbour seals and a harp seal pup as well as the three named animals, and there
+is no reliable way to tell which is which from the image alone. Labelling a photo "Yuki"
+without certainty would put a false claim about an identifiable animal on the page.
 
 ## Themes
 

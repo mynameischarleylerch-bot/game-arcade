@@ -1,13 +1,14 @@
 #!/usr/bin/env node
 /**
- * One-shot fetcher: pulls CC-licensed seal photos from Openverse into
- * vendor/seal-scroller/media/ and writes gifs.json beside it.
+ * DISABLED — do not run. This fetcher is retained only for reference.
  *
- *   node scripts/fetch-seals.mjs
+ * It pulls CC-licensed seal photos from Openverse. It used to write
+ * vendor/seal-scroller/media/, which would DESTROY the photographs now living
+ * in media/stars/. The feed is now built from user-supplied photos plus the
+ * named animals in sources.json, and there is no automated refresh for it.
  *
- * Openverse needs no API key (unlike Giphy/Tenor, which both reject unauthenticated
- * requests). Re-run to refresh the feed. Images are committed to the repo, so the
- * game never calls out to the network at runtime.
+ * If you ever want Openverse photos back, restore this to a separate output
+ * directory (e.g. media/openverse/) rather than sharing media/stars/.
  */
 import { mkdir, writeFile } from 'node:fs/promises';
 import path from 'node:path';
@@ -202,4 +203,6 @@ async function main() {
   console.log(`\nWrote ${items.length} items to vendor/seal-scroller/gifs.json`);
 }
 
-await main();
+console.error('scripts/fetch-seals.mjs is disabled: it would overwrite the supplied photos in media/stars/.');
+console.error('The feed is now user-supplied photos + sources.json. See README.');
+process.exit(1);
