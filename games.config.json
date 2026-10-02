@@ -27,6 +27,18 @@
       "controls": "Arrows move, up rotates, space drops",
       "year": 2026,
       "featured": false
+    },
+    {
+      "slug": "seal-scroller",
+      "title": "Seal Scroller",
+      "summary": "An endless vertical feed of seals, panning slowly past.",
+      "repoUrl": "https://github.com/mynameischarleylerch-bot",
+      "playUrl": "./vendor/seal-scroller/index.html",
+      "cover": "./assets/covers/seal-scroller.svg",
+      "tags": ["scroller", "photography"],
+      "controls": "Scroll or arrow keys",
+      "year": 2026,
+      "featured": false
     }
   ]
 }

@@ -1,0 +1,23 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="320" height="180" viewBox="0 0 320 180" role="img" aria-label="Seal Scroller">
+  <defs>
+    <linearGradient id="ss-sky" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#b3e5fc"/><stop offset="1" stop-color="#f4fbff"/>
+    </linearGradient>
+  </defs>
+  <rect width="320" height="180" fill="url(#ss-sky)"/>
+  <circle cx="272" cy="30" r="32" fill="#fff4a3" opacity=".8"/>
+  <!-- a seal basking on a rock -->
+  <ellipse cx="132" cy="136" rx="56" ry="11" fill="#8fb8c9" opacity=".65"/>
+  <ellipse cx="130" cy="112" rx="36" ry="24" fill="#4a7f96"/>
+  <ellipse cx="130" y="103" rx="36" ry="15" fill="#ffffff" opacity=".22"/>
+  <circle cx="158" cy="86" r="17" fill="#5b93aa"/>
+  <circle cx="158" y="81" r="17" fill="#ffffff" opacity=".22"/>
+  <circle cx="164" cy="84" r="2.8" fill="#06334f"/>
+  <circle cx="162.5" cy="83.2" r="0.9" fill="#ffffff"/>
+  <path d="M196 102 q17 6 9 17" stroke="#4a7f96" stroke-width="4.5" fill="none" stroke-linecap="round"/>
+  <!-- stacked "cards" hinting at the vertical feed -->
+  <rect x="258" y="64" width="15" height="82" rx="7.5" fill="#ffffff" opacity=".55"/>
+  <rect x="234" y="80" width="15" height="66" rx="7.5" fill="#ffffff" opacity=".4"/>
+  <rect x="210" y="92" width="15" height="54" rx="7.5" fill="#ffffff" opacity=".28"/>
+  <text x="16" y="30" fill="#01579b" font-family="Segoe UI, sans-serif" font-size="17" font-weight="600">seal scroller</text>
+</svg>
