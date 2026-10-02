@@ -436,4 +436,357 @@ kbd {
   .panel { padding: 1.25rem; }
   .card__links { flex-direction: column; align-items: stretch; }
   .btn { text-align: center; }
+}/* ============================================================
+   Themes. Each block redefines palette tokens only — shape, spacing
+   and motion above are theme-independent. Applied by setting
+   data-theme on <html> (see src/themes.js and src/theme-ui.js).
+   ============================================================ */
+
+/* ---- DORFic: abstract, near-minimal. Flat fields, thin rules, no gloss. ---- */
+[data-theme="doric"] {
+  --bg-base: #f2f2f0;
+  --sky-top: #d8d8d4;
+  --sky-mid: #e8e8e4;
+  --sky-floor: #fbfbf9;
+  --sun-tint: rgba(255, 255, 255, 0.5);
+  --sun-core: rgba(255, 255, 255, 0.6);
+  --haze-tint: rgba(255, 255, 255, 0.4);
+  --cloud-1: rgba(255, 255, 255, 0.5);
+  --cloud-2: rgba(255, 255, 255, 0.6);
+  --cloud-3: rgba(255, 255, 255, 0.5);
+  --cloud-4: rgba(255, 255, 255, 0.4);
+  --bubble-cap: rgba(255, 255, 255, 0.4);
+  --bubble-rim: rgba(0, 0, 0, 0.04);
+  --bubble-body: rgba(0, 0, 0, 0.05);
+  --bubble-inset: transparent;
+  --bubble-edge: rgba(0, 0, 0, 0.08);
+
+  --accent: #6b6b6b;
+  --accent-line: #4a4a4a;
+  --accent-deep: #1c1c1c;
+  --accent-soft: #e0e0dc;
+
+  --ink: #1c1c1c;
+  --ink-soft: #56565a;
+  --on-accent: #ffffff;
+  --sheen: transparent;
+  --sheen-faint: transparent;
+  --sheen-on-accent: transparent;
+  --sheen-on-accent-strong: transparent;
+
+  --leaf: #5a5a56;
+  --leaf-deep: #2c2c2a;
+  --lime: #c8c8c0;
+  --featured-line: rgba(0, 0, 0, 0.35);
+  --featured-glow: rgba(0, 0, 0, 0.18);
+  --hill-far-top: #d2d2ce;
+  --hill-far-bot: #b4b4b0;
+  --hill-near-top: #c2c2be;
+
+  --hairline: rgba(0, 0, 0, 0.14);
+  --hairline-strong: rgba(0, 0, 0, 0.2);
+  --hairline-soft: rgba(0, 0, 0, 0.1);
+  --glass-top: rgba(255, 255, 255, 0.9);
+  --glass-mid: rgba(255, 255, 255, 0.75);
+  --glass-bot: rgba(255, 255, 255, 0.65);
+  --card-top: rgba(255, 255, 255, 0.95);
+  --card-bot: rgba(255, 255, 255, 0.85);
+
+  --shadow-panel: 0 1px 0 rgba(0, 0, 0, 0.08);
+  --shadow-card: 0 1px 0 rgba(0, 0, 0, 0.07);
+  --shadow-lift: 0 2px 0 rgba(0, 0, 0, 0.1);
+  --shadow-edge: 0 0 0 transparent;
+  --shadow-chip: 0 1px 0 rgba(0, 0, 0, 0.12);
+  --shadow-chip-hover: 0 1px 0 rgba(0, 0, 0, 0.16);
+  --shadow-chip-active: 0 1px 0 rgba(0, 0, 0, 0.2);
+  --shadow-btn: 0 1px 0 rgba(0, 0, 0, 0.12);
+  --shadow-btn-hover: 0 2px 0 rgba(0, 0, 0, 0.16);
+  --shadow-accent: 0 1px 0 rgba(0, 0, 0, 0.14);
+  --shadow-accent-hover: 0 2px 0 rgba(0, 0, 0, 0.18);
+  --shadow-bubble: none;
+  --shadow-hero: 0 1px 0 rgba(0, 0, 0, 0.06);
+  --shadow-divider: rgba(0, 0, 0, 0.1);
+  --shadow-kbd: rgba(0, 0, 0, 0.2);
+  --shadow-error: 0 1px 0 rgba(122, 31, 31, 0.2);
+
+  --repo-top: #d4d4d0;
+  --tag-top: #e8e8e4;
+  --tag-bot: #d4d4d0;
+
+  --error-ink: #7a1f1f;
+  --error-top: rgba(255, 240, 240, 0.95);
+  --error-bot: rgba(250, 226, 226, 0.9);
+  --error-line: rgba(122, 31, 31, 0.28);
+
+  --stage-top: #ffffff;
+  --stage-bot: #eeeeea;
+  --stage-full: #000000;
+  --kbd-top: #ffffff;
+  --kbd-bot: #eeeeea;
+
+  /* Flatten the gloss and drop the scenery — DORFic's defining traits. */
+  --gloss-strength: 0;
+  --scenery-opacity: 0;
+}
+
+/* ---- Eco: organic, matte, natural. No gloss, soft shadows kept. ---- */
+[data-theme="eco"] {
+  --bg-base: #f2f7e8;
+  --sky-top: #a8cf8f;
+  --sky-mid: #c8e0b0;
+  --sky-floor: #f6faf0;
+  --sun-tint: rgba(240, 230, 150, 0.5);
+  --sun-core: rgba(255, 255, 245, 0.85);
+  --haze-tint: rgba(255, 255, 255, 0.45);
+  --cloud-1: rgba(255, 255, 255, 0.6);
+  --cloud-2: rgba(255, 255, 255, 0.7);
+  --cloud-3: rgba(255, 255, 255, 0.6);
+  --cloud-4: rgba(255, 255, 255, 0.5);
+  --bubble-cap: rgba(255, 255, 255, 0.5);
+  --bubble-rim: rgba(255, 255, 255, 0.15);
+  --bubble-body: rgba(140, 190, 120, 0.3);
+  --bubble-inset: rgba(255, 255, 255, 0.3);
+  --bubble-edge: rgba(255, 255, 255, 0.35);
+
+  --accent: #7aa84a;
+  --accent-line: #5c8a33;
+  --accent-deep: #33601f;
+  --accent-soft: #d4e6bd;
+
+  --ink: #2c3b1e;
+  --ink-soft: #55683f;
+  --on-accent: #ffffff;
+  --sheen: rgba(255, 255, 255, 0.35);
+  --sheen-faint: rgba(255, 255, 255, 0.3);
+  --sheen-on-accent: rgba(47, 84, 25, 0.4);
+  --sheen-on-accent-strong: rgba(47, 84, 25, 0.45);
+
+  --leaf: #4f7d2e;
+  --leaf-deep: #2f5419;
+  --lime: #b5d94a;
+  --featured-line: rgba(47, 84, 25, 0.45);
+  --featured-glow: rgba(47, 84, 25, 0.22);
+  --hill-far-top: #9cc47a;
+  --hill-far-bot: #6f9a4e;
+  --hill-near-top: #7fae5c;
+
+  --hairline: rgba(255, 255, 255, 0.7);
+  --hairline-strong: rgba(255, 255, 255, 0.85);
+  --hairline-soft: rgba(255, 255, 255, 0.6);
+  --glass-top: rgba(250, 253, 245, 0.72);
+  --glass-mid: rgba(248, 252, 240, 0.55);
+  --glass-bot: rgba(244, 250, 235, 0.42);
+  --card-top: rgba(252, 254, 246, 0.9);
+  --card-bot: rgba(248, 252, 238, 0.7);
+
+  --shadow-panel: 0 12px 28px rgba(47, 84, 25, 0.16);
+  --shadow-card: 0 6px 16px rgba(47, 84, 25, 0.14);
+  --shadow-lift: 0 14px 26px rgba(47, 84, 25, 0.22);
+  --shadow-edge: inset 0 1px 0 rgba(255, 255, 255, 0.6);
+  --shadow-chip: 0 3px 8px rgba(47, 84, 25, 0.16);
+  --shadow-chip-hover: 0 6px 14px rgba(47, 84, 25, 0.22);
+  --shadow-chip-active: 0 4px 12px rgba(47, 84, 25, 0.24);
+  --shadow-btn: 0 3px 8px rgba(47, 84, 25, 0.16);
+  --shadow-btn-hover: 0 6px 14px rgba(47, 84, 25, 0.22);
+  --shadow-accent: 0 4px 12px rgba(79, 125, 46, 0.3);
+  --shadow-accent-hover: 0 8px 18px rgba(79, 125, 46, 0.36);
+  --shadow-bubble: 0 0.5rem 1.5rem rgba(47, 84, 25, 0.12);
+  --shadow-hero: 0 8px 20px rgba(47, 84, 25, 0.2);
+  --shadow-divider: rgba(47, 84, 25, 0.14);
+  --shadow-kbd: rgba(47, 84, 25, 0.28);
+  --shadow-error: 0 8px 18px rgba(109, 58, 18, 0.16);
+
+  --repo-top: #dcefc8;
+  --tag-top: #d4e6bd;
+  --tag-bot: #bcd79c;
+
+  --error-ink: #6d3a12;
+  --error-top: rgba(255, 244, 228, 0.95);
+  --error-bot: rgba(250, 232, 205, 0.9);
+  --error-line: rgba(109, 58, 18, 0.3);
+
+  --stage-top: #f4faec;
+  --stage-bot: #dcecc8;
+  --stage-full: #000000;
+  --kbd-top: #ffffff;
+  --kbd-bot: #e8f2dc;
+
+  /* Matte: kill the specular highlight but keep the soft shadows. */
+  --gloss-strength: 0;
+  --scenery-opacity: 0.7;
+}
+
+/* ---- Glacier: cold, high-key, frosted. ---- */
+[data-theme="glacier"] {
+  --bg-base: #f4faff;
+  --sky-top: #cfe6f5;
+  --sky-mid: #e3f1f9;
+  --sky-floor: #fbfdff;
+  --sun-tint: rgba(255, 255, 255, 0.9);
+  --sun-core: rgba(255, 255, 255, 1);
+  --haze-tint: rgba(255, 255, 255, 0.8);
+  --cloud-1: rgba(255, 255, 255, 0.95);
+  --cloud-2: rgba(255, 255, 255, 1);
+  --cloud-3: rgba(255, 255, 255, 0.95);
+  --cloud-4: rgba(255, 255, 255, 0.85);
+  --bubble-cap: rgba(255, 255, 255, 1);
+  --bubble-rim: rgba(190, 225, 245, 0.3);
+  --bubble-body: rgba(160, 205, 235, 0.3);
+  --bubble-inset: rgba(255, 255, 255, 0.9);
+  --bubble-edge: rgba(255, 255, 255, 0.8);
+
+  --accent: #7fc4e8;
+  --accent-line: #5aa6cd;
+  --accent-deep: #1d4f6b;
+  --accent-soft: #dceef8;
+
+  --ink: #16303d;
+  --ink-soft: #4a6b7a;
+  --on-accent: #ffffff;
+  --sheen: rgba(255, 255, 255, 1);
+  --sheen-faint: rgba(255, 255, 255, 0.8);
+  --sheen-on-accent: rgba(29, 79, 107, 0.4);
+  --sheen-on-accent-strong: rgba(29, 79, 107, 0.45);
+
+  --leaf: #6aa8b8;
+  --leaf-deep: #3c6f7d;
+  --lime: #c8e8f2;
+  --featured-line: rgba(127, 196, 232, 0.9);
+  --featured-glow: rgba(127, 196, 232, 0.5);
+  --hill-far-top: #c2dbe8;
+  --hill-far-bot: #9dbfd0;
+  --hill-near-top: #b0d2e0;
+
+  --hairline: rgba(255, 255, 255, 0.95);
+  --hairline-strong: rgba(255, 255, 255, 1);
+  --hairline-soft: rgba(255, 255, 255, 0.85);
+  --glass-top: rgba(255, 255, 255, 0.82);
+  --glass-mid: rgba(255, 255, 255, 0.62);
+  --glass-bot: rgba(240, 248, 252, 0.5);
+  --card-top: rgba(255, 255, 255, 0.95);
+  --card-bot: rgba(255, 255, 255, 0.78);
+
+  --shadow-panel: 0 16px 36px rgba(29, 79, 107, 0.16);
+  --shadow-card: 0 8px 18px rgba(29, 79, 107, 0.14);
+  --shadow-lift: 0 16px 30px rgba(29, 79, 107, 0.22);
+  --shadow-edge: inset 0 1px 0 rgba(255, 255, 255, 1);
+  --shadow-chip: 0 4px 10px rgba(29, 79, 107, 0.16);
+  --shadow-chip-hover: 0 7px 16px rgba(29, 79, 107, 0.24);
+  --shadow-chip-active: 0 5px 14px rgba(127, 196, 232, 0.36);
+  --shadow-btn: 0 4px 10px rgba(29, 79, 107, 0.16);
+  --shadow-btn-hover: 0 7px 16px rgba(29, 79, 107, 0.24);
+  --shadow-accent: 0 5px 14px rgba(127, 196, 232, 0.36);
+  --shadow-accent-hover: 0 9px 20px rgba(127, 196, 232, 0.44);
+  --shadow-bubble: 0 0.5rem 1.5rem rgba(29, 79, 107, 0.12);
+  --shadow-hero: 0 9px 22px rgba(29, 79, 107, 0.2);
+  --shadow-divider: rgba(29, 79, 107, 0.1);
+  --shadow-kbd: rgba(29, 79, 107, 0.24);
+  --shadow-error: 0 8px 18px rgba(107, 42, 42, 0.16);
+
+  --repo-top: #e4f4fb;
+  --tag-top: #dceef8;
+  --tag-bot: #c2e0f0;
+
+  --error-ink: #6b2a2a;
+  --error-top: rgba(255, 240, 240, 0.95);
+  --error-bot: rgba(250, 226, 226, 0.9);
+  --error-line: rgba(107, 42, 42, 0.28);
+
+  --stage-top: #fbfdff;
+  --stage-bot: #e6f1f8;
+  --stage-full: #000000;
+  --kbd-top: #ffffff;
+  --kbd-bot: #eaf4fb;
+
+  --gloss-strength: 0.85;
+  --scenery-opacity: 0.55;
+}
+
+/* ---- Dark Aero: the same glass and gloss on near-black. ---- */
+[data-theme="dark-aero"] {
+  color-scheme: dark;
+
+  --bg-base: #0d1117;
+  --sky-top: #0f2027;
+  --sky-mid: #122a34;
+  --sky-floor: #0a141a;
+  --sun-tint: rgba(120, 190, 255, 0.16);
+  --sun-core: rgba(180, 225, 255, 0.22);
+  --haze-tint: rgba(150, 200, 240, 0.08);
+  --cloud-1: rgba(150, 200, 240, 0.08);
+  --cloud-2: rgba(150, 200, 240, 0.1);
+  --cloud-3: rgba(150, 200, 240, 0.08);
+  --cloud-4: rgba(150, 200, 240, 0.06);
+  --bubble-cap: rgba(200, 235, 255, 0.3);
+  --bubble-rim: rgba(255, 255, 255, 0.06);
+  --bubble-body: rgba(41, 182, 246, 0.16);
+  --bubble-inset: rgba(255, 255, 255, 0.06);
+  --bubble-edge: rgba(255, 255, 255, 0.14);
+
+  --accent: #29b6f6;
+  --accent-line: #4fc3f7;
+  --accent-deep: #7fd4f8;
+  --accent-soft: #1a3a48;
+
+  /* Light ink on dark glass — the one theme where these invert. */
+  --ink: #e6edf3;
+  --ink-soft: #9fb3c0;
+  --on-accent: #06232f;
+  --sheen: rgba(255, 255, 255, 0.22);
+  --sheen-faint: rgba(255, 255, 255, 0.14);
+  --sheen-on-accent: rgba(0, 0, 0, 0.35);
+  --sheen-on-accent-strong: rgba(0, 0, 0, 0.4);
+
+  --leaf: #2e9e5b;
+  --leaf-deep: #7ed99f;
+  --lime: #a3e635;
+  --featured-line: rgba(163, 230, 53, 0.55);
+  --featured-glow: rgba(163, 230, 53, 0.3);
+  --hill-far-top: #14303c;
+  --hill-far-bot: #0f2530;
+  --hill-near-top: #173a48;
+
+  --hairline: rgba(255, 255, 255, 0.14);
+  --hairline-strong: rgba(255, 255, 255, 0.2);
+  --hairline-soft: rgba(255, 255, 255, 0.1);
+  --glass-top: rgba(30, 45, 56, 0.72);
+  --glass-mid: rgba(24, 38, 48, 0.6);
+  --glass-bot: rgba(18, 30, 38, 0.5);
+  --card-top: rgba(32, 48, 60, 0.8);
+  --card-bot: rgba(22, 36, 45, 0.7);
+
+  --shadow-panel: 0 18px 40px rgba(0, 0, 0, 0.5);
+  --shadow-card: 0 8px 20px rgba(0, 0, 0, 0.45);
+  --shadow-lift: 0 18px 34px rgba(0, 0, 0, 0.6);
+  --shadow-edge: inset 0 1px 0 rgba(255, 255, 255, 0.1);
+  --shadow-chip: 0 4px 10px rgba(0, 0, 0, 0.4);
+  --shadow-chip-hover: 0 8px 16px rgba(0, 0, 0, 0.5);
+  --shadow-chip-active: 0 6px 16px rgba(41, 182, 246, 0.28);
+  --shadow-btn: 0 4px 10px rgba(0, 0, 0, 0.4);
+  --shadow-btn-hover: 0 8px 18px rgba(0, 0, 0, 0.5);
+  --shadow-accent: 0 6px 18px rgba(41, 182, 246, 0.28);
+  --shadow-accent-hover: 0 10px 24px rgba(41, 182, 246, 0.36);
+  --shadow-bubble: 0 0.5rem 1.5rem rgba(0, 0, 0, 0.4);
+  --shadow-hero: 0 10px 24px rgba(0, 0, 0, 0.5);
+  --shadow-divider: rgba(255, 255, 255, 0.1);
+  --shadow-kbd: rgba(255, 255, 255, 0.24);
+  --shadow-error: 0 8px 18px rgba(0, 0, 0, 0.5);
+
+  --repo-top: #23405a;
+  --tag-top: #1e3d4c;
+  --tag-bot: #17303c;
+
+  --error-ink: #ff9d94;
+  --error-top: rgba(60, 20, 20, 0.8);
+  --error-bot: rgba(40, 14, 14, 0.8);
+  --error-line: rgba(255, 120, 110, 0.4);
+
+  --stage-top: #101a20;
+  --stage-bot: #0a1218;
+  --stage-full: #000000;
+  --kbd-top: #1e2c36;
+  --kbd-bot: #141f27;
+
+  --gloss-strength: 0.7;
+  --scenery-opacity: 0.5;
 }
