@@ -150,6 +150,34 @@ test('every slide credits "The creator" and never names a person', async () => {
   }
 });
 
+test('no slide title or credit reveals the total number of seals', async () => {
+  const { window } = await boot();
+  const d = window.document;
+  const text = d.getElementById('feed').textContent;
+  // "Seal 11 of 20" used to sit in every credit and gave the whole game away.
+  assert.doesNotMatch(text, /\bof\s+\d+\b/i);
+  assert.doesNotMatch(text, /\b\d+\s*\/\s*\d+\b/);
+});
+
+test('a photo with no source renders plain text, not a dangling link', async () => {
+  const { window } = await boot();
+  const d = window.document;
+  const credit = d.querySelector('.slide__credit');
+  // The supplied photos have no source URL, so there must be no empty <a>.
+  assert.equal(credit.querySelectorAll('a').length, 0);
+  assert.ok(credit.querySelector('.slide__by'));
+  assert.match(credit.textContent, /The creator/);
+});
+
+test('the feed fetches its JSON with a cache-busting query', async () => {
+  // Pages serves with `Cache-Control: max-age=600`; a plain './gifs.json' can come
+  // back stale for ten minutes. Capture what the module actually requests.
+  const source = read('sealfeed.js');
+  assert.match(source, /const BUILD_ID = ['"][^'"]+['"]/);
+  assert.match(source, /MANIFEST_URL = `\.\/gifs\.json\?v=\$\{BUILD_ID\}`/);
+  assert.match(source, /SOURCES_URL = `\.\/sources\.json\?v=\$\{BUILD_ID\}`/);
+});
+
 test('the photo sits in a smaller frame rather than filling the slide', async () => {
   const { window } = await boot();
   const d = window.document;

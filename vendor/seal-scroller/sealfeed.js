@@ -2,8 +2,16 @@
 import { clampIndex, nextIndex, isAdjacent } from './scroll.js';
 import { loadLikes, saveLikes, toggleLike } from './likes.js';
 
-const MANIFEST_URL = './gifs.json';
-const SOURCES_URL = './sources.json';
+/*
+ * GitHub Pages serves everything with `Cache-Control: max-age=600`, so a hard
+ * refresh is the only way to see a data change and it is easy to forget. These
+ * files change rarely, so they are fetched with a cache-busting query keyed on a
+ * build id. Bump BUILD_ID in a commit whenever gifs.json or sources.json changes
+ * and every visitor picks it up on their next normal load.
+ */
+const BUILD_ID = '2026-10-01-the-creator';
+const MANIFEST_URL = `./gifs.json?v=${BUILD_ID}`;
+const SOURCES_URL = `./sources.json?v=${BUILD_ID}`;
 const PRELOAD_RADIUS = 2;   // neighbours either side get eager loading
 const SCROLL_KEYS = { ArrowDown: 1, PageDown: 1, ArrowUp: -1, PageUp: -1 };
 
@@ -47,9 +55,11 @@ function renderSlides(items) {
         </button>
         <div class="slide__credit">
           <span>${escapeHtml(item.title)}</span>
-          <a href="${escapeHtml(item.source)}" target="_blank" rel="noopener noreferrer">
-            ${escapeHtml(item.creator)} · ${escapeHtml(item.license)}
-          </a>
+          ${item.source
+            ? `<a href="${escapeHtml(item.source)}" target="_blank" rel="noopener noreferrer">
+                 ${escapeHtml(item.creator)} · ${escapeHtml(item.license)}
+               </a>`
+            : `<span class="slide__by">${escapeHtml(item.creator)} · ${escapeHtml(item.license)}</span>`}
         </div>
       </section>`,
     )
