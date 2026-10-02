@@ -1,0 +1,26 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Arcade — my games</title>
+<meta name="description" content="A small arcade of the games I build, playable right in the page.">
+<link rel="stylesheet" href="./styles.css">
+<link rel="icon" href="data:,">
+</head>
+<body>
+<header class="masthead">
+  <h1>Arcade</h1>
+  <p class="masthead__sub">Games I build. Each one plays right here in the page.</p>
+</header>
+<main>
+  <div id="filters"></div>
+  <div id="grid"><p class="empty">Loading…</p></div>
+  <p id="error" class="error" hidden></p>
+</main>
+<footer class="footer">
+  <p>Built by <a href="https://github.com/karin" rel="noopener noreferrer">karin</a>. Every game links back to its source repo.</p>
+</footer>
+<script type="module" src="./src/app.js"></script>
+</body>
+</html>
