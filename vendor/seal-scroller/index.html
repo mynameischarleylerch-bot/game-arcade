@@ -1,0 +1,128 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Seal Scroller</title>
+<style>
+  /* Frutiger Aero chrome — matches the other two games and the site around them. */
+  :root {
+    --deep: #01579b;
+    --ink-soft: #3d6b85;
+    --glass: linear-gradient(180deg, rgba(255,255,255,.62), rgba(255,255,255,.3) 55%, rgba(255,255,255,.16));
+    --kenburns-ms: 9000ms;      /* one full pan/zoom cycle */
+    --ease-snap: cubic-bezier(.22,.61,.36,1);
+  }
+
+  * { box-sizing: border-box; }
+
+  html, body {
+    margin: 0; height: 100%;
+    background: linear-gradient(180deg, #e1f5fe, #b3e5fc 55%, #f4fbff);
+    color: var(--deep);
+    font: 16px "Segoe UI", Frutiger, system-ui, -apple-system, sans-serif;
+    overflow: hidden;
+  }
+
+  /* The feed: one full-height slide per seal, snapped like a Shorts feed. */
+  .feed {
+    height: 100dvh;
+    overflow-y: scroll;
+    scroll-snap-type: y mandatory;
+    scrollbar-width: none;
+    overscroll-behavior: contain;
+    -webkit-overflow-scrolling: touch;
+  }
+  .feed::-webkit-scrollbar { display: none; }
+
+  .slide {
+    position: relative;
+    height: 100dvh;
+    scroll-snap-align: start;
+    scroll-snap-stop: always;   /* one swipe = one seal, no flinging past three */
+    display: grid;
+    place-items: center;
+    overflow: hidden;
+    background: #0d2a3d;         /* letterbox colour behind a cropped photo */
+  }
+
+  .slide__img {
+    width: 100%; height: 100%;
+    object-fit: cover;
+    display: block;
+    /* The "motion": a slow pan/zoom so a still photo reads as a moving clip. */
+    animation: kenburns var(--kenburns-ms) var(--ease-snap) infinite alternate;
+    transform-origin: center;
+  }
+  @keyframes kenburns {
+    from { transform: scale(1) translate(0, 0); }
+    to   { transform: scale(1.14) translate(-2%, -1.5%); }
+  }
+
+  /* Only the active slide animates, so 20 timers don't fight for the CPU. */
+  .slide:not(.is-active) .slide__img { animation-play-state: paused; }
+
+  .slide__credit {
+    position: absolute; left: 0; right: 0; bottom: 0;
+    padding: 2.5rem 1.1rem 1.1rem;
+    display: flex; align-items: flex-end; justify-content: space-between; gap: 0.75rem;
+    background: linear-gradient(180deg, transparent, rgba(1,87,155,.6));
+    color: #fff; font-size: 0.85rem; text-shadow: 0 1px 3px rgba(0,0,0,.55);
+  }
+  .slide__credit span { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .slide__credit a { color: #fff; white-space: nowrap; }
+
+  .slide__badge {
+    position: absolute; top: 0.9rem; right: 0.9rem;
+    padding: 0.3rem 0.8rem; border-radius: 999px;
+    background: var(--glass);
+    border: 1px solid rgba(255,255,255,.9);
+    color: var(--deep); font-size: 0.8rem;
+    box-shadow: 0 6px 14px rgba(1,87,155,.18), inset 0 1px 0 #fff;
+    backdrop-filter: blur(10px);
+    -webkit-backdrop-filter: blur(10px);
+  }
+
+  .hud {
+    position: fixed; top: 0.9rem; left: 0.9rem; z-index: 5;
+    padding: 0.35rem 0.9rem; border-radius: 999px;
+    background: var(--glass);
+    border: 1px solid rgba(255,255,255,.9); color: var(--deep);
+    box-shadow: 0 6px 14px rgba(1,87,155,.18), inset 0 1px 0 #fff;
+    backdrop-filter: blur(10px);
+    -webkit-backdrop-filter: blur(10px);
+  }
+
+  .dots {
+    position: fixed; right: 0.7rem; top: 50%; transform: translateY(-50%); z-index: 5;
+    display: flex; flex-direction: column; gap: 6px;
+  }
+  .dot {
+    width: 7px; height: 7px; border-radius: 50%;
+    background: rgba(255,255,255,.6);
+    box-shadow: 0 0 0 1px rgba(1,87,155,.25);
+    transition: transform 160ms var(--ease-snap), background 160ms var(--ease-snap);
+  }
+  .dot[data-active="true"] { background: var(--deep); transform: scale(1.35); }
+
+  .message {
+    height: 100dvh; display: grid; place-items: center; text-align: center;
+    padding: 2rem; color: var(--ink-soft);
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    .feed { scroll-snap-type: none; }
+    .slide__img { animation: none; }
+    .dot { transition: none; }
+  }
+</style>
+</head>
+<body>
+  <div class="hud" id="hud">loading seals…</div>
+  <div class="dots" id="dots" aria-hidden="true"></div>
+  <div class="feed" id="feed"></div>
+  <p class="message" id="message" hidden></p>
+
+  <script type="module" src="./sealfeed.js"></script>
+</body>
+</html>
