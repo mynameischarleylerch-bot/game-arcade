@@ -202,6 +202,13 @@ test('the site shell loads its entry points with cache-busting queries', () => {
   assert.match(playHtml, /from '\.\/src\/theme-ui\.js\?v=[^"]+'/);
 });
 
+test('app.js fetches games.config.json with a cache-busting query', () => {
+  // The version must also apply to the DATA fetch, not just the script tag. Without
+  // it a renamed game kept showing the old title for ten minutes.
+  const app = readFileSync(new URL('../src/app.js', import.meta.url), 'utf8');
+  assert.match(app, /const CONFIG_URL = '\.\/games\.config\.json\?v=[^"']+'/);
+});
+
 test('the photo sits in a smaller frame rather than filling the slide', async () => {
   const { window } = await boot();
   const d = window.document;
