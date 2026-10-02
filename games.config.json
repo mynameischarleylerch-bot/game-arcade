@@ -3,8 +3,8 @@
   "games": [
     {
       "slug": "demo-snake",
-      "title": "Demo Snake",
-      "summary": "Placeholder so the player has something to load. Replace with a real game.",
+      "title": "Snake",
+      "summary": "Steer the snake, eat the food, do not bite yourself.",
       "repoUrl": "https://github.com/mynameischarleylerch-bot",
       "playUrl": "./vendor/demo-snake/index.html",
       "cover": "./assets/covers/demo-snake.svg",
@@ -18,8 +18,8 @@
     },
     {
       "slug": "demo-blocks",
-      "title": "Demo Blocks",
-      "summary": "Second placeholder: stack falling pieces and clear lines.",
+      "title": "Frutiger Falls",
+      "summary": "Stack the falling pieces and clear whole lines.",
       "repoUrl": "https://github.com/mynameischarleylerch-bot",
       "playUrl": "./vendor/demo-blocks/index.html",
       "cover": "./assets/covers/demo-blocks.svg",
