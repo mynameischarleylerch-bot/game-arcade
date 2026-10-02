@@ -5,7 +5,7 @@
   "type": "module",
   "description": "Personal arcade: my GitHub games, playable in the page.",
   "scripts": {
-    "test": "node --test \"tests/**/*.test.js\"",
+    "test": "node --test \"tests/**/*.test.js\" && node scripts/validate-config.mjs",
     "serve": "python -m http.server 8080"
   },
   "devDependencies": {
