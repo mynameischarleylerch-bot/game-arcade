@@ -171,11 +171,35 @@ test('a photo with no source renders plain text, not a dangling link', async () 
 
 test('the feed fetches its JSON with a cache-busting query', async () => {
   // Pages serves with `Cache-Control: max-age=600`; a plain './gifs.json' can come
-  // back stale for ten minutes. Capture what the module actually requests.
+  // back stale for ten minutes.
   const source = read('sealfeed.js');
   assert.match(source, /const BUILD_ID = ['"][^'"]+['"]/);
   assert.match(source, /MANIFEST_URL = `\.\/gifs\.json\?v=\$\{BUILD_ID\}`/);
   assert.match(source, /SOURCES_URL = `\.\/sources\.json\?v=\$\{BUILD_ID\}`/);
+});
+
+test('the page loads sealfeed.js with a cache-busting query', async () => {
+  // The real cause of a stale credit line: the script tag itself was unversioned,
+  // so visitors ran old JS even after the JSON had been fixed.
+  assert.match(read('index.html'), /src="\.\/sealfeed\.js\?v=[^"]+"/);
+});
+
+test('sealfeed.js imports its dependencies with cache-busting queries', () => {
+  const source = read('sealfeed.js');
+  for (const dep of ['scroll.js', 'likes.js']) {
+    assert.match(source, new RegExp(`from '\./${dep.replace('.', '\\.')}\\?v=`));
+  }
+});
+
+test('the site shell loads its entry points with cache-busting queries', () => {
+  const root = new URL('..', import.meta.url);
+  const indexHtml = readFileSync(new URL('index.html', root), 'utf8');
+  const playHtml = readFileSync(new URL('play.html', root), 'utf8');
+  assert.match(indexHtml, /src="\.\/src\/app\.js\?v=[^"]+"/);
+  assert.match(indexHtml, /from '\.\/src\/theme-ui\.js\?v=[^"]+'/);
+  assert.match(playHtml, /from '\.\/src\/play\.js\?v=[^"]+'/);
+  assert.match(playHtml, /from '\.\/src\/router\.js\?v=[^"]+'/);
+  assert.match(playHtml, /from '\.\/src\/theme-ui\.js\?v=[^"]+'/);
 });
 
 test('the photo sits in a smaller frame rather than filling the slide', async () => {

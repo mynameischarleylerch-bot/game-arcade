@@ -240,6 +240,12 @@
   </aside>
   <p class="message" id="message" hidden></p>
 
-  <script type="module" src="./sealfeed.js"></script>
+  <!--
+    Bump ?v= when sealfeed.js changes. GitHub Pages serves it with
+    `Cache-Control: max-age=600`, so an unversioned script tag leaves visitors
+    running stale JS for up to ten minutes — which is what kept the old credit
+    line on screen after the data had already been fixed.
+  -->
+  <script type="module" src="./sealfeed.js?v=2026-10-01-a"></script>
 </body>
 </html>

@@ -1,6 +1,11 @@
 /** Renders the seal feed from gifs.json and drives snap-scroll + Ken Burns. */
-import { clampIndex, nextIndex, isAdjacent } from './scroll.js';
-import { loadLikes, saveLikes, toggleLike } from './likes.js';
+/*
+ * Imports are versioned for the same reason the script tag is: a bare './x.js'
+ * can be served stale from the Pages cache, so a fix in a dependency would not
+ * reach visitors. Keep these in step with BUILD_ID.
+ */
+import { clampIndex, nextIndex, isAdjacent } from './scroll.js?v=2026-10-01-a';
+import { loadLikes, saveLikes, toggleLike } from './likes.js?v=2026-10-01-a';
 
 /*
  * GitHub Pages serves everything with `Cache-Control: max-age=600`, so a hard

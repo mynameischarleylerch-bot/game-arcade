@@ -33,8 +33,8 @@
 <p class="hint">Press <kbd>Esc</kbd> to go back. Fullscreen is the way to play.</p>
 </div>
 <script type="module">
-  import { initPlayer } from './src/play.js';
-  import { gameSlugFromSearch } from './src/router.js';
+  import { initPlayer } from './src/play.js?v=2026-10-01-a';
+  import { gameSlugFromSearch } from './src/router.js?v=2026-10-01-a';
 
   const slug = gameSlugFromSearch(window.location.search);
   const response = await fetch('./games.config.json');
@@ -42,7 +42,7 @@
   initPlayer({ window, config, slug });
 </script>
 <script type="module">
-  import { initThemeButton } from './src/theme-ui.js';
+  import { initThemeButton } from './src/theme-ui.js?v=2026-10-01-a';
   initThemeButton(window);
 </script>
 </body>
