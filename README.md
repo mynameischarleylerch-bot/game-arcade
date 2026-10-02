@@ -31,7 +31,7 @@ system: `fetch()` of `games.config.json` is blocked on `file://`.
 2. Add an entry to `games.config.json`:
 
        { "slug": "my-game", "title": "My Game", "summary": "One line.",
-         "repoUrl": "https://github.com/karin/my-game",
+         "repoUrl": "https://github.com/mynameischarleylerch-bot/my-game",
          "playUrl": "./vendor/my-game/index.html",
          "cover": "./assets/covers/my-game.svg",
          "tags": ["arcade"], "controls": "Arrow keys", "year": 2026,

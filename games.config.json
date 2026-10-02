@@ -5,7 +5,7 @@
       "slug": "demo-snake",
       "title": "Demo Snake",
       "summary": "Placeholder so the player has something to load. Replace with a real game.",
-      "repoUrl": "https://github.com/karin/demo-snake",
+      "repoUrl": "https://github.com/mynameischarleylerch-bot",
       "playUrl": "./vendor/demo-snake/index.html",
       "cover": "./assets/covers/demo-snake.svg",
       "tags": [
@@ -20,7 +20,7 @@
       "slug": "demo-blocks",
       "title": "Demo Blocks",
       "summary": "Second placeholder: stack falling pieces and clear lines.",
-      "repoUrl": "https://github.com/karin/demo-blocks",
+      "repoUrl": "https://github.com/mynameischarleylerch-bot",
       "playUrl": "./vendor/demo-blocks/index.html",
       "cover": "./assets/covers/demo-blocks.svg",
       "tags": ["puzzle"],
