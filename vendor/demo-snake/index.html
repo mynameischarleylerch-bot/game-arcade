@@ -5,11 +5,19 @@
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Demo Snake</title>
 <style>
-  html, body { margin: 0; height: 100%; background: #0d1117; color: #e6edf3;
-               font: 14px ui-monospace, monospace; overflow: hidden; }
+  /* Frutiger Aero chrome to match the site around it. */
+  html, body { margin: 0; height: 100%;
+               background: linear-gradient(180deg, #e1f5fe, #b3e5fc 55%, #f4fbff);
+               color: #06334f; font: 14px "Segoe UI", Frutiger, system-ui, sans-serif; overflow: hidden; }
   body { display: grid; place-items: center; }
-  canvas { background: #161b22; border: 1px solid #30363d; border-radius: 8px; touch-action: none; }
-  #hud { position: fixed; top: 10px; left: 12px; }
+  canvas { background: linear-gradient(180deg, #f7fdff, #d8f0fc);
+           border: 1px solid rgba(255,255,255,.9); border-radius: 12px;
+           box-shadow: 0 14px 30px rgba(1,87,155,.22), inset 0 1px 0 #fff;
+           touch-action: none; }
+  #hud { position: fixed; top: 10px; left: 12px; padding: .3rem .8rem; border-radius: 999px;
+         background: linear-gradient(180deg, rgba(255,255,255,.9), rgba(255,255,255,.5));
+         border: 1px solid rgba(255,255,255,.9); color: #01579b;
+         box-shadow: 0 6px 14px rgba(1,87,155,.18), inset 0 1px 0 #fff; }
 </style>
 </head>
 <body>
@@ -23,7 +31,6 @@
   const STEP_MS = 110;
   const STEP_HALF_MS = 55;
   const MAX_QUEUED_TURNS = 3;
-  const MIN_SNAKE_ALPHA = 0.45;
   const START_CELLS = [{ x: 8, y: 12 }, { x: 7, y: 12 }, { x: 6, y: 12 }];
 
   const canvas = document.getElementById('board');
@@ -84,14 +91,25 @@
 
   function draw() {
     ctx.clearRect(0, 0, canvas.width, canvas.height);
-    ctx.fillStyle = '#2f81f7';
-    ctx.fillRect(food.x * CELL, food.y * CELL, CELL, CELL);
-    ctx.fillStyle = '#58a6ff';
+    // Food: a glossy red orb — high contrast against the pale board.
+    ctx.fillStyle = '#e53935';
+    ctx.beginPath();
+    ctx.arc(food.x * CELL + CELL / 2, food.y * CELL + CELL / 2, CELL * 0.36, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.fillStyle = 'rgba(255,255,255,.75)';
+    ctx.beginPath();
+    ctx.arc(food.x * CELL + CELL * 0.38, food.y * CELL + CELL * 0.36, CELL * 0.11, 0, Math.PI * 2);
+    ctx.fill();
+
+    // Snake: saturated green with a lighter head, plus a gloss cap on every segment.
     snake.forEach((part, index) => {
-      ctx.globalAlpha = Math.max(MIN_SNAKE_ALPHA, 1 - index / (snake.length + 4));
-      ctx.fillRect(part.x * CELL, part.y * CELL, CELL, CELL);
+      const x = part.x * CELL;
+      const y = part.y * CELL;
+      ctx.fillStyle = index === 0 ? '#1b8a4c' : '#2e9e5b';
+      ctx.fillRect(x + 1, y + 1, CELL - 2, CELL - 2);
+      ctx.fillStyle = 'rgba(255,255,255,.42)';
+      ctx.fillRect(x + 1, y + 1, CELL - 2, (CELL - 2) * 0.42);
     });
-    ctx.globalAlpha = 1;
     if (paused && !over) hud.textContent = hudText(score, 'paused — space to resume');
   }
 

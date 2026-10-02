@@ -5,11 +5,19 @@
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Demo Blocks</title>
 <style>
-  html, body { margin: 0; height: 100%; background: #0d1117; color: #e6edf3;
-               font: 14px ui-monospace, monospace; overflow: hidden; }
+  /* Frutiger Aero chrome to match the site around it. */
+  html, body { margin: 0; height: 100%;
+               background: linear-gradient(180deg, #e1f5fe, #b3e5fc 55%, #f4fbff);
+               color: #06334f; font: 14px "Segoe UI", Frutiger, system-ui, sans-serif; overflow: hidden; }
   body { display: grid; place-items: center; }
-  canvas { background: #161b22; border: 1px solid #30363d; border-radius: 8px; touch-action: none; }
-  #hud { position: fixed; top: 10px; left: 12px; }
+  canvas { background: linear-gradient(180deg, #f7fdff, #d8f0fc);
+           border: 1px solid rgba(255,255,255,.9); border-radius: 12px;
+           box-shadow: 0 14px 30px rgba(1,87,155,.22), inset 0 1px 0 #fff;
+           touch-action: none; }
+  #hud { position: fixed; top: 10px; left: 12px; padding: .3rem .8rem; border-radius: 999px;
+         background: linear-gradient(180deg, rgba(255,255,255,.9), rgba(255,255,255,.5));
+         border: 1px solid rgba(255,255,255,.9); color: #01579b;
+         box-shadow: 0 6px 14px rgba(1,87,155,.18), inset 0 1px 0 #fff; }
 </style>
 </head>
 <body>
@@ -169,15 +177,20 @@
     hud.textContent = `game over — score ${score} · lines ${lines} · press R to restart`;
   }
 
-  function drawCell(bx, by, colour) {
-    ctx.fillStyle = colour;
-    ctx.fillRect(bx * CELL + 1, by * CELL + 1, CELL - 2, CELL - 2);
+  function drawCell(bx, by, base, gloss) {
+    const x = bx * CELL;
+    const y = by * CELL;
+    ctx.fillStyle = base;
+    ctx.fillRect(x + 1, y + 1, CELL - 2, CELL - 2);
+    // Aero gloss: bright cap over the top 40% of the cell.
+    ctx.fillStyle = gloss;
+    ctx.fillRect(x + 1, y + 1, CELL - 2, (CELL - 2) * 0.4);
   }
 
   function draw() {
     ctx.clearRect(0, 0, canvas.width, canvas.height);
     for (let y = 0; y < ROWS; y++) {
-      for (let x = 0; x < COLS; x++) if (grid[y][x]) drawCell(x, y, '#30363d');
+      for (let x = 0; x < COLS; x++) if (grid[y][x]) drawCell(x, y, '#7b5ea7', 'rgba(255,255,255,.38)');
     }
     if (over || !piece) return;
     piece.matrix.forEach((row, y) =>
@@ -185,7 +198,7 @@
         if (!filled) return;
         const by = piece.y + y;
         if (by < 0) return;
-        drawCell(piece.x + x, by, '#2f81f7');
+        drawCell(piece.x + x, by, '#0288d1', 'rgba(255,255,255,.5)');
       }),
     );
   }

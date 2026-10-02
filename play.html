@@ -8,16 +8,28 @@
 <link rel="icon" href="data:,">
 </head>
 <body class="player-page">
-<header class="player-head">
+<div class="scenery scenery--player" aria-hidden="true">
+  <div class="scenery__sun"></div>
+  <div class="scenery__cloud scenery__cloud--a"></div>
+  <div class="scenery__cloud scenery__cloud--b"></div>
+  <div class="scenery__bubble scenery__bubble--2"></div>
+  <div class="scenery__bubble scenery__bubble--4"></div>
+</div>
+
+<div class="shell">
+<header class="player-head panel">
   <a id="back" class="btn btn--ghost" href="./index.html">&larr; All games</a>
-  <h1 id="title">Loading…</h1>
-  <p id="meta" class="player-meta"></p>
-  <button id="fullscreen" class="btn" type="button">Fullscreen</button>
+  <div class="player-head__text">
+    <h1 id="title">Loading…</h1>
+    <p id="meta" class="player-meta"></p>
+  </div>
+  <button id="fullscreen" class="btn btn--aqua" type="button">Fullscreen</button>
 </header>
 <div id="stage" class="stage">
   <iframe id="frame" class="stage__frame" title="game" allow="fullscreen; autoplay; gamepad"></iframe>
 </div>
 <p class="hint">Press <kbd>Esc</kbd> to go back. Fullscreen is the way to play.</p>
+</div>
 <script type="module">
   import { initPlayer } from './src/play.js';
   import { gameSlugFromSearch } from './src/router.js';
