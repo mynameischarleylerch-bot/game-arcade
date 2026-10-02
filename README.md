@@ -119,6 +119,20 @@ photos include harbour seals and a harp seal pup as well as the three named anim
 is no reliable way to tell which is which from the image alone. Labelling a photo "Yuki"
 without certainty would put a false claim about an identifiable animal on the page.
 
+## Licence
+
+**All rights reserved.** The source code in this repository is not open source and is not
+covered by an open-source licence. You may read it, but you may not copy, modify,
+redistribute, republish, sub-license, sell, or build derivative works from it without
+written permission. See [LICENSE](LICENSE).
+
+The photographs in `vendor/seal-scroller/media/stars/` are **not** covered by that notice
+and are not open either — they are credited on screen as "The creator" and are for personal,
+non-commercial display only.
+
+The repository is public because GitHub Pages only serves public repositories on the free
+plan. That is a hosting constraint, not an invitation to reuse the code.
+
 ## Themes
 
 The **Theme:** button in the header cycles the page between five Frutiger-Family looks:
