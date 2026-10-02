@@ -97,3 +97,46 @@ filenames, titles, creators and licences for the current set.
 Photos in `vendor/seal-scroller/media/` **are committed** (about 8 MB). That is deliberate:
 the Pages workflow publishes the git checkout, so gitignored photos would ship a live site
 with broken images while every local test still passed.
+
+## Themes
+
+The **Theme:** button in the header cycles the page between five Frutiger-Family looks:
+
+| Theme | Character |
+|---|---|
+| Frutiger Aero | The original: glossy glass, aqua, sky, hills, bubbles |
+| Frutiger DORFic | Abstract and near-minimal — flat fields, thin rules, no gloss |
+| Frutiger Eco | Organic and matte — green and earth, natural surfaces |
+| Frutiger Glacier | Cold and high-key — ice blue, frosted |
+| Dark Aero | The same glass and gloss on near-black |
+
+DORFic, Eco and Glacier are established Frutiger-Family aesthetics (siblings to Frutiger
+Aero, alongside Metro, Technozen, Aurora and Jolly), each named after an Adrian Frutiger
+typeface. The palettes follow that character rather than being arbitrary colour swaps.
+
+Every colour in `styles.css` is a custom property on `:root`. Each theme is a
+`[data-theme="name"]` block that redefines **only** those properties; shape, spacing and
+motion are shared. Switching sets `data-theme` on `<html>` (`src/theme-ui.js`), so there is
+no reload and no re-render.
+
+Two deliberate limits:
+
+- **Games keep their own colours.** The theme applies to site chrome only. Each game is a
+  separate document in an `iframe`, so a parent theme cannot leak into it. Theming the
+  games would mean editing every vendored file, and they would drift apart over time.
+- **The choice is not remembered.** A fresh visit always starts on Frutiger Aero. There is
+  no `localStorage`, which also means no flash of a stale theme on load.
+
+### Adding a theme
+
+1. Add an entry to `THEMES` in `src/themes.js` (`id` must be lowercase kebab-case).
+2. Add a matching `[data-theme="id"]` block in `styles.css`.
+3. Run `npm test`. Two checks guard this:
+   - `scripts/check-themes.mjs` fails if the block does not override **every** palette
+     token on `:root`, so a partial block is caught immediately rather than shipping one
+     element that stays Aero.
+   - `scripts/check-contrast.mjs` fails if body text drops below WCAG AA (4.5:1) against the
+     background or the card surface.
+
+Both run as part of `npm test`. `color-scheme: dark` in the Dark Aero block is what makes
+form controls and scrollbars render dark too.
