@@ -92,6 +92,12 @@
   --kbd-top: #ffffff;
   --kbd-bot: #dceef8;
 
+  /* Each theme gets its own decorative backdrop. `none` keeps the plain sky.
+     Layered under .scenery, above the body gradient. */
+  --backdrop-image: none;
+  --backdrop-size: auto;
+  --backdrop-opacity: 0;
+
   /* ---- shape & motion: shared by every theme, not part of the palette --- */
   --radius: 14px;
   --radius-lg: 22px;
@@ -117,6 +123,20 @@ body {
     linear-gradient(180deg, var(--sky-top) 0%, var(--sky-mid) 38%, var(--bg-base) 72%, var(--sky-floor) 100%);
   background-attachment: fixed;
   overflow-x: hidden;
+}
+
+/* Per-theme backdrop. A separate fixed layer rather than a child of .scenery,
+   because DORFic sets --scenery-opacity to 0 and must still show its backdrop.
+   Sits below .scenery, so bubbles and hills still read on top of it. */
+.backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 0;
+  background-image: var(--backdrop-image);
+  background-size: var(--backdrop-size);
+  background-repeat: repeat;
+  opacity: var(--backdrop-opacity);
+  pointer-events: none;
 }
 
 /* ---------------------------------------------------------------- scenery */
@@ -444,85 +464,87 @@ kbd {
 
 /* ---- DORFic: abstract, near-minimal. Flat fields, thin rules, no gloss. ---- */
 [data-theme="doric"] {
-  --bg-base: #f2f2f0;
-  --sky-top: #d8d8d4;
-  --sky-mid: #e8e8e4;
-  --sky-floor: #fbfbf9;
-  --sun-tint: rgba(255, 255, 255, 0.5);
-  --sun-core: rgba(255, 255, 255, 0.6);
-  --haze-tint: rgba(255, 255, 255, 0.4);
-  --cloud-1: rgba(255, 255, 255, 0.5);
-  --cloud-2: rgba(255, 255, 255, 0.6);
-  --cloud-3: rgba(255, 255, 255, 0.5);
-  --cloud-4: rgba(255, 255, 255, 0.4);
-  --bubble-cap: rgba(255, 255, 255, 0.4);
-  --bubble-rim: rgba(0, 0, 0, 0.04);
-  --bubble-body: rgba(0, 0, 0, 0.05);
+  /* DORFic in orange: still abstract and near-minimal, but warm. Flat fields,
+     hairline rules and no gloss — the colour is the only thing that changed. */
+  --bg-base: #fdf1e3;
+  --sky-top: #f7c894;
+  --sky-mid: #fbe0c4;
+  --sky-floor: #fffaf4;
+  --sun-tint: rgba(255, 176, 92, 0.45);
+  --sun-core: rgba(255, 214, 170, 0.7);
+  --haze-tint: rgba(255, 240, 224, 0.5);
+  --cloud-1: rgba(255, 226, 194, 0.5);
+  --cloud-2: rgba(255, 236, 210, 0.6);
+  --cloud-3: rgba(255, 226, 194, 0.5);
+  --cloud-4: rgba(255, 232, 205, 0.4);
+  --bubble-cap: rgba(255, 208, 150, 0.4);
+  --bubble-rim: rgba(150, 70, 10, 0.04);
+  --bubble-body: rgba(220, 120, 40, 0.06);
   --bubble-inset: transparent;
-  --bubble-edge: rgba(0, 0, 0, 0.08);
+  --bubble-edge: rgba(150, 70, 10, 0.1);
 
-  --accent: #6b6b6b;
-  --accent-line: #4a4a4a;
-  --accent-deep: #1c1c1c;
-  --accent-soft: #e0e0dc;
+  --accent: #e07b2a;
+  --accent-line: #b85c15;
+  --accent-deep: #7a3a0d;
+  --accent-soft: #fbd9b0;
 
-  --ink: #1c1c1c;
-  --ink-soft: #56565a;
+  --ink: #3d1f08;
+  --ink-soft: #7a4c22;
   --on-accent: #ffffff;
   --sheen: transparent;
   --sheen-faint: transparent;
   --sheen-on-accent: transparent;
   --sheen-on-accent-strong: transparent;
 
-  --leaf: #5a5a56;
-  --leaf-deep: #2c2c2a;
-  --lime: #c8c8c0;
-  --featured-line: rgba(0, 0, 0, 0.35);
-  --featured-glow: rgba(0, 0, 0, 0.18);
-  --hill-far-top: #d2d2ce;
-  --hill-far-bot: #b4b4b0;
-  --hill-near-top: #c2c2be;
+  --leaf: #c2621a;
+  --leaf-deep: #7a3a0d;
+  --lime: #f0a83c;
+  --featured-line: rgba(122, 58, 13, 0.4);
+  --featured-glow: rgba(224, 123, 42, 0.22);
+  --hill-far-top: #f2b877;
+  --hill-far-bot: #d98c42;
+  --hill-near-top: #e5a05c;
 
-  --hairline: rgba(0, 0, 0, 0.14);
-  --hairline-strong: rgba(0, 0, 0, 0.2);
-  --hairline-soft: rgba(0, 0, 0, 0.1);
-  --glass-top: rgba(255, 255, 255, 0.9);
-  --glass-mid: rgba(255, 255, 255, 0.75);
-  --glass-bot: rgba(255, 255, 255, 0.65);
-  --card-top: rgba(255, 255, 255, 0.95);
-  --card-bot: rgba(255, 255, 255, 0.85);
+  --hairline: rgba(122, 58, 13, 0.16);
+  --hairline-strong: rgba(122, 58, 13, 0.24);
+  --hairline-soft: rgba(122, 58, 13, 0.1);
+  --glass-top: rgba(255, 250, 244, 0.92);
+  --glass-mid: rgba(255, 246, 235, 0.78);
+  --glass-bot: rgba(253, 238, 220, 0.68);
+  --card-top: rgba(255, 252, 247, 0.96);
+  --card-bot: rgba(253, 242, 229, 0.88);
 
-  --shadow-panel: 0 1px 0 rgba(0, 0, 0, 0.08);
-  --shadow-card: 0 1px 0 rgba(0, 0, 0, 0.07);
-  --shadow-lift: 0 2px 0 rgba(0, 0, 0, 0.1);
+  --shadow-panel: 0 1px 0 rgba(122, 58, 13, 0.1);
+  --shadow-card: 0 1px 0 rgba(122, 58, 13, 0.09);
+  --shadow-lift: 0 2px 0 rgba(122, 58, 13, 0.12);
   --shadow-edge: 0 0 0 transparent;
-  --shadow-chip: 0 1px 0 rgba(0, 0, 0, 0.12);
-  --shadow-chip-hover: 0 1px 0 rgba(0, 0, 0, 0.16);
-  --shadow-chip-active: 0 1px 0 rgba(0, 0, 0, 0.2);
-  --shadow-btn: 0 1px 0 rgba(0, 0, 0, 0.12);
-  --shadow-btn-hover: 0 2px 0 rgba(0, 0, 0, 0.16);
-  --shadow-accent: 0 1px 0 rgba(0, 0, 0, 0.14);
-  --shadow-accent-hover: 0 2px 0 rgba(0, 0, 0, 0.18);
+  --shadow-chip: 0 1px 0 rgba(122, 58, 13, 0.14);
+  --shadow-chip-hover: 0 1px 0 rgba(122, 58, 13, 0.18);
+  --shadow-chip-active: 0 1px 0 rgba(122, 58, 13, 0.22);
+  --shadow-btn: 0 1px 0 rgba(122, 58, 13, 0.14);
+  --shadow-btn-hover: 0 2px 0 rgba(122, 58, 13, 0.18);
+  --shadow-accent: 0 1px 0 rgba(122, 58, 13, 0.16);
+  --shadow-accent-hover: 0 2px 0 rgba(122, 58, 13, 0.2);
   --shadow-bubble: none;
-  --shadow-hero: 0 1px 0 rgba(0, 0, 0, 0.06);
-  --shadow-divider: rgba(0, 0, 0, 0.1);
-  --shadow-kbd: rgba(0, 0, 0, 0.2);
-  --shadow-error: 0 1px 0 rgba(122, 31, 31, 0.2);
+  --shadow-hero: 0 1px 0 rgba(122, 58, 13, 0.08);
+  --shadow-divider: rgba(122, 58, 13, 0.12);
+  --shadow-kbd: rgba(122, 58, 13, 0.22);
+  --shadow-error: 0 1px 0 rgba(140, 40, 10, 0.22);
 
-  --repo-top: #d4d4d0;
-  --tag-top: #e8e8e4;
-  --tag-bot: #d4d4d0;
+  --repo-top: #fbd9b0;
+  --tag-top: #fbe0c4;
+  --tag-bot: #f5c99b;
 
-  --error-ink: #7a1f1f;
-  --error-top: rgba(255, 240, 240, 0.95);
-  --error-bot: rgba(250, 226, 226, 0.9);
-  --error-line: rgba(122, 31, 31, 0.28);
+  --error-ink: #8a2c0a;
+  --error-top: rgba(255, 240, 230, 0.95);
+  --error-bot: rgba(252, 226, 210, 0.9);
+  --error-line: rgba(138, 44, 10, 0.3);
 
-  --stage-top: #ffffff;
-  --stage-bot: #eeeeea;
+  --stage-top: #fffaf4;
+  --stage-bot: #fbe6d2;
   --stage-full: #000000;
-  --kbd-top: #ffffff;
-  --kbd-bot: #eeeeea;
+  --kbd-top: #fffdfa;
+  --kbd-bot: #fbe6d2;
 
   /* Flatten the gloss and drop the scenery — DORFic's defining traits. */
   --gloss-strength: 0;
@@ -789,4 +811,52 @@ kbd {
 
   --gloss-strength: 0.7;
   --scenery-opacity: 0.5;
+}
+/* ---- Per-theme backdrops --------------------------------------------------
+   Pure CSS gradients, no image files and no extra requests. Each theme gets a
+   different texture so switching is obvious even at a glance. */
+
+[data-theme="aero"] {
+  /* Faint concentric ripples — reads as sky/water without competing. */
+  --backdrop-image:
+    repeating-radial-gradient(circle at 50% 120%, rgba(255, 255, 255, 0.5) 0 2px, transparent 2px 90px);
+  --backdrop-size: auto;
+  --backdrop-opacity: 0.35;
+}
+
+[data-theme="doric"] {
+  /* DORFic is geometric: a hard diagonal grid, the abstract counterpoint to Aero's curves. */
+  --backdrop-image:
+    repeating-linear-gradient(45deg, rgba(224, 123, 42, 0.10) 0 1px, transparent 1px 28px),
+    repeating-linear-gradient(-45deg, rgba(224, 123, 42, 0.10) 0 1px, transparent 1px 28px);
+  --backdrop-size: auto;
+  --backdrop-opacity: 1;
+}
+
+[data-theme="eco"] {
+  /* Organic: soft dappled blobs, like light through leaves. */
+  --backdrop-image:
+    radial-gradient(circle at 18% 22%, rgba(79, 125, 46, 0.16) 0 12%, transparent 45%),
+    radial-gradient(circle at 78% 68%, rgba(127, 174, 92, 0.14) 0 14%, transparent 48%),
+    radial-gradient(circle at 46% 88%, rgba(181, 217, 74, 0.12) 0 10%, transparent 40%);
+  --backdrop-size: auto;
+  --backdrop-opacity: 1;
+}
+
+[data-theme="glacier"] {
+  /* Angular ice facets: long thin diagonals at two angles. */
+  --backdrop-image:
+    repeating-linear-gradient(72deg, rgba(127, 196, 232, 0.14) 0 1px, transparent 1px 44px),
+    repeating-linear-gradient(-72deg, rgba(255, 255, 255, 0.5) 0 1px, transparent 1px 66px);
+  --backdrop-size: auto;
+  --backdrop-opacity: 0.9;
+}
+
+[data-theme="dark-aero"] {
+  /* A faint hex-ish dot grid plus a city-glow gradient from below. */
+  --backdrop-image:
+    radial-gradient(ellipse at 50% 130%, rgba(41, 182, 246, 0.22) 0%, transparent 55%),
+    radial-gradient(circle, rgba(255, 255, 255, 0.07) 1px, transparent 1px);
+  --backdrop-size: auto, 34px 34px;
+  --backdrop-opacity: 1;
 }
