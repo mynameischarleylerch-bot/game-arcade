@@ -68,7 +68,9 @@ test('featuredGames and allTags', () => {
     games: [validGame({ featured: true }), validGame({ slug: 'blocks', tags: ['puzzle', 'arcade'] })],
   };
   assert.deepEqual(featuredGames(config).map((g) => g.slug), ['snake']);
-  assert.deepEqual(allTags(config), ['arcade', 'puzzle']);
+  // validGame's default tags are ['arcade', 'canvas']; this one overrides them with ['puzzle', 'arcade'],
+  // so the union across both games is arcade + canvas + puzzle.
+  assert.deepEqual(allTags(config), ['arcade', 'canvas', 'puzzle']);
 });
 
 test('tolerates a missing or empty games array', () => {
