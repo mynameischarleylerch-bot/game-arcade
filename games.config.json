@@ -1,0 +1,20 @@
+{
+  "version": 1,
+  "games": [
+    {
+      "slug": "demo-snake",
+      "title": "Demo Snake",
+      "summary": "Placeholder so the player has something to load. Replace with a real game.",
+      "repoUrl": "https://github.com/karin/demo-snake",
+      "playUrl": "./vendor/demo-snake/index.html",
+      "cover": "./assets/covers/demo-snake.svg",
+      "tags": [
+        "arcade",
+        "canvas"
+      ],
+      "controls": "Arrow keys / WASD",
+      "year": 2026,
+      "featured": true
+    }
+  ]
+}
