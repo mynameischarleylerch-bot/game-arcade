@@ -33,7 +33,7 @@ export function initPlayer({ window, config, slug, onExit = null }) {
 
   titleEl.textContent = game.title;
   metaEl.textContent = `${game.controls} · ${game.year}`;
-  document.title = `${game.title} — Arcade`;
+  document.title = `${game.title} — Aero Arcade`;
   frameEl.setAttribute('src', game.playUrl);
   frameEl.setAttribute('title', game.title);
 

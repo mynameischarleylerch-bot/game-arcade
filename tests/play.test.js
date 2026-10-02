@@ -32,7 +32,7 @@ test('loads the game into the iframe and fills in the chrome', () => {
   assert.equal(document.getElementById('frame').getAttribute('src'), './vendor/demo-snake/index.html');
   assert.equal(document.getElementById('title').textContent, 'Demo Snake');
   assert.match(document.getElementById('meta').textContent, /Arrow keys/);
-  assert.equal(document.title, 'Demo Snake — Arcade');
+  assert.equal(document.title, 'Demo Snake — Aero Arcade');
 });
 
 test('shows an error state for an unknown slug instead of a blank page', () => {
