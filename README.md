@@ -74,17 +74,33 @@ Giphy's public beta key returns `403 BANNED` and Tenor rejects unauthenticated c
 redistributing downloaded GIFs conflicts with Giphy's terms. Openverse content exists for
 this kind of reuse, and every slide credits its creator and licence on screen.
 
-`scripts/fetch-seals.mjs` excludes three things on purpose:
+### Which seals
 
-- **Wax and official seals** — bare "seal" searches return civic crests and stamps, which
-  are documents, not animals. Filtered by title, using seal-specific search terms.
+Every photo is a **ringed-group seal of the genus *Pusa*** — ringed (*P. hispida*),
+bearded (*P. barbata*), hooded (*P. fasciata*), and the Caspian seal, which is what
+**bakail** refers to. Earlier versions of this feed mixed in harbour seal pups and fur
+seals; those are *Phoca* and *Otariidae*, not *Pusa*, so the search terms changed to name the
+genus and species directly rather than the word "seal".
+
+One species may contribute at most 5 photos, so a single well-ranked species cannot fill the
+whole feed.
+
+`scripts/fetch-seals.mjs` excludes several things on purpose:
+
+- **Wax and official seals, and museum artefacts** — searches legitimately return civic
+  crests, wax matrices, "medieval ring seal", and even seal-skin trousers. A rejected list
+  covers both documents and objects, plus clipart, maps and taxonomic diagrams.
+- **Anything that is not positively a ringed-group seal** — the title must actually name a
+  ringed, bearded or hooded seal. This is what stops an unrelated but legally reusable
+  photo from slipping in.
 - **`by-nd` ("no derivatives") images** — the feed crops and scales every photo, which is an
   adaptation, so those licences cannot be used here.
 - **Uncredited photos** — anything without a creator is dropped, since attribution is
   mandatory under the licences that remain.
-
-It also rejects anything under 25 KB that is not a JPEG, which catches placeholder
-thumbnails and mislabelled PNGs.
+- **Unusable files** — under 25 KB, not a JPEG, under 320px on either edge (catches
+  placeholder thumbnails and mislabelled PNGs), or over 700 KB (the original unrestricted
+  run pulled 2.5 MB files and the feed hit 31 MB; it is now about 6 MB with no visible
+  difference).
 
 Refresh or change the feed:
 
