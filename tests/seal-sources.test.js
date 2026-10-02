@@ -26,6 +26,7 @@ async function boot() {
   });
 
   window.eval(read('scroll.js').replace(/export /g, ''));
+  window.eval(read('likes.js').replace(/export /g, ''));
   window.eval(read('sealfeed.js').replace(/^import .*$/gm, '').replace(/export /g, ''));
   await new Promise((resolve) => setTimeout(resolve, 300));
   return dom;
@@ -86,9 +87,62 @@ test('the three named animals render with working links', async () => {
   }
 });
 
-test('the feed still renders alongside the panel', async () => {
+test('the feed renders every slide with a credit and a like button', async () => {
   const { window } = await boot();
   const d = window.document;
-  assert.equal(d.querySelectorAll('.slide').length, 20);
-  assert.ok([...d.querySelectorAll('.slide')].every((s) => !!s.querySelector('.slide__credit')));
+  const slides = [...d.querySelectorAll('.slide')];
+  assert.equal(slides.length, 20);
+  assert.ok(slides.every((s) => !!s.querySelector('.slide__credit')));
+  assert.ok(slides.every((s) => !!s.querySelector('img.slide__img')));
+  assert.equal(d.querySelectorAll('.like').length, 20);
+});
+
+test('the feed never reveals how many seals there are', async () => {
+  const { window } = await boot();
+  const d = window.document;
+  const html = d.getElementById('feed').innerHTML;
+  // No "1 / 20"-style counter, no one-dot-per-seal, and no total in the HUD.
+  assert.ok(!/\d+\s*\/\s*\d+/.test(html), 'no n/total counter in the markup');
+  assert.equal(d.querySelectorAll('.slide__badge').length, 0);
+  assert.equal(d.querySelectorAll('.dot').length, 1, 'a single progress dot, not one per seal');
+  assert.doesNotMatch(d.getElementById('hud').textContent, /\d/);
+});
+
+test('the like button toggles and records the state', async () => {
+  const { window } = await boot();
+  const d = window.document;
+  const button = d.querySelector('.like[data-like="0"]');
+
+  assert.equal(button.getAttribute('aria-pressed'), 'false');
+  assert.equal(button.querySelector('.like__count').textContent, '0');
+
+  button.dispatchEvent(new window.Event('click', { bubbles: true }));
+  assert.equal(button.getAttribute('aria-pressed'), 'true');
+  assert.ok(button.classList.contains('is-liked'));
+  assert.equal(button.querySelector('.like__count').textContent, '1');
+
+  button.dispatchEvent(new window.Event('click', { bubbles: true }));
+  assert.equal(button.getAttribute('aria-pressed'), 'false');
+  assert.equal(button.querySelector('.like__count').textContent, '0');
+});
+
+test('each slide can be liked independently', async () => {
+  const { window } = await boot();
+  const d = window.document;
+  const first = d.querySelector('.like[data-like="0"]');
+  const third = d.querySelector('.like[data-like="2"]');
+  first.dispatchEvent(new window.Event('click', { bubbles: true }));
+  third.dispatchEvent(new window.Event('click', { bubbles: true }));
+  assert.equal(first.getAttribute('aria-pressed'), 'true');
+  assert.equal(third.getAttribute('aria-pressed'), 'true');
+  assert.equal(d.querySelector('.like[data-like="1"]').getAttribute('aria-pressed'), 'false');
+});
+
+test('the photo sits in a smaller frame rather than filling the slide', async () => {
+  const { window } = await boot();
+  const d = window.document;
+  const frame = d.querySelector('.slide__frame');
+  assert.ok(frame, 'slide__frame wrapper exists');
+  // The image is a child of the frame, so the frame can constrain its size.
+  assert.ok(frame.querySelector('img.slide__img'));
 });

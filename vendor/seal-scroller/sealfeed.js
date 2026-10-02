@@ -1,5 +1,6 @@
 /** Renders the seal feed from gifs.json and drives snap-scroll + Ken Burns. */
 import { clampIndex, nextIndex, isAdjacent } from './scroll.js';
+import { loadLikes, saveLikes, toggleLike } from './likes.js';
 
 const MANIFEST_URL = './gifs.json';
 const SOURCES_URL = './sources.json';
@@ -28,14 +29,22 @@ function showMessage(text) {
 }
 
 function renderSlides(items) {
+  // No counter anywhere: the badge and the dots both leaked the total, so the
+  // feed is an endless-feeling scroll rather than a finite list.
   feedEl.innerHTML = items
     .map(
       (item, index) => `
       <section class="slide" data-index="${index}" aria-label="${escapeHtml(item.title)}">
-        <img class="slide__img" src="./media/${escapeHtml(item.file)}"
-             alt="${escapeHtml(item.title)}" loading="${index <= PRELOAD_RADIUS ? 'eager' : 'lazy'}"
-             decoding="async" draggable="false">
-        <span class="slide__badge">${index + 1} / ${items.length}</span>
+        <div class="slide__frame">
+          <img class="slide__img" src="./media/${escapeHtml(item.file)}"
+               alt="${escapeHtml(item.title)}" loading="${index <= PRELOAD_RADIUS ? 'eager' : 'lazy'}"
+               decoding="async" draggable="false">
+        </div>
+        <button class="like" type="button" data-like="${index}" aria-pressed="false"
+                aria-label="Like this seal">
+          <span class="like__icon" aria-hidden="true">&#9829;</span>
+          <span class="like__count">0</span>
+        </button>
         <div class="slide__credit">
           <span>${escapeHtml(item.title)}</span>
           <a href="${escapeHtml(item.source)}" target="_blank" rel="noopener noreferrer">
@@ -47,13 +56,10 @@ function renderSlides(items) {
     .join('');
 }
 
-function renderDots(items, active) {
-  dotsEl.innerHTML = items
-    .map(
-      (item, index) =>
-        `<span class="dot" data-active="${index === active}" title="${escapeHtml(item.title)}"></span>`,
-    )
-    .join('');
+/* The dots used to render one per seal, which gave the total away. Removed. */
+function renderProgress(active) {
+  dotsEl.innerHTML = `<span class="dot dot--active"></span>`;
+  dotsEl.setAttribute('aria-hidden', 'true');
 }
 
 function setActive(index, items) {
@@ -65,8 +71,46 @@ function setActive(index, items) {
     // Only neighbours are worth decoding; the rest stay lazy.
     img.loading = isAdjacent(slideIndex, active, PRELOAD_RADIUS) ? 'eager' : 'lazy';
   }
-  renderDots(items, active);
-  hudEl.textContent = `${active + 1} / ${items.length} seals`;
+  renderProgress(active);
+  // Deliberately no "n / total" here — the feed should not advertise its length.
+  hudEl.textContent = items.length > 0 ? 'seal' : '';
+}
+
+/**
+ * Likes are per slide index and persist in localStorage. The count shown on a
+ * slide is the number of likes THAT seal has, which does not reveal the total
+ * number of seals in the feed.
+ */
+let likes = new Set();
+
+function renderLike(index) {
+  const button = feedEl.querySelector(`.like[data-like="${index}"]`);
+  if (!button) return;
+  const liked = likes.has(index);
+  button.setAttribute('aria-pressed', String(liked));
+  button.classList.toggle('is-liked', liked);
+  const count = button.querySelector('.like__count');
+  if (count) count.textContent = liked ? '1' : '0';
+}
+
+function bindLikes() {
+  const storage = window.localStorage;
+  likes = loadLikes(storage);
+
+  feedEl.addEventListener('click', (event) => {
+    const button = event.target.closest('.like');
+    if (!button) return;
+    event.stopPropagation(); // don't let a tap also scroll the feed
+    const index = Number(button.dataset.like);
+    if (!Number.isInteger(index)) return;
+    likes = toggleLike(likes, index);
+    saveLikes(storage, likes);
+    renderLike(index);
+  });
+
+  for (const slide of feedEl.querySelectorAll('.slide')) {
+    renderLike(Number(slide.dataset.index));
+  }
 }
 
 const slideHeight = () => feedEl.clientHeight || 1;
@@ -182,6 +226,7 @@ async function main() {
   renderSlides(items);
   setActive(0, items);
   bindScroll(items);
+  bindLikes();
   loadSources();
 }
 

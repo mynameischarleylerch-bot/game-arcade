@@ -46,6 +46,18 @@
     background: #0d2a3d;         /* letterbox colour behind a cropped photo */
   }
 
+  /* The photo is deliberately smaller than the slide: a framed picture on the
+     Aero backdrop rather than a full-bleed wallpaper. */
+  .slide__frame {
+    width: min(72%, 30rem);
+    aspect-ratio: 4 / 5;
+    border-radius: 18px;
+    overflow: hidden;
+    border: 1px solid rgba(255,255,255,.9);
+    background: #0d2a3d;
+    box-shadow: 0 18px 40px rgba(1,87,155,.28), inset 0 1px 0 rgba(255,255,255,.35);
+  }
+
   .slide__img {
     width: 100%; height: 100%;
     object-fit: cover;
@@ -58,6 +70,35 @@
     from { transform: scale(1) translate(0, 0); }
     to   { transform: scale(1.14) translate(-2%, -1.5%); }
   }
+
+  /* Like button — bottom-left of the slide, clear of the credit line. */
+  .like {
+    position: absolute;
+    left: 1.1rem; bottom: 4.2rem; z-index: 4;
+    display: inline-flex; align-items: center; gap: 0.4rem;
+    padding: 0.4rem 0.9rem;
+    border-radius: 999px;
+    border: 1px solid rgba(255,255,255,.9);
+    background: linear-gradient(180deg, rgba(255,255,255,.9), rgba(255,255,255,.6));
+    color: var(--deep);
+    font: inherit; font-size: 0.9rem;
+    cursor: pointer;
+    box-shadow: 0 8px 18px rgba(1,87,155,.2), inset 0 1px 0 #fff;
+    backdrop-filter: blur(10px);
+    -webkit-backdrop-filter: blur(10px);
+    transition: transform 140ms ease, box-shadow 140ms ease, background 140ms ease;
+  }
+  .like:hover { transform: translateY(-1px); }
+  .like:active { transform: translateY(0); }
+  .like:focus-visible { outline: 3px solid var(--deep); outline-offset: 2px; }
+  .like__icon { font-size: 1.05rem; line-height: 1; color: var(--ink-soft); }
+  .like.is-liked {
+    background: linear-gradient(180deg, #ff8fa3, #e9405f);
+    border-color: rgba(255,255,255,.95);
+    box-shadow: 0 8px 20px rgba(233,64,95,.4), inset 0 1px 0 rgba(255,255,255,.5);
+  }
+  .like.is-liked .like__icon { color: #fff; }
+  .like.is-liked .like__count { color: #fff; }
 
   /* Only the active slide animates, so 20 timers don't fight for the CPU. */
   .slide:not(.is-active) .slide__img { animation-play-state: paused; }
@@ -72,16 +113,7 @@
   .slide__credit span { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
   .slide__credit a { color: #fff; white-space: nowrap; }
 
-  .slide__badge {
-    position: absolute; top: 0.9rem; right: 0.9rem;
-    padding: 0.3rem 0.8rem; border-radius: 999px;
-    background: var(--glass);
-    border: 1px solid rgba(255,255,255,.9);
-    color: var(--deep); font-size: 0.8rem;
-    box-shadow: 0 6px 14px rgba(1,87,155,.18), inset 0 1px 0 #fff;
-    backdrop-filter: blur(10px);
-    -webkit-backdrop-filter: blur(10px);
-  }
+  /* The "n / total" badge was removed: it advertised the length of the feed. */
 
   .hud {
     position: fixed; top: 0.9rem; left: 0.9rem; z-index: 5;
@@ -93,17 +125,16 @@
     -webkit-backdrop-filter: blur(10px);
   }
 
+  /* A single small marker, not one dot per seal. */
   .dots {
     position: fixed; right: 0.7rem; top: 50%; transform: translateY(-50%); z-index: 5;
     display: flex; flex-direction: column; gap: 6px;
   }
   .dot {
     width: 7px; height: 7px; border-radius: 50%;
-    background: rgba(255,255,255,.6);
+    background: var(--deep);
     box-shadow: 0 0 0 1px rgba(1,87,155,.25);
-    transition: transform 160ms var(--ease-snap), background 160ms var(--ease-snap);
   }
-  .dot[data-active="true"] { background: var(--deep); transform: scale(1.35); }
 
   .message {
     height: 100dvh; display: grid; place-items: center; text-align: center;
