@@ -1,0 +1,31 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Arcade — loading</title>
+<link rel="stylesheet" href="./styles.css">
+<link rel="icon" href="data:,">
+</head>
+<body class="player-page">
+<header class="player-head">
+  <a id="back" class="btn btn--ghost" href="./index.html">&larr; All games</a>
+  <h1 id="title">Loading…</h1>
+  <p id="meta" class="player-meta"></p>
+  <button id="fullscreen" class="btn" type="button">Fullscreen</button>
+</header>
+<div id="stage" class="stage">
+  <iframe id="frame" class="stage__frame" title="game" allow="fullscreen; autoplay; gamepad"></iframe>
+</div>
+<p class="hint">Press <kbd>Esc</kbd> to go back. Fullscreen is the way to play.</p>
+<script type="module">
+  import { initPlayer } from './src/play.js';
+  import { gameSlugFromSearch } from './src/router.js';
+
+  const slug = gameSlugFromSearch(window.location.search);
+  const response = await fetch('./games.config.json');
+  const config = await response.json();
+  initPlayer({ window, config, slug });
+</script>
+</body>
+</html>
