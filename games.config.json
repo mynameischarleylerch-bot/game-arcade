@@ -29,6 +29,21 @@
       "featured": false
     },
     {
+      "slug": "fru-angler",
+      "title": "Frutiger Angler",
+      "summary": "Cast, wait for the bite, and keep the line inside the bar.",
+      "repoUrl": "https://github.com/mynameischarleylerch-bot",
+      "playUrl": "./vendor/fru-angler/index.html",
+      "cover": "./assets/covers/fru-angler.svg",
+      "tags": [
+        "fishing",
+        "simulator"
+      ],
+      "controls": "Hold space or press and hold to cast, then reel",
+      "year": 2026,
+      "featured": false
+    },
+    {
       "slug": "seal-scroller",
       "title": "Seal Scroller",
       "summary": "An endless vertical feed of seals, panning slowly past.",

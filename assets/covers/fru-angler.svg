@@ -1,0 +1,41 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="320" height="180" viewBox="0 0 320 180" role="img" aria-label="Frutiger Angler">
+  <defs>
+    <linearGradient id="fa-sky" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#b3e5fc"/><stop offset="1" stop-color="#f4fbff"/>
+    </linearGradient>
+    <linearGradient id="fa-water" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#7fc4e8"/><stop offset="1" stop-color="#2f81c4"/>
+    </linearGradient>
+    <linearGradient id="fa-fish" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#4ade80"/><stop offset="1" stop-color="#15803d"/>
+    </linearGradient>
+  </defs>
+
+  <rect width="320" height="180" fill="url(#fa-sky)"/>
+  <circle cx="272" cy="28" r="30" fill="#fff4a3" opacity=".85"/>
+
+  <!-- water -->
+  <path d="M0 104 Q80 88 160 100 T320 96 L320 180 L0 180 Z" fill="url(#fa-water)"/>
+  <g fill="#ffffff" opacity=".22">
+    <rect x="18" y="122" width="52" height="4" rx="2"/>
+    <rect x="96" y="140" width="40" height="4" rx="2"/>
+    <rect x="212" y="128" width="46" height="4" rx="2"/>
+    <rect x="58" y="158" width="34" height="4" rx="2"/>
+  </g>
+
+  <!-- rod -->
+  <path d="M40 152 L128 58" stroke="#7a4a22" stroke-width="5" stroke-linecap="round"/>
+  <path d="M128 58 Q170 76 178 108" stroke="#cfe6f5" stroke-width="2" fill="none" opacity=".9"/>
+
+  <!-- bobber -->
+  <circle cx="178" cy="110" r="8" fill="#e53935"/>
+  <circle cx="175.5" cy="107.5" r="2.6" fill="#fff" opacity=".85"/>
+
+  <!-- leaping fish -->
+  <path d="M198 76 q23 -17 46 0 q-23 17 -46 0 Z" fill="url(#fa-fish)"/>
+  <path d="M198 76 l-15 -11 v22 Z" fill="#166534"/>
+  <circle cx="225" cy="72" r="2.4" fill="#06334f"/>
+  <g fill="#ffffff" opacity=".38"><rect x="209" y="72" width="21" height="5" rx="2.5"/></g>
+
+  <text x="16" y="30" fill="#01579b" font-family="Segoe UI, sans-serif" font-size="17" font-weight="600">frutiger angler</text>
+</svg>
