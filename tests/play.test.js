@@ -67,6 +67,30 @@ test('Escape exits to the index', () => {
   assert.deepEqual(exits, ['./index.html']);
 });
 
+test('Escape exits even while focus is inside the game iframe', () => {
+  const dom = makeDom();
+  const exits = [];
+  initPlayer({ window: dom.window, config: { games: [game] }, slug: 'demo-snake', onExit: (url) => exits.push(url) });
+  const frame = dom.window.document.getElementById('frame');
+  frame.dispatchEvent(new dom.window.Event('load'));
+  // Same-origin, so the shell can reach into the game's document.
+  const gameDocument = frame.contentDocument;
+  gameDocument.dispatchEvent(new dom.window.KeyboardEvent('keydown', { key: 'Escape', bubbles: true }));
+  assert.deepEqual(exits, ['./index.html']);
+});
+
+test('the in-iframe Escape handler leaves game keys alone', () => {
+  const dom = makeDom();
+  const exits = [];
+  initPlayer({ window: dom.window, config: { games: [game] }, slug: 'demo-snake', onExit: (url) => exits.push(url) });
+  const frame = dom.window.document.getElementById('frame');
+  frame.dispatchEvent(new dom.window.Event('load'));
+  const arrow = new dom.window.KeyboardEvent('keydown', { key: 'ArrowUp', cancelable: true });
+  frame.contentDocument.dispatchEvent(arrow);
+  assert.equal(arrow.defaultPrevented, false);
+  assert.deepEqual(exits, []);
+});
+
 test('does not hijack keys that belong to the game', () => {
   const dom = makeDom();
   initPlayer({ window: dom.window, config: { games: [game] }, slug: 'demo-snake' });

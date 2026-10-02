@@ -48,8 +48,21 @@ export function initPlayer({ window, config, slug, onExit = null }) {
   // without depending on jsdom, which does not implement real page navigation.
   const exit = onExit ?? (() => window.location.assign(backUrl()));
 
-  document.addEventListener('keydown', (event) => {
+  const onKeydown = (event) => {
     if (event.key !== ESCAPE_KEY) return; // every other key belongs to the game
     exit(backUrl());
+  };
+  document.addEventListener('keydown', onKeydown);
+
+  // While the game has focus, keystrokes land in the iframe and never bubble to
+  // the shell — so Esc has to be handled there too. Games are same-origin under
+  // vendor/, which is what makes this reachable; a cross-origin game would just
+  // not get an Esc handler and the Back button covers it.
+  frameEl.addEventListener('load', () => {
+    try {
+      frameEl.contentDocument?.addEventListener('keydown', onKeydown);
+    } catch {
+      // Cross-origin frame: unreachable by design, not an error worth surfacing.
+    }
   });
 }
