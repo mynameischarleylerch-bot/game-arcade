@@ -158,7 +158,15 @@ browser. `angler.js` only turns their output into pixels.
 The header carries a Messenger-style contact card: your avatar with a status dot, the classic
 status list (Online, Busy, Be right back, Away, On the phone, Out to lunch, Appear offline,
 Offline) and an editable nickname. Open it and pick any of **sixteen display pictures** from
-the 4x4 grid Messenger used. It is Aero glass, so it follows whichever theme is active, and
+the 4x4 grid Messenger used.
+
+Each avatar is the Messenger butterfly: a single continuous silhouette with one big round head
+merged into a body that bulges into shoulder lobes, pinches, then flares to a rounded base. No
+legs, no arms, no hands, no separate parts — and deliberately not stretched: the figure is
+68 wide by 79 tall in a square 96px box, so it reads as a solid little figure rather than an
+oval. The background is transparent so it sits on the site's glass, and all sixteen share the
+same path, differing only in colour. They are drawn by `scripts/gen-avatars.mjs` from a single
+`FIGURE` constant; change that one path and all sixteen follow. It is Aero glass, so it follows whichever theme is active, and
 the choice persists in `localStorage`.
 
 Rules live in `src/messenger.js` (statuses, the avatar table, storage repair), rendering in

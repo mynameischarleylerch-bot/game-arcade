@@ -1,6 +1,6 @@
 /** Boots the arcade index: load registry, validate, render, wire tag filters. */
-import { validateConfig, filterByTag, allTags } from './config.js?v=2026-10-01-d';
-import { renderGrid, renderTagFilters } from './render.js?v=2026-10-01-d';
+import { validateConfig, filterByTag, allTags } from './config.js?v=2026-10-01-e';
+import { renderGrid, renderTagFilters } from './render.js?v=2026-10-01-e';
 
 /*
  * Versioned for the same reason as the script tags: Pages serves
@@ -8,7 +8,7 @@ import { renderGrid, renderTagFilters } from './render.js?v=2026-10-01-d';
  * up to ten minutes after you change it — a rename appears to do nothing. Bump
  * this in the same commit as any games.config.json edit.
  */
-const CONFIG_URL = './games.config.json?v=2026-10-01-c';
+const CONFIG_URL = './games.config.json?v=2026-10-01-e';
 
 async function loadConfig() {
   const response = await fetch(CONFIG_URL);

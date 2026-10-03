@@ -12,6 +12,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
+import { globSync } from 'node:fs';
 import { BUILD, versioned } from '../src/build.js';
 import { AVATARS } from '../src/messenger.js';
 
@@ -105,5 +106,36 @@ test('every registered game has a real play target and cover', () => {
   for (const game of config.games) {
     assert.match(game.playUrl, /^\.\//, `${game.slug}: playUrl must be same-origin and relative`);
     assert.match(game.cover, /^\.\//, `${game.slug}: cover must be same-origin and relative`);
+  }
+});
+
+
+test('every module uses the same BUILD stamp, with no drift', () => {
+  // Two files on one stale stamp is exactly how the Aero restyle shipped as
+  // "nothing changed": the stamp exists per file, so it can fall out of step.
+  // Scoped to src/: the tests hold fixture strings such as '?v=old'.
+  const files = globSync(
+    new URL('../src/*.js', import.meta.url).pathname.replace(/^\/([A-Za-z]:)/, '$1'),
+  );
+  const offenders = [];
+  for (const file of files) {
+    const src = readFileSync(file, 'utf8');
+    const stamps = new Set([...src.matchAll(/\?v=([A-Za-z0-9._-]+)/g)].map((m) => m[1]));
+    // Stamps that are not the current build are drift.
+    for (const stamp of stamps) {
+      if (stamp !== BUILD) offenders.push(`${file.split(/[\\/]/).pop()}: ${stamp}`);
+    }
+  }
+  assert.deepEqual(offenders, [],
+    `these files are not on BUILD ${BUILD}:\n${offenders.join('\n')}`);
+});
+
+test('both HTML pages are on the current BUILD', () => {
+  for (const page of ['index.html', 'play.html']) {
+    const html = readFileSync(new URL(`../${page}`, import.meta.url), 'utf8');
+    const stamps = new Set([...html.matchAll(/\?v=([A-Za-z0-9._-]+)/g)].map((m) => m[1]));
+    for (const stamp of stamps) {
+      assert.equal(stamp, BUILD, `${page} carries a stale stamp: ${stamp}`);
+    }
   }
 });
