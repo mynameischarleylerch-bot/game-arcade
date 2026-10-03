@@ -3,6 +3,7 @@ import assert from 'node:assert/strict';
 import {
   RODS, FISH, castQuality, castDistance, biteDelayFor, rollFish, rollMutation,
   fishWeight, catchValue, canCatch, buyRod, startingLoadout,
+  startingInventory, ownsRod, addRodToInventory, equipRod, rodArt, RODS_BY_PRICE,
 } from '../vendor/fru-angler/fishing.js';
 
 test('the starting wallet can afford exactly one upgrade from the cheapest rod', () => {
@@ -147,4 +148,119 @@ test('fish are ordered from common to mythical', () => {
   for (let i = 1; i < ranks.length; i += 1) {
     assert.ok(ranks[i] >= ranks[i - 1], 'rarity must not go backwards down the table');
   }
+});
+
+
+/* ------------------------------------------------------------- inventory */
+
+/**
+ * Buying a rod has to put it somewhere. Previously a purchase simply overwrote the
+ * equipped rod, so there was no inventory: you owned exactly one rod and could not
+ * go back to an earlier one.
+ */
+
+test('you start owning only the starting rod', () => {
+  const inv = startingInventory();
+  assert.deepEqual(inv, ['bamboo']);
+  assert.ok(ownsRod(inv, 'bamboo'));
+  assert.equal(ownsRod(inv, 'willow'), false);
+});
+
+test('buying a rod adds it to the inventory and equips it', () => {
+  const inv = startingInventory();
+  const bought = addRodToInventory(inv, 'willow');
+  assert.ok(ownsRod(bought, 'willow'), 'the new rod is owned');
+  assert.ok(ownsRod(bought, 'bamboo'), 'the old one is kept');
+  assert.equal(bought.length, 2);
+});
+
+test('buying the same rod twice does not duplicate it', () => {
+  let inv = startingInventory();
+  inv = addRodToInventory(inv, 'willow');
+  inv = addRodToInventory(inv, 'willow');
+  assert.equal(inv.filter((id) => id === 'willow').length, 1);
+  assert.equal(inv.length, 2);
+});
+
+test('an unknown rod cannot enter the inventory', () => {
+  const inv = addRodToInventory(startingInventory(), 'hypercarbon');
+  assert.deepEqual(inv, ['bamboo']);
+});
+
+test('you can equip any rod you own', () => {
+  let inv = startingInventory();
+  inv = addRodToInventory(inv, 'willow');
+  assert.equal(equipRod(inv, 'willow').rodId, 'willow');
+  // and go back to the one you started with
+  assert.equal(equipRod(inv, 'bamboo').rodId, 'bamboo');
+});
+
+test('you cannot equip a rod you do not own', () => {
+  const inv = startingInventory();
+  const result = equipRod(inv, 'titan');
+  assert.equal(result.rodId, 'bamboo', 'an unaffordable/unowned rod is refused');
+  assert.equal(result.ok, false);
+  assert.match(result.reason, /own/i);
+});
+
+test('the inventory keeps its rods in price order', () => {
+  let inv = startingInventory();
+  for (const id of ['titan', 'willow', 'oak']) inv = addRodToInventory(inv, id);
+  const prices = inv.map((id) => RODS[id].price);
+  assert.deepEqual(prices, [...prices].sort((a, b) => a - b), `not sorted: ${prices}`);
+});
+
+/* -------------------------------------------------------------- rod art */
+
+/**
+ * Each rod has to look different, or equipping one changes nothing visible.
+ */
+test('every rod has distinct artwork', () => {
+  const seen = new Set();
+  for (const id of Object.keys(RODS)) {
+    const art = rodArt(id);
+    assert.ok(art, `${id} has no art`);
+    assert.match(art.path, /^M[\d.]+ [\d.]+ L[\d.]+ [\d.]+$/, `${id}: bad rod path "${art.path}"`);
+    assert.match(art.colour, /^#[0-9a-f]{6}$/i, `${id}: bad colour ${art.colour}`);
+    assert.ok(art.width > 0.4, `${id}: rod is too thin to see`);
+    seen.add(art.path + art.colour);
+  }
+  assert.equal(seen.size, Object.keys(RODS).length, 'rods must look different from each other');
+});
+
+test('each rod gets longer and thicker as it is upgraded', () => {
+  const ids = Object.values(RODS_BY_PRICE);
+  for (let i = 1; i < ids.length; i += 1) {
+    const cheaper = rodArt(ids[i - 1]);
+    const dearer = rodArt(ids[i]);
+    assert.ok(dearer.width >= cheaper.width,
+      `${ids[i]} should not be thinner than ${ids[i - 1]}`);
+  }
+});
+
+test('the lure sits at the end of the rod it belongs to', () => {
+  // The lure is a disc nudged just past the tip so it caps the rod rather than
+  // hiding inside it. Anything more than a unit away would float or overlap.
+  for (const id of Object.keys(RODS)) {
+    const art = rodArt(id);
+    const end = art.path.split('L')[1].trim().split(/\s+/).map(Number);
+    assert.ok(Math.abs(art.tipX - end[0]) <= 1,
+      `${id}: tip x ${art.tipX} is off the rod end ${end[0]}`);
+    assert.ok(Math.abs(art.tipY - end[1]) <= 1,
+      `${id}: tip y ${art.tipY} is off the rod end ${end[1]}`);
+    assert.ok(art.tipX >= end[0] && art.tipY <= end[1],
+      `${id}: the lure should sit up-and-right of the tip, along the rod`);
+  }
+});
+
+test('an unknown rod falls back to the starting rod art', () => {
+  assert.deepEqual(rodArt('nonsense'), rodArt('bamboo'));
+});
+
+test('RODS_BY_PRICE lists every rod from cheapest to dearest', () => {
+  assert.equal(RODS_BY_PRICE.length, Object.keys(RODS).length);
+  for (let i = 1; i < RODS_BY_PRICE.length; i += 1) {
+    assert.ok(RODS[RODS_BY_PRICE[i]].price > RODS[RODS_BY_PRICE[i - 1]].price);
+  }
+  assert.equal(RODS_BY_PRICE[0], 'bamboo');
 });

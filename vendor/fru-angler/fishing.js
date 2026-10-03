@@ -64,6 +64,43 @@ export const RODS = {
   },
 };
 
+/**
+ * How each rod is drawn in the scene: its length, thickness and colour, plus where
+ * the lure ends up. Without this, buying a rod changed the numbers but not a single
+ * pixel on screen. Coordinates are the scene's percentage space, running from the
+ * angler's shoulder at (40.7, 52) up and to the right.
+ *
+ * Upgrades get longer and thicker, so the progression is legible at a glance.
+ */
+const ROD_LOOKS = {
+  bamboo: { path: 'M40.7 52 L52 40', width: 1.1, colour: '#c8a06a' },
+  willow: { path: 'M40.7 52 L55 35', width: 1.5, colour: '#a9714a' },
+  carbon: { path: 'M40.7 52 L58 31', width: 1.9, colour: '#4a6b7c' },
+  oak: { path: 'M40.7 52 L61 27', width: 2.4, colour: '#7d4f2e' },
+  titan: { path: 'M40.7 52 L64 23', width: 3.0, colour: '#8c9aa8' },
+};
+
+const LURE_OFFSET = 0.6;   // nudge the lure just past the tip so it sits on the end
+
+/** Tip coordinates are derived from the path, never typed twice. */
+function withTip(look) {
+  const end = look.path.split('L')[1].trim().split(/\s+/).map(Number);
+  return { ...look, tipX: end[0] + LURE_OFFSET, tipY: end[1] - LURE_OFFSET };
+}
+
+export const ROD_ART = Object.fromEntries(
+  Object.entries(ROD_LOOKS).map(([id, look]) => [id, withTip(look)]),
+);
+
+/** The scene art for a rod, falling back to the starting rod for anything unknown. */
+export function rodArt(rodId) {
+  return ROD_ART[rodId] ?? ROD_ART.bamboo;
+}
+
+/** Every rod id, cheapest first. The shop and the inventory both list them in order. */
+export const RODS_BY_PRICE = Object.keys(RODS)
+  .sort((a, b) => RODS[a].price - RODS[b].price);
+
 /* ------------------------------------------------------------------- fish */
 
 /**
@@ -195,6 +232,38 @@ export function buyRod(wallet, rodId) {
     return { ...wallet, ok: false, reason: 'Not enough coins.' };
   }
   return { ok: true, rodId, coins: wallet.coins - rod.price };
+}
+
+/* ------------------------------------------------------------- inventory */
+
+/** The rods you own, cheapest first. Everyone starts with the bamboo pole. */
+export function startingInventory() {
+  return ['bamboo'];
+}
+
+export function ownsRod(inventory, rodId) {
+  return Array.isArray(inventory) && inventory.includes(rodId);
+}
+
+/**
+ * Put a rod in the bag. Never duplicates, always keeps price order so the shop can
+ * list owned and unowned rods together without sorting twice.
+ */
+export function addRodToInventory(inventory, rodId) {
+  const owned = Array.isArray(inventory) ? inventory.filter((id) => RODS[id]) : [];
+  if (!RODS[rodId] || owned.includes(rodId)) return [...owned];
+  return [...owned, rodId].sort((a, b) => RODS[a].price - RODS[b].price);
+}
+
+/**
+ * Equip an owned rod. This is free and separate from buying, which is the point of
+ * an inventory: you can go back to an earlier rod without paying again.
+ */
+export function equipRod(inventory, rodId) {
+  if (!ownsRod(inventory, rodId)) {
+    return { rodId: inventory?.[0] ?? 'bamboo', ok: false, reason: 'You do not own that rod.' };
+  }
+  return { rodId, ok: true };
 }
 
 /* ------------------------------------------------------------- bestiary */

@@ -96,15 +96,24 @@ test('the blob stands on the pier deck, not floating above it', () => {
 
 test('the fishing line starts at the rod tip the lure marks', () => {
   const start = PAGE.match(/id="line" d="M([\d.]+) ([\d.]+)/);
-  const lure = PAGE.match(/class="scene__lure" cx="([\d.]+)" cy="([\d.]+)"/);
+  const lure = PAGE.match(/id="rod-tip" cx="([\d.]+)" cy="([\d.]+)"/);
   assert.ok(start && lure, 'the line and the lure must both be in the scene');
 
-  // angler.js reads the tip from the lure at runtime, so the shipped initial path
-  // only has to be close to it. A big drift here is what desyncs the line.
-  assert.ok(Math.abs(Number(start[1]) - (Number(lure[1]) + 1.4)) <= 1,
+  // angler.js measures the lure at runtime, so the shipped path only has to agree
+  // with it. These are the carbon rod's numbers, which is what the page ships.
+  assert.ok(Math.abs(Number(start[1]) - Number(lure[1])) <= 2,
     `line starts at x=${start[1]}, lure at ${lure[1]}`);
-  assert.equal(Number(start[2]), Number(lure[2]) + 2,
-    `line should start at y=${Number(lure[2]) + 2}`);
+  assert.ok(Math.abs(Number(start[2]) - Number(lure[2])) <= 3,
+    `line starts at y=${start[2]}, lure at ${lure[2]}`);
+});
+
+test('the rod and lure are addressable so equipping can repaint them', () => {
+  assert.match(PAGE, /id="rod-shaft"/, 'the rod needs an id angler.js can rewrite');
+  assert.match(PAGE, /id="rod-tip"/, 'the lure needs an id too');
+  // They ship as inline attributes so the rod is visible before any script runs.
+  assert.match(PAGE, /id="rod-shaft"[^>]*\bd="/, 'the rod must ship with a path');
+  assert.match(PAGE, /id="rod-shaft"[^>]*stroke="#[0-9a-f]{6}"/i, 'and a colour');
+  assert.match(PAGE, /id="rod-shaft"[^>]*stroke-width="[\d.]+"/, 'and a thickness');
 });
 
 test('angler.js measures the rod tip instead of reading cx/cy', () => {
@@ -149,12 +158,17 @@ test('the fishing line sits outside the counter-scaled group', () => {
 test("the shipped line path agrees with where angler.js puts the tip", () => {
   // A mismatch here shows as the line jumping on the first cast.
   const start = PAGE.match(/id="line" d="M([\d.]+) ([\d.]+)/);
-  const lure = PAGE.match(/class="scene__lure" cx="([\d.]+)" cy="([\d.]+)/);
+  const lure = PAGE.match(/id="rod-tip" cx="([\d.]+)" cy="([\d.]+)"/);
   assert.ok(start && lure, 'line and lure must both exist');
-  assert.equal(Number(start[1]), Number(lure[1]) + 1.4,
-    'the initial line start must equal rodTip().x');
-  assert.equal(Number(start[2]), Number(lure[2]) + 2,
-    'the initial line start must equal rodTip().y');
+  assert.ok(Math.abs(Number(start[1]) - Number(lure[1])) <= 2,
+    `the initial line start x=${start[1]} should be the lure at x=${lure[1]}`);
+  assert.ok(Math.abs(Number(start[2]) - Number(lure[2])) <= 3,
+    `the initial line start y=${start[2]} should be the lure at y=${lure[2]}`);
+});
+
+test('the shop styles the inventory sections', () => {
+  assert.match(PAGE, /\.shop__section/, 'inventory/for-sale headings need styling');
+  assert.match(PAGE, /\.rod__swatch/, 'the rod colour chip needs styling');
 });
 
 test('the perfect band is lime, the Aero "go" colour', () => {

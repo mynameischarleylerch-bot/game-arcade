@@ -230,7 +230,8 @@ test('the shop lists every rod and a purchase upgrades the equipped one', async 
 test('progress and wallet survive a reload', async () => {
   const first = await boot(8);
   localStorage.setItem('fru-angler-save', JSON.stringify({
-    coins: 4321, rodId: 'carbon', bestiary: { glidefin: 1.87 },
+    coins: 4321, rodId: 'carbon', owned: ['bamboo', 'carbon'],
+    bestiary: { glidefin: 1.87 },
   }));
   // Re-import a fresh instance against the same JSDOM storage.
   await import('../vendor/fru-angler/angler.js?run=8b');
@@ -316,4 +317,93 @@ test('a landed fish shows rarity as filled blocks, not colour', async () => {
   const filled = [...pips].filter((p) => p.classList.contains('is-on'));
   assert.ok(filled.length >= 1 && filled.length <= 5);
   assert.match(ctx.doc.getElementById('catch-rarity').getAttribute('aria-label'), /Rarity \d of 5/);
+});
+
+
+/* ------------------------------------------------------------ inventory */
+
+const shopRow = (ctx, rodId) =>
+  ctx.doc.querySelector(`#shop-list .rod[data-rod="${rodId}"]`);
+
+const rodAppearance = (ctx) => ({
+  shaft: ctx.doc.getElementById('rod-shaft').getAttribute('stroke'),
+  width: ctx.doc.getElementById('rod-shaft').getAttribute('stroke-width'),
+  d: ctx.doc.getElementById('rod-shaft').getAttribute('d'),
+  tip: ctx.doc.getElementById('rod-tip').getAttribute('cx'),
+});
+
+test('the shop separates your rods from the ones for sale', async () => {
+  const ctx = await boot(14);
+  ctx.doc.getElementById('shop-open').click();
+  const headings = [...ctx.doc.querySelectorAll('.shop__section')].map((h) => h.textContent);
+  assert.match(headings[0], /Your rods \(1\)/, `headings were ${JSON.stringify(headings)}`);
+  assert.ok(headings.some((h) => /For sale/.test(h)), 'there must be a for-sale section');
+  assert.ok(shopRow(ctx, 'bamboo'), 'the starting rod is in your rods');
+  assert.ok(shopRow(ctx, 'willow'), 'and other rods are for sale');
+});
+
+test('a rod you own can be re-equipped for free', async () => {
+  const ctx = await boot(15, 0.1);
+  ctx.doc.getElementById('shop-open').click();
+  // Buy the willow with the starting wallet (it starts with exactly its price).
+  shopRow(ctx, 'willow').click();
+
+  assert.equal(shopRow(ctx, 'willow').dataset.state, 'equipped', 'buying equips it');
+  const coinsAfterBuy = Number(text(ctx, 'coins'));
+
+  // Now go back to the bamboo pole: no cost, still in the inventory.
+  shopRow(ctx, 'bamboo').click();
+  assert.equal(text(ctx, 'rod'), 'Bamboo Pole');
+  assert.equal(Number(text(ctx, 'coins')), coinsAfterBuy, 're-equipping must be free');
+  assert.ok(shopRow(ctx, 'willow'), 'the willow is still owned after re-equipping');
+});
+
+test('the visible rod changes when you equip a different one', async () => {
+  const ctx = await boot(16);
+  const before = rodAppearance(ctx);
+  assert.match(text(ctx, 'rod'), /Bamboo Pole/);
+
+  ctx.doc.getElementById('shop-open').click();
+  shopRow(ctx, 'willow').click();
+
+  const after = rodAppearance(ctx);
+  assert.match(text(ctx, 'rod'), /Willow Rod/);
+  assert.notEqual(after.shaft, before.shaft, 'the rod colour must change');
+  assert.notEqual(after.d, before.d, 'the rod shape/length must change');
+  assert.ok(Number(after.width) > Number(before.width), 'and the better rod is thicker');
+  assert.notEqual(after.tip, before.tip, 'the lure moves to the new tip');
+});
+
+test('the rod in the scene matches the equipped rod after a reload', async () => {
+  const ctx = await boot(17);
+  localStorage.setItem('fru-angler-save', JSON.stringify({
+    coins: 5000, rodId: 'oak', owned: ['bamboo', 'willow', 'oak'], bestiary: {},
+  }));
+  await import('../vendor/fru-angler/angler.js?run=17b');
+
+  assert.match(text(ctx, 'rod'), /Oak Lance/);
+  const art = rodAppearance(ctx);
+  assert.equal(art.shaft, '#7d4f2e', 'the oak rod colour must be drawn after reload');
+  assert.equal(art.width, '2.4');
+});
+
+test('a save with a rod you do not own falls back rather than equipping it', async () => {
+  const ctx = await boot(18);
+  localStorage.setItem('fru-angler-save', JSON.stringify({
+    coins: 10, rodId: 'titan', owned: ['bamboo'], bestiary: {},
+  }));
+  await import('../vendor/fru-angler/angler.js?run=18b');
+
+  assert.match(text(ctx, 'rod'), /Bamboo Pole/,
+    'the HUD must not claim a rod the save does not own');
+});
+
+test('a save with no inventory at all still loads', async () => {
+  const ctx = await boot(19);
+  localStorage.setItem('fru-angler-save', JSON.stringify({ coins: 99, bestiary: {} }));
+  await import('../vendor/fru-angler/angler.js?run=19b');
+  assert.match(text(ctx, 'rod'), /Bamboo Pole/);
+  ctx.doc.getElementById('shop-open').click();
+  assert.match(ctx.doc.querySelector('.shop__section').textContent, /Your rods \(1\)/,
+    'an old save gets the starting rod only');
 });

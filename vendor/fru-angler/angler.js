@@ -9,10 +9,11 @@ import {
   RODS, FISH, RARITY_ORDER, RARITY_COLOURS,
   castQuality, castDistance, biteDelayFor, rollFish, rollMutation,
   fishWeight, canCatch, catchValue, startingLoadout, buyRod, recordCatch,
-} from './fishing.js?v=2026-10-01-h';
+  startingInventory, ownsRod, addRodToInventory, equipRod, rodArt, RODS_BY_PRICE,
+} from './fishing.js?v=2026-10-01-i';
 import {
   reelConfig, stepReel as advance, reelOutcomeFor, isCaught, lineSnapped,
-} from './reel.js?v=2026-10-01-h';
+} from './reel.js?v=2026-10-01-i';
 
 /* ------------------------------------------------------------------ tuning */
 
@@ -39,6 +40,7 @@ const ui = {
   coins: el('coins'), rod: el('rod'), rodStats: el('rod-stats'), bestiary: el('bestiary'),
   message: el('message'),
   line: el('line'),
+  rodShaft: el('rod-shaft'), rodTipDot: el('rod-tip'),
   rarity: el('catch-rarity'),
 };
 
@@ -47,6 +49,7 @@ const ui = {
 const state = {
   phase: 'idle',        // idle | casting | waiting | reeling | result
   rodId: 'bamboo',
+  owned: startingInventory(),   // everything bought so far; rodId is one of these
   coins: 0,
   meter: 0,
   holding: false,
@@ -70,7 +73,15 @@ function load() {
     if (!raw) return;
     const saved = JSON.parse(raw);
     if (Number.isFinite(saved.coins) && saved.coins >= 0) state.coins = saved.coins;
-    if (RODS[saved.rodId]) state.rodId = saved.rodId;
+    // Repair the inventory before trusting the equipped rod: a save from before
+    // this feature has no 'owned' list at all.
+    state.owned = startingInventory();
+    if (Array.isArray(saved.owned)) {
+      for (const id of saved.owned) state.owned = addRodToInventory(state.owned, id);
+    }
+    // Only equip something actually owned, otherwise the HUD would lie.
+    if (RODS[saved.rodId] && ownsRod(state.owned, saved.rodId)) state.rodId = saved.rodId;
+    else if (!ownsRod(state.owned, state.rodId)) state.rodId = state.owned[0];
     if (saved.bestiary && typeof saved.bestiary === 'object') state.bestiary = saved.bestiary;
   } catch {
     // Corrupt or blocked storage: the fresh loadout above already stands.
@@ -80,7 +91,7 @@ function load() {
 function save() {
   try {
     localStorage.setItem(SAVE_KEY, JSON.stringify({
-      coins: state.coins, rodId: state.rodId, bestiary: state.bestiary,
+      coins: state.coins, rodId: state.rodId, owned: state.owned, bestiary: state.bestiary,
     }));
   } catch {
     // Storage blocked: the session still plays, it just will not persist.
@@ -88,6 +99,20 @@ function save() {
 }
 
 /* ------------------------------------------------------------------ chrome */
+
+/** Draw the equipped rod. This is what makes buying a rod visible. */
+function paintRod() {
+  const art = rodArt(state.rodId);
+  ui.rodShaft?.setAttribute('d', art.path);
+  ui.rodShaft?.setAttribute('stroke', art.colour);
+  ui.rodShaft?.setAttribute('stroke-width', String(art.width));
+  ui.rodTipDot?.setAttribute('cx', String(art.tipX));
+  ui.rodTipDot?.setAttribute('cy', String(art.tipY));
+  ui.rodTipDot?.setAttribute('fill', art.colour);
+  ui.rodTipDot?.setAttribute('r', String(1 + art.width / 3));
+  // The line starts at the rod's new tip, so move it there immediately.
+  placeBobber(parseFloat(ui.bobber.style.left) || 60, parseFloat(ui.bobber.style.top) || 70);
+}
 
 function paintChrome() {
   const current = rod();
@@ -98,6 +123,7 @@ function paintChrome() {
     `luck ${current.luck.toFixed(1)} · up to ${current.maxKg} kg`;
   const found = Object.keys(state.bestiary).length;
   ui.bestiary.textContent = `${found}/${FISH.length} species landed`;
+  paintRod();
 }
 
 function setPhase(phase) {
@@ -324,36 +350,82 @@ function loseFish(reason) {
 
 /* -------------------------------------------------------------------- shop */
 
+/**
+ * The shop lists the inventory and the catalogue separately: what you own (and can
+ * re-equip for free) above, what you could buy below.
+ */
 function renderShop() {
   ui.shopCoins.textContent = state.coins;
   ui.shopList.textContent = '';
 
-  for (const r of Object.values(RODS)) {
-    const equipped = r.id === state.rodId;
-    const affordable = state.coins >= r.price;
+  const owned = new Set(state.owned);
+  const makeRow = (id, isOwned) => {
+    const spec = RODS[id];
+    const equipped = id === state.rodId;
+    const art = rodArt(id);
+    const affordable = state.coins >= spec.price;
+
     const button = document.createElement('button');
     button.type = 'button';
     button.className = `rod${equipped ? ' rod--equipped' : ''}`;
-    button.disabled = equipped || !affordable;
+    button.dataset.rod = id;
+    button.dataset.state = equipped ? 'equipped' : isOwned ? 'owned' : 'unowned';
+    // Equipping is always allowed once you own it; buying needs the coins.
+    button.disabled = equipped || (!isOwned && !affordable);
+
+    const tag = equipped ? 'equipped' : isOwned ? 'equip' : affordable ? 'buy' : 'not enough coins';
     button.innerHTML =
-      `<span class="rod__row"><span>${r.name}</span><span>¤${r.price}</span></span>` +
-      `<span class="rod__stats">control ${r.control.toFixed(2)} · resilience ${r.resilience.toFixed(2)} · ` +
-      `luck ${r.luck.toFixed(1)} · max ${r.maxKg} kg</span>` +
-      `<span class="rod__blurb">${r.blurb}</span>` +
-      `<span class="rod__stats">${equipped ? 'equipped' : affordable ? 'buy' : 'not enough coins'}</span>`;
+      `<span class="rod__row"><span>${spec.name}</span>` +
+      `<span>${isOwned ? '<i class="rod__swatch" style="background:' + art.colour + '"></i>' : '¤' + spec.price}</span></span>`
+      + `<span class="rod__stats">control ${spec.control.toFixed(2)} · resilience ${spec.resilience.toFixed(2)} · `
+      + `luck ${spec.luck.toFixed(1)} · max ${spec.maxKg} kg</span>`
+      + `<span class="rod__blurb">${spec.blurb}</span>`
+      + `<span class="rod__state">${tag}</span>`;
+
     button.addEventListener('click', () => {
-      const result = buyRod(state, r.id);
-      if (!result.ok) {
-        button.textContent = result.reason;
-        return;
+      if (isOwned) {
+        const result = equipRod(state.owned, id);
+        if (!result.ok) return;
+        state.rodId = result.rodId;
+      } else {
+        const result = buyRod(state, id);
+        if (!result.ok) {
+          button.querySelector('.rod__state').textContent = result.reason;
+          return;
+        }
+        state.coins = result.coins;
+        state.owned = addRodToInventory(state.owned, id);
+        state.rodId = id;
       }
-      state.coins = result.coins;
-      state.rodId = result.rodId;
       save();
       paintChrome();
       renderShop();
     });
-    ui.shopList.appendChild(button);
+
+    return button;
+  };
+
+  const heading = (text) => {
+    const h = document.createElement('h3');
+    h.className = 'shop__section';
+    h.textContent = text;
+    ui.shopList.appendChild(h);
+  };
+
+  heading(`Your rods (${state.owned.length})`);
+  for (const id of RODS_BY_PRICE) {
+    if (ownsRod(state.owned, id)) ui.shopList.appendChild(makeRow(id, true));
+  }
+
+  const forSale = RODS_BY_PRICE.filter((id) => !ownsRod(state.owned, id));
+  heading('For sale');
+  for (const id of forSale) ui.shopList.appendChild(makeRow(id, false));
+
+  if (forSale.length === 0) {
+    const done = document.createElement('p');
+    done.className = 'shop__owned-all';
+    done.textContent = 'You own every rod in the game.';
+    ui.shopList.appendChild(done);
   }
 }
 
