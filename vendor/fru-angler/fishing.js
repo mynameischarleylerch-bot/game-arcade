@@ -1147,7 +1147,7 @@ export function lostItemsFor(areaId) {
   return LOST_ITEMS.filter((i) => i.water === areaId).sort((a, b) => a.value - b.value);
 }
 
-/* -------------------------------------------------------------- the creel */
+/* -------------------------------------------------------------- the bag */
 
 /**
  * What a landed fish is, in the bag.
@@ -1155,11 +1155,11 @@ export function lostItemsFor(areaId) {
  * A catch used to pay rod coins the instant it came over the side
  * (`state.coins += value`), so the player never chose anything: every fish was
  * sold the moment it existed, and a bag of them would have been a list of things
- * that had already been spent. A catch now sits in the creel until you do one of
+ * that had already been spent. A catch now sits in the bag until you do one of
  * two things with it -- sell it for rod coins, or feed it to your seal for bond.
  *
  * `mutation` is stored rather than baked into `value`, because the multiplier is
- * how the fish was landed and the creel has to show and sell it as that fish.
+ * how the fish was landed and the bag has to show and sell it as that fish.
  */
 export function fishEntrySpec(fish, weight, mutation = null) {
   return {
@@ -1170,35 +1170,35 @@ export function fishEntrySpec(fish, weight, mutation = null) {
   };
 }
 
-/** Put a fish in the creel. Never mutates: the save holds one array, not a log. */
-export function addToCreel(creel, entry) {
-  const owned = Array.isArray(creel) ? creel.filter((e) => e && FISH.some((f) => f.id === e.fishId)) : [];
+/** Put a fish in the bag. Never mutates: the save holds one array, not a log. */
+export function addToBag(bag, entry) {
+  const owned = Array.isArray(bag) ? bag.filter((e) => e && FISH.some((f) => f.id === e.fishId)) : [];
   if (!entry || !FISH.some((f) => f.id === entry.fishId)) return [...owned];
   return [...owned, { ...entry }];
 }
 
-/** What one creel entry is worth in rod coins, mutation included. */
-export function creelEntryValue(entry) {
+/** What one bag entry is worth in rod coins, mutation included. */
+export function bagEntryValue(entry) {
   const fish = FISH.find((f) => f.id === entry?.fishId);
   if (!fish) return 0;
   return catchValue(fish, entry.weight, entry.multiplier ?? 1);
 }
 
-/** The whole creel, in rod coins. Shown so selling is never a surprise. */
-export function creelWorth(creel) {
-  return (Array.isArray(creel) ? creel : []).reduce((sum, e) => sum + creelEntryValue(e), 0);
+/** The whole bag, in rod coins. Shown so selling is never a surprise. */
+export function bagWorth(bag) {
+  return (Array.isArray(bag) ? bag : []).reduce((sum, e) => sum + bagEntryValue(e), 0);
 }
 
 /** Sell one fish. Takes out exactly that one and pays exactly that one. */
-export function sellFromCreel(creel, index) {
-  const owned = Array.isArray(creel) ? creel : [];
+export function sellFromBag(bag, index) {
+  const owned = Array.isArray(bag) ? bag : [];
   if (!Number.isInteger(index) || index < 0 || index >= owned.length) {
-    return { ok: false, reason: 'No such fish in the creel.' };
+    return { ok: false, reason: 'No such fish in the bag.' };
   }
   return {
     ok: true,
-    creel: owned.filter((_, i) => i !== index),
-    coins: creelEntryValue(owned[index]),
+    bag: owned.filter((_, i) => i !== index),
+    coins: bagEntryValue(owned[index]),
   };
 }
 
@@ -1221,10 +1221,10 @@ export function bondLuck(fed) {
  * Bond is per seal, not global: feeding Tangerine does nothing for Bubbles, so a
  * player with two seals has to pick who they are raising.
  */
-export function feedToBond(creel, index, bond = {}, sealId = null) {
-  const owned = Array.isArray(creel) ? creel : [];
+export function feedToBond(bag, index, bond = {}, sealId = null) {
+  const owned = Array.isArray(bag) ? bag : [];
   if (!Number.isInteger(index) || index < 0 || index >= owned.length) {
-    return { ok: false, reason: 'No such fish in the creel.' };
+    return { ok: false, reason: 'No such fish in the bag.' };
   }
   // Bond is keyed by SEAL, not by fish. The first version keyed it by the fish
   // being fed, so feeding four different Glidefins gave four bonds of one rather
@@ -1235,7 +1235,7 @@ export function feedToBond(creel, index, bond = {}, sealId = null) {
   const current = bondCount(bond, sealId);
   return {
     ok: true,
-    creel: owned.filter((_, i) => i !== index),
+    bag: owned.filter((_, i) => i !== index),
     bond: { ...bond, [sealId]: current + 1 },
     fed: owned[index],
   };
@@ -1246,11 +1246,11 @@ export function bondCount(bond, sealId) {
   return Math.max(0, Number(bond?.[sealId]) || 0);
 }
 
-/** Total rod coins in a creel, by seal, so the dock can show what each is worth. */
-export function creelWorthByFish(creel) {
+/** Total rod coins in a bag, by seal, so the dock can show what each is worth. */
+export function bagWorthByFish(bag) {
   const out = new Map();
-  for (const entry of Array.isArray(creel) ? creel : []) {
-    out.set(entry.fishId, (out.get(entry.fishId) ?? 0) + creelEntryValue(entry));
+  for (const entry of Array.isArray(bag) ? bag : []) {
+    out.set(entry.fishId, (out.get(entry.fishId) ?? 0) + bagEntryValue(entry));
   }
   return out;
 }

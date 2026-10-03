@@ -13,7 +13,7 @@ import { readFileSync } from 'node:fs';
 import { JSDOM } from 'jsdom';
 import { FISH, RARITY_ORDER, fishIndex, hookLineFor, AREAS,
          RODS, RODS_BY_PRICE, SEALS, startingLoadout, TIMES, WEATHER, LOST_ITEMS,
-} from '../vendor/fru-angler/fishing.js?v=2026-10-03-y';
+} from '../vendor/fru-angler/fishing.js?v=2026-10-03-z';
 
 const PAGE = readFileSync(
   new URL('../vendor/fru-angler/index.html', import.meta.url),
@@ -24,6 +24,22 @@ const PAGE = readFileSync(
  * Boot a fresh instance. Each call gets its own JSDOM, virtual clock and module
  * instance (the ?run= query defeats Node's ES module cache).
  */
+/**
+ * The source of one function, up to the next `function` declaration.
+ *
+ * The idiom these tests used was `src.slice(...).slice(0, body.indexOf('\n}\n'))`.
+ * That terminator never matches in a CRLF file, so the slice ran to the end of the
+ * file and the assertions silently tested whatever came after. Three tests were
+ * green against the wrong text.
+ */
+function fnSource(src, name) {
+  const start = src.indexOf(`function ${name}`);
+  if (start === -1) throw new Error(`no such function: ${name}`);
+  const rest = src.slice(start + 1);
+  const next = /\n(?:async )?function [A-Za-z]/.exec(rest);
+  return next ? rest.slice(0, next.index + 1) : rest;
+}
+
 async function boot(run = 1, randomValue = 0.1, seed = null) {
   const dom = new JSDOM(PAGE, { url: 'http://localhost:8080/vendor/fru-angler/index.html' });
   const win = dom.window;
@@ -188,7 +204,7 @@ test('the bobber travels and a bite eventually opens the minigame', async () => 
   assert.match(text(ctx, 'rod-stats'), /control .*resilience .*luck .*kg/);
 });
 
-test('a tracking player lands the fish into the creel, and the bestiary updates', async () => {
+test('a tracking player lands the fish into the bag, and the bestiary updates', async () => {
   const ctx = await boot(4, 0.1);   // pinned to a Glidefin: fight 0.35, easy to hold
   const before = Number(text(ctx, 'coins'));
 
@@ -219,11 +235,11 @@ test('a tracking player lands the fish into the creel, and the bestiary updates'
     'the card states rarity and weight: ' + meta);
   assert.match(text(ctx, 'catch-value'), /^\u00a4 \d+$/);
 
-  // It no longer pays: a landed fish waits in the creel. The card still shows what
+  // It no longer pays: a landed fish waits in the bag. The card still shows what
   // it WOULD sell for, because that is what the sell button will pay.
   assert.equal(Number(text(ctx, 'coins')), before,
-    'landing a fish must not pay out -- it goes in the creel');
-  assert.equal(text(ctx, 'creel-count'), '(1)', 'and the creel badge must show it');
+    'landing a fish must not pay out -- it goes in the bag');
+  assert.equal(text(ctx, 'bag-count'), '(1)', 'and the bag badge must show it');
   assert.equal(text(ctx, 'bestiary'), `1/${FISH.length} species landed`);
 });
 
@@ -1166,7 +1182,7 @@ test('nothing on a catch reaches the wallet, junk or fish', async () => {
   await landOne(ctx, 71);
   const coinsAfter = Number(ctx.doc.getElementById('coins').textContent);
 
-  // A cast pays nothing at all now: the fish waits in the creel and the junk waits
+  // A cast pays nothing at all now: the fish waits in the bag and the junk waits
   // in the finds bag. Both are sold deliberately, in two different currencies.
   assert.equal(coinsAfter, coinsBefore,
     `landing a fish must not move the rod wallet, moved ${coinsBefore} -> ${coinsAfter}`);
@@ -1773,8 +1789,7 @@ test('a notice never wipes the one before it', async () => {
   // real behaviour end to end: a catch with a seal and junk in the water must leave
   // a find notice standing and the item still in the bag.
   const src = readFileSync(new URL('../vendor/fru-angler/angler.js', import.meta.url), 'utf8');
-  const fn = src.slice(src.indexOf('function notify('));
-  const body = fn.slice(0, fn.indexOf('\n}\n'));
+  const body = fnSource(src, 'notify(');
   assert.match(body, /appendChild\(card\)/, 'notices must be appended');
   assert.doesNotMatch(body, /ui\.notify\.textContent\s*=\s*''/,
     'clearing the container would erase whatever came before it');
@@ -2010,12 +2025,11 @@ test('the row lock blames the lake once rank and coins are out of the way', asyn
   assert.ok(sawLakeLock > 0, 'nothing was locked by its lake, so this test proved nothing');
 });
 
-test('a landed fish lands in the creel, not the wallet', async () => {
+test('a landed fish lands in the bag, not the wallet', async () => {
   // The old line was `state.coins += value`: every fish was sold the instant it
   // came over the side. If that survives, the bag is decoration.
   const src = readFileSync(new URL('../vendor/fru-angler/angler.js', import.meta.url), 'utf8');
-  const fn = src.slice(src.indexOf('function landFish'));
-  const body = fn.slice(0, fn.indexOf('\n}\n'));
+  const body = fnSource(src, 'landFish(');
   // Match CODE, not prose: scanning the raw text matched the `state.coins +=`
   // inside the very comment that explains why the line is gone.
   const code = body
@@ -2023,34 +2037,34 @@ test('a landed fish lands in the creel, not the wallet', async () => {
     .replace(/\/\/[^\r\n]*/g, '');
   assert.doesNotMatch(code, /state\.coins\s*\+=/,
     'landing a fish must not pay into the wallet');
-  assert.match(body, /addToCreel/, 'it must go in the creel');
+  assert.match(body, /addToBag/, 'it must go in the bag');
   assert.match(body, /fishEntrySpec/, 'as a proper entry');
 });
 
-test('the creel panel exists and offers both choices', async () => {
+test('the bag panel exists and offers both choices', async () => {
   // "Favourite" and "sell" are the two things the player can do, so both have to
   // exist as controls -- not one with the other implied.
-  assert.match(PAGE, /id="creel-panel"/, 'the creel needs a panel');
-  assert.match(PAGE, /id="creel-list"/, 'and somewhere to show the fish');
+  assert.match(PAGE, /id="bag-panel"/, 'the bag needs a panel');
+  assert.match(PAGE, /id="bag-list"/, 'and somewhere to show the fish');
   const src = readFileSync(new URL('../vendor/fru-angler/angler.js', import.meta.url), 'utf8');
-  assert.match(src, /function paintCreel/, 'and something to paint it');
-  assert.match(src, /sellFromCreel\(/, 'selling must be wired');
+  assert.match(src, /function paintBag/, 'and something to paint it');
+  assert.match(src, /sellFromBag\(/, 'selling must be wired');
   assert.match(src, /feedToBond\(/, 'and so must feeding');
 });
 
-test('the creel saves, loads and survives a reload', async () => {
+test('the bag saves, loads and survives a reload', async () => {
   // A bag that does not persist loses the fish between sessions, which is worse
   // than never having had one.
   const save = {
     coins: 5000,
-    creel: [{ fishId: 'glidefin', weight: 3.2, mutation: null, multiplier: 1 }],
+    bag: [{ fishId: 'glidefin', weight: 3.2, mutation: null, multiplier: 1 }],
     bond: { bubbles: 4 },
     bestiary: { glidefin: 3.2 },
   };
   const ctx = await seedSave(save, 950);
   const raw = ctx.win.localStorage.getItem('fru-angler-save');
   assert.ok(raw, 'a save must be written');
-  assert.deepEqual(JSON.parse(raw).creel, save.creel, 'the creel must be saved');
+  assert.deepEqual(JSON.parse(raw).bag, save.bag, 'the bag must be saved');
   assert.deepEqual(JSON.parse(raw).bond, save.bond, 'and the bond');
 });
 
@@ -2060,24 +2074,24 @@ test('clicking Sell pays rod coins and takes that fish out', async () => {
   const ctx = await seedSave({
     coins: 0, rodId: 'bamboo', owned: ['bamboo'], bestiary: {}, areaId: 'aero-lake',
     xp: 0, ownedSeals: [], equippedSeal: null, lost: [], giftedRods: [], sealCoins: 0,
-    creel: [{ fishId: 'glidefin', weight: 4, mutation: null, multiplier: 1 }],
+    bag: [{ fishId: 'glidefin', weight: 4, mutation: null, multiplier: 1 }],
   }, 960);
 
-  ctx.doc.getElementById('creel-open').dispatchEvent(
+  ctx.doc.getElementById('bag-open').dispatchEvent(
     new ctx.win.MouseEvent('click', { bubbles: true }));
-  const row = ctx.doc.querySelector('#creel-list .creel__row');
-  assert.ok(row, 'the creel must list the saved fish');
+  const row = ctx.doc.querySelector('#bag-list .bag__row');
+  assert.ok(row, 'the bag must list the saved fish');
 
-  const sell = row.querySelector('.creel__sell');
+  const sell = row.querySelector('.bag__sell');
   const want = Number(sell.textContent.replace(/[^0-9]/g, ''));
   assert.ok(want > 0, 'the sell button states the price');
 
   sell.dispatchEvent(new ctx.win.MouseEvent('click', { bubbles: true }));
   assert.equal(Number(ctx.doc.getElementById('coins').textContent), want,
     'selling must pay exactly the stated price');
-  assert.equal(ctx.doc.querySelectorAll('#creel-list .creel__row').length, 0,
+  assert.equal(ctx.doc.querySelectorAll('#bag-list .bag__row').length, 0,
     'and the fish must be gone');
-  assert.equal(text(ctx, 'creel-count'), '', 'the badge must clear');
+  assert.equal(text(ctx, 'bag-count'), '', 'the badge must clear');
 });
 
 test('clicking Feed spends the fish and raises that seal bond', async () => {
@@ -2085,17 +2099,17 @@ test('clicking Feed spends the fish and raises that seal bond', async () => {
     coins: 0, rodId: 'bamboo', owned: ['bamboo'], bestiary: {}, areaId: 'aero-lake',
     xp: 0, ownedSeals: ['bubbles'], equippedSeal: 'bubbles', lost: [],
     giftedRods: [], sealCoins: 0, bond: {},
-    creel: [{ fishId: 'glidefin', weight: 4, mutation: null, multiplier: 1 }],
+    bag: [{ fishId: 'glidefin', weight: 4, mutation: null, multiplier: 1 }],
   }, 961);
 
-  ctx.doc.getElementById('creel-open').dispatchEvent(
+  ctx.doc.getElementById('bag-open').dispatchEvent(
     new ctx.win.MouseEvent('click', { bubbles: true }));
-  const feed = ctx.doc.querySelector('#creel-list .creel__feed');
+  const feed = ctx.doc.querySelector('#bag-list .bag__feed');
   assert.equal(feed.disabled, false, 'a seal is equipped, so feeding must be possible');
   assert.match(feed.textContent, /Bubbles/, 'and the button must name the seal it feeds');
 
   feed.dispatchEvent(new ctx.win.MouseEvent('click', { bubbles: true }));
-  assert.equal(ctx.doc.querySelectorAll('#creel-list .creel__row').length, 0,
+  assert.equal(ctx.doc.querySelectorAll('#bag-list .bag__row').length, 0,
     'a fed fish is gone');
   assert.equal(Number(ctx.doc.getElementById('coins').textContent), 0,
     'and feeding must pay no coins');
@@ -2109,16 +2123,16 @@ test('with no seal equipped, Feed is disabled and says why', async () => {
   const ctx = await seedSave({
     coins: 0, rodId: 'bamboo', owned: ['bamboo'], bestiary: {}, areaId: 'aero-lake',
     xp: 0, ownedSeals: [], equippedSeal: null, lost: [], giftedRods: [], sealCoins: 0,
-    creel: [{ fishId: 'glidefin', weight: 4, mutation: null, multiplier: 1 }],
+    bag: [{ fishId: 'glidefin', weight: 4, mutation: null, multiplier: 1 }],
   }, 962);
 
-  ctx.doc.getElementById('creel-open').dispatchEvent(
+  ctx.doc.getElementById('bag-open').dispatchEvent(
     new ctx.win.MouseEvent('click', { bubbles: true }));
-  const feed = ctx.doc.querySelector('#creel-list .creel__feed');
+  const feed = ctx.doc.querySelector('#bag-list .bag__feed');
   assert.equal(feed.disabled, true, 'no seal, no feeding');
   assert.match(feed.title, /seal/i, 'and it must say why');
   // Selling must still work, or a player with no seal has a dead bag.
-  assert.equal(ctx.doc.querySelector('#creel-list .creel__sell').disabled, false,
+  assert.equal(ctx.doc.querySelector('#bag-list .bag__sell').disabled, false,
     'sell must remain available');
 });
 
@@ -2157,7 +2171,7 @@ test('the silhouette element exists and is sized to fit', async () => {
 });
 
 test('clicking a button in a panel must not start a cast', async () => {
-  // Every panel -- rod shop, seals, creel, index, lakes -- is a child of #lake,
+  // Every panel -- rod shop, seals, bag, index, lakes -- is a child of #lake,
   // and press() was bound to #lake's mousedown. So opening the shop and clicking
   // anything inside it cast the rod. The shake buttons were the only thing with
   // stopPropagation, which is why the bug survived: it was never tested anywhere
@@ -2167,7 +2181,7 @@ test('clicking a button in a panel must not start a cast', async () => {
 
   // Every interactive control in every panel.
   const panels = ['shop-panel', 'inventory-panel', 'index-panel', 'lake-panel',
-    'seal-shop-panel', 'creel-panel'];
+    'seal-shop-panel', 'bag-panel'];
   for (const id of panels) {
     const panel = doc.getElementById(id);
     assert.ok(panel, `${id} must exist`);
@@ -2208,7 +2222,7 @@ test('touching a panel button must not cast either', async () => {
   // lake, so on a phone every tap in the shop cast the rod.
   const ctx = await boot(1002);
   const lake = ctx.doc.getElementById('lake');
-  for (const id of ['shop-panel', 'seal-shop-panel', 'creel-panel']) {
+  for (const id of ['shop-panel', 'seal-shop-panel', 'bag-panel']) {
     for (const b of ctx.doc.getElementById(id).querySelectorAll('button')) {
       b.dispatchEvent(new ctx.win.Event('touchstart', { bubbles: true, cancelable: true }));
     }
@@ -2326,4 +2340,85 @@ test('only reaching the lake counts as a cast', () => {
     'the mouse path needs the guard');
   assert.match(src, /addEventListener\('touchstart',[\s\S]{0,120}isInterface/,
     'and so does the touch path');
+});
+
+test('the fish bag and the inventory are two different things', () => {
+  // "bag" was already taken: ui.bag, openBag and closeBag were the INVENTORY
+  // panel (rods and the bestiary). A blind rename to bag made ui.bag and ui.bagOpen
+  // each appear twice in the object literal, and the second silently won -- the
+  // inventory lost its panel and its button, and six tests failed for a cause none
+  // of them named. The fish bag is bagPanel/bagOpenBtn; the inventory is
+  // inventory*. Both are asserted so neither can quietly take the other's name.
+  const src = readFileSync(new URL('../vendor/fru-angler/angler.js', import.meta.url), 'utf8');
+
+  // The visible name.
+  assert.match(PAGE, /id="bag-panel"/, 'the panel is the bag');
+  assert.match(PAGE, />Bag</, 'and says so');
+  assert.match(PAGE, /id="bag-open"[^>]*>Bag/, 'the HUD button too');
+  assert.doesNotMatch(PAGE, /Creel/i, 'no "creel" may remain on screen');
+
+  // Two distinct things, both present, neither aliased onto the other.
+  assert.match(src, /bagPanel:\s*el\('bag-panel'\)/, 'the fish bag is bagPanel');
+  assert.match(src, /bagOpenBtn:\s*el\('bag-open'\)/, 'and its button is bagOpenBtn');
+  assert.match(src, /inventory:\s*el\('inventory-panel'\)/, 'the inventory is inventory');
+  assert.match(src, /inventoryOpen:\s*el\('inventory-open'\)/, 'and its button is inventoryOpen');
+  assert.match(src, /function openBag\(\)/, 'openBag is the inventory');
+  assert.match(src, /function openBagPanel\(\)/, 'and the fish bag is openBagPanel');
+  // openBag must open the INVENTORY, not the fish bag: that mix-up is the bug.
+  const inv = fnSource(src, 'openBag()');
+  assert.match(inv, /ui\.inventory/, 'openBag must open the inventory panel');
+  const fish = fnSource(src, 'openBagPanel()');
+  assert.match(fish, /ui\.bagPanel/, 'openBagPanel must open the fish bag');
+  // Two `creel` occurrences in code are correct and required: the fallback that
+  // reads the old key, and the re-save that normalises it. No other may remain.
+  const code = src.replace(/\/\*[\s\S]*?\*\//g, '').replace(/\/\/[^\n]*/g, '');
+  const creels = code.match(/saved\.creel/g) ?? [];
+  assert.equal(creels.length, 2,
+    `only the two legacy reads may mention creel, got ${creels.length}`);
+  assert.doesNotMatch(code, /\bcreel[A-Z]/, 'no creel identifier may survive');
+  assert.doesNotMatch(code, /(?:^|[^.\w])creel(?=[.\s;,)\]])/,
+    'and no bare creel identifier anywhere');
+});
+
+test('a save written before the rename still loads its fish', async () => {
+  // The state key was `creel` and is now `bag`. A save that only has `creel` must
+  // still be read, or every player's fish vanish on the next load -- they were
+  // never sold, they would simply stop being found.
+  //
+  // (A blanket rename of this file first turned the fixture key into `bag` and the
+  // test into a tautology: it asserted `bag` was read as `bag`.)
+  const ctx = await seedSave({
+    coins: 10, rodId: 'bamboo', owned: ['bamboo'], bestiary: {}, areaId: 'aero-lake',
+    xp: 0, ownedSeals: [], equippedSeal: null, lost: [], giftedRods: [], sealCoins: 0,
+    creel: [{ fishId: 'glidefin', weight: 2, mutation: null, multiplier: 1 }],
+    bond: {},
+  }, 1010);
+
+  assert.equal(ctx.doc.getElementById('bag-count').textContent, '(1)',
+    'the legacy creel key must still be read on load');
+
+  // Re-saving must write the NEW key only, so the next load is unambiguous.
+  ctx.doc.getElementById('bag-open').dispatchEvent(
+    new ctx.win.MouseEvent('click', { bubbles: true }));
+  const saved = JSON.parse(ctx.win.localStorage.getItem('fru-angler-save'));
+  assert.ok(Array.isArray(saved.bag) && saved.bag.length === 1,
+    `the fish must be saved as bag, got ${JSON.stringify(saved.bag)}`);
+  assert.ok(!('creel' in saved),
+    `and not under the old key as well, got ${JSON.stringify(saved.creel)}`);
+});
+
+test('the ui lookup has no duplicate keys', () => {
+  // The rename collided on `bag` and `bagOpen` and produced two entries for each.
+  // In an object literal the second silently wins, so the inventory quietly lost
+  // its panel and its button while every other test carried on passing. Six tests
+  // failed for this one cause, none of them naming it.
+  const src = readFileSync(new URL('../vendor/fru-angler/angler.js', import.meta.url), 'utf8');
+  const block = src.slice(src.indexOf('const ui = {'), src.indexOf('\n};'));
+  const keys = [...block.matchAll(/^\s{2}(\w+):/gm)].map((m) => m[1]);
+  const seen = new Set();
+  const dupes = keys.filter((k) => (seen.has(k) ? true : (seen.add(k), false)));
+  assert.deepEqual(dupes, [], `duplicate keys in ui: ${dupes.join(', ')}`);
+  // And both panels must be present under distinct names.
+  assert.ok(keys.includes('bagPanel'), 'the fish bag needs its own name');
+  assert.ok(keys.includes('inventory'), 'the inventory needs its own name');
 });

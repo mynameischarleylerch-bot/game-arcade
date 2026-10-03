@@ -8,8 +8,8 @@ import {
   fishSvg, FISH_SHAPES, hookLineFor, AREAS, areaUnlocked,
   rodWorksIn, rodCheckIn,
  areaProgress, levelFrom, xpForCatch, luckFromLevel, luckFor, LOST_ITEMS, rollLostItem, lostItemsFor, SEALS, buySeal, equipSeal, sealComment, sealDuplicates, visitArea, xpForLevel, sellLostItems, lostItemById, MUTATIONS, mutationMultiplierFor, mutationById, sealLines, WEATHER, TIMES, skyFor, luckFromSky,
-  addToCreel, fishEntrySpec, creelWorth, creelEntryValue,
-  sellFromCreel, feedToBond, bondLuck, bondCount,
+  addToBag, fishEntrySpec, bagWorth, bagEntryValue,
+  sellFromBag, feedToBond, bondLuck, bondCount,
   fishSilhouette,} from '../vendor/fru-angler/fishing.js';
 
 test('the starting wallet can afford exactly one upgrade from the cheapest rod', () => {
@@ -2042,57 +2042,57 @@ test('the rank gate still applies on top of the lake gate', () => {
     `${seal.name} must sell at rank ${seal.level} in its own lake`);
 });
 
-// ---------------------------------------------------------------- the creel
+// ---------------------------------------------------------------- the bag
 
-test('a landed fish goes in the creel, not straight into the wallet', () => {
+test('a landed fish goes in the bag, not straight into the wallet', () => {
   // state.coins += value at the moment of the catch. Every fish was sold the
   // instant it hit the deck, so the player never chose whether a catch was worth
   // money or worth feeding to their seal -- there was no bag to choose with.
-  const creel = addToCreel([], fishEntrySpec(FISH[0], 2.4));
-  assert.equal(creel.length, 1, 'the fish must land in the creel');
-  assert.equal(creelWorth(creel), catchValue(FISH[0], 2.4),
+  const bag = addToBag([], fishEntrySpec(FISH[0], 2.4));
+  assert.equal(bag.length, 1, 'the fish must land in the bag');
+  assert.equal(bagWorth(bag), catchValue(FISH[0], 2.4),
     'and it must still be worth what it was');
   // Adding never mutates the input: the save holds one array, not a history.
   const before = [];
-  addToCreel(before, fishEntrySpec(FISH[0], 2.4));
-  assert.equal(before.length, 0, 'the creel must be immutable');
+  addToBag(before, fishEntrySpec(FISH[0], 2.4));
+  assert.equal(before.length, 0, 'the bag must be immutable');
 });
 
 test('selling a fish takes exactly that fish out and pays rod coins', () => {
   const a1 = fishEntrySpec(FISH[0], 1.5);
   const b1 = fishEntrySpec(FISH[3], 2);
-  const creel = addToCreel(addToCreel([], a1), b1);
-  assert.equal(creel.length, 2);
+  const bag = addToBag(addToBag([], a1), b1);
+  assert.equal(bag.length, 2);
 
-  const sold = sellFromCreel(creel, 0);
+  const sold = sellFromBag(bag, 0);
   assert.equal(sold.ok, true);
   assert.equal(sold.coins, catchValue(FISH[0], 1.5), 'the price must be that fish alone');
-  assert.equal(sold.creel.length, 1, 'and only that fish leaves');
-  assert.equal(sold.creel[0].fishId, b1.fishId, 'the wrong one went');
+  assert.equal(sold.bag.length, 1, 'and only that fish leaves');
+  assert.equal(sold.bag[0].fishId, b1.fishId, 'the wrong one went');
 
   // An index that does not exist must refuse, not silently sell something.
-  assert.equal(sellFromCreel(creel, 7).ok, false);
-  assert.equal(sellFromCreel(creel, -1).ok, false);
-  assert.equal(sellFromCreel([], 0).ok, false);
+  assert.equal(sellFromBag(bag, 7).ok, false);
+  assert.equal(sellFromBag(bag, -1).ok, false);
+  assert.equal(sellFromBag([], 0).ok, false);
 });
 
 test('feeding a fish spends it and raises the seal bond', () => {
   // Feeding is the whole point of the bag: a catch can become luck instead of
   // coins. Bond is what makes that a decision rather than a second shop.
-  const creel = addToCreel([], fishEntrySpec(FISH[0], 2));
-  const fed = feedToBond(creel, 0, { bubbles: 3 }, 'bubbles');
+  const bag = addToBag([], fishEntrySpec(FISH[0], 2));
+  const fed = feedToBond(bag, 0, { bubbles: 3 }, 'bubbles');
   assert.equal(fed.ok, true);
-  assert.equal(fed.creel.length, 0, 'a fed fish is gone');
+  assert.equal(fed.bag.length, 0, 'a fed fish is gone');
   assert.equal(fed.bond.bubbles, 4, `bond must rise from 3 to 4, got ${fed.bond.bubbles}`);
 
   // Feeding four DIFFERENT fish to one seal is one bond of four, not four bonds
   // of one. The first version keyed the bond by fish id and got this backwards.
-  let c = creel;
+  let c = bag;
   let bond = {};
   for (const other of [FISH[0], FISH[1], FISH[2], FISH[3]]) {
-    const step = feedToBond(addToCreel(c, fishEntrySpec(other, 1)), 0, bond, 'bubbles');
+    const step = feedToBond(addToBag(c, fishEntrySpec(other, 1)), 0, bond, 'bubbles');
     assert.equal(step.ok, true);
-    c = step.creel;
+    c = step.bag;
     bond = step.bond;
   }
   assert.deepEqual(bond, { bubbles: 4 },
@@ -2101,9 +2101,9 @@ test('feeding a fish spends it and raises the seal bond', () => {
 
   // Feeding nothing must not work, and neither must feeding with no seal.
   assert.equal(feedToBond([], 0, {}, 'bubbles').ok, false);
-  assert.equal(feedToBond(creel, 9, {}, 'bubbles').ok, false);
-  assert.equal(feedToBond(creel, 0, {}, null).ok, false, 'no seal, no feeding');
-  assert.equal(feedToBond(creel, 0, {}, 'not-a-seal').ok, false, 'and no ghosts');
+  assert.equal(feedToBond(bag, 9, {}, 'bubbles').ok, false);
+  assert.equal(feedToBond(bag, 0, {}, null).ok, false, 'no seal, no feeding');
+  assert.equal(feedToBond(bag, 0, {}, 'not-a-seal').ok, false, 'and no ghosts');
 });
 
 

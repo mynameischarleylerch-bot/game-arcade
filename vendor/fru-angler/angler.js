@@ -23,13 +23,13 @@ import {
  SEALS, LOST_ITEMS,
  levelFrom, xpForCatch, xpForLevel, luckFor, luckFromLevel,
  rollLostItem, lostItemsFor, sellLostItems, lostItemById,
- addToCreel, fishEntrySpec, creelWorth, creelEntryValue,
- sellFromCreel, feedToBond, bondLuck, bondCount,
+ addToBag, fishEntrySpec, bagWorth, bagEntryValue,
+ sellFromBag, feedToBond, bondLuck, bondCount,
  buySeal, equipSeal, sealComment, sealDuplicates, sealIdleLine,
-} from './fishing.js?v=2026-10-03-y';
+} from './fishing.js?v=2026-10-03-z';
 import {
   reelConfig, stepReel as advance, reelOutcomeFor, isCaught, lineSnapped,
-} from './reel.js?v=2026-10-03-y';
+} from './reel.js?v=2026-10-03-z';
 
 /* ------------------------------------------------------------------ tuning */
 
@@ -62,9 +62,16 @@ const ui = {
   catchMutation: el('catch-mutation'),
   shopPanel: el('shop-panel'), shopList: el('shop-list'), shopCoins: el('shop-coins'),
   shopOpen: el('shop-open'), shopClose: el('shop-close'),
-  bag: el('inventory-panel'), bagRods: el('inventory-rods'), bagFish: el('inventory-fish'),
-  bagEmpty: el('inventory-empty'), bagCount: el('inventory-count'),
-  bagOpen: el('inventory-open'), bagClose: el('inventory-close'),
+  // The inventory: rods and the bestiary. Historically called "a bag".
+  inventory: el('inventory-panel'), inventoryRods: el('inventory-rods'),
+  inventoryFish: el('inventory-fish'),
+  inventoryEmpty: el('inventory-empty'), inventoryCount: el('inventory-count'),
+  inventoryOpen: el('inventory-open'), inventoryClose: el('inventory-close'),
+  // The fish bag: unsold catches. Two panels are "a bag"; they are not
+  // the same one, and a duplicate key here silently kills a panel.
+  bagPanel: el('bag-panel'), bagList: el('bag-list'),
+  bagSummary: el('bag-summary'), bagOpenBtn: el('bag-open'),
+  bagCloseBtn: el('bag-close'), bagCount: el('bag-count'),
   indexPanel: el('index-panel'), indexList: el('index-list'),
   indexOpen: el('index-open'), indexClose: el('index-close'),
   lakePicker: el('lake-picker'), lakePanel: el('lake-panel'),
@@ -83,8 +90,6 @@ const ui = {
   findsList: el('finds-list'), sellFinds: el('sell-finds'),
   pet: el('fa-pet'),
   sealPanel: el('seal-shop-panel'), sealList: el('seal-shop-list'),
-  creel: el('creel-panel'), creelList: el('creel-list'), creelSummary: el('creel-summary'),
-  creelOpen: el('creel-open'), creelClose: el('creel-close'), creelCount: el('creel-count'),
   sealCoins: el('seal-shop-coins'),
   sealOpen: el('seal-shop-open'), sealClose: el('seal-shop-close'),
   rodShaft: el('rod-shaft'), rodTipDot: el('rod-tip'),
@@ -118,7 +123,7 @@ const state = {
   lost: [],            // lost items recovered, newest last
   sealCoins: 0,        // the seal economy; sold finds are the ONLY way in
   giftedRods: [],      // rods handed over on arrival, so they cannot be farmed
-  creel: [],           // landed fish, unsold. They are worth nothing until you act.
+  bag: [],           // landed fish, unsold. They are worth nothing until you act.
   bond: {},            // sealId -> how many fish it has been fed
 };
 
@@ -174,10 +179,11 @@ function load() {
     if (!('sealCoins' in saved)) {
       state.lost = [];
     }
-    // The creel. Filtered against the fish table so a save naming a fish that
+    // The bag. Filtered against the fish table so a save naming a fish that
     // no longer exists cannot put a ghost in the bag.
-    state.creel = Array.isArray(saved.creel)
-      ? saved.creel.filter((e) => e && FISH.some((f) => f.id === e.fishId))
+    const storedBag = Array.isArray(saved.bag) ? saved.bag : saved.creel;
+    state.bag = Array.isArray(storedBag)
+      ? storedBag.filter((e) => e && FISH.some((f) => f.id === e.fishId))
       : [];
     // Bond, per seal. Unknown seal ids are dropped for the same reason.
     state.bond = saved.bond && typeof saved.bond === 'object'
@@ -197,6 +203,11 @@ function load() {
       const area = AREAS.find((a) => a.id === saved.areaId);
       if (area && areaUnlocked(area, state)) state.areaId = area.id;
     }
+
+    // Normalise the rename now rather than on the next change: a legacy save
+    // with `creel` is rewritten as `bag` the moment it loads, so the migration
+    // happens once instead of on every load, and no save ever holds both keys.
+    if (Array.isArray(saved.creel)) save();
   } catch {
     // Corrupt or blocked storage: the fresh loadout above already stands.
   }
@@ -215,7 +226,7 @@ function save() {
       lost: state.lost,
       sealCoins: state.sealCoins,
       giftedRods: state.giftedRods,
-      creel: state.creel,
+      bag: state.bag,
       bond: state.bond,
     }));
   } catch {
@@ -594,9 +605,9 @@ function paintChrome() {
   paintFinds();
 
   // The button says how many rods you carry, so the inventory is findable at a glance.
-  if (ui.bagCount) {
+  if (ui.inventoryCount) {
     const rods = state.owned.length;
-    ui.bagCount.textContent = `${rods} ${rods === 1 ? 'rod' : 'rods'}`;
+    ui.inventoryCount.textContent = `${rods} ${rods === 1 ? 'rod' : 'rods'}`;
   }
   paintRod();
 }
@@ -897,12 +908,12 @@ function landFish() {
   const mutation = rollMutation();
   const value = catchValue(fish, kg, mutation.multiplier);
   const wasBest = state.bestiary[fish.id] ?? 0;
-  // Into the creel, NOT the wallet. `state.coins += value` here meant every fish
+  // Into the bag, NOT the wallet. `state.coins += value` here meant every fish
   // was sold the instant it came over the side, so there was no choice to make:
   // a catch could be worth coins or worth bond, and it was always coins.
   //
   // Bestiary and rank still happen on landing -- the fish was caught either way.
-  state.creel = addToCreel(state.creel, fishEntrySpec(fish, kg, mutation));
+  state.bag = addToBag(state.bag, fishEntrySpec(fish, kg, mutation));
   state.bestiary = recordCatch(state.bestiary, fish, kg);
 
   const meta = [
@@ -962,7 +973,7 @@ function landFish() {
 
   save();
   paintChrome();
-  paintCreelBadge(Array.isArray(state.creel) ? state.creel.length : 0);
+  paintBagBadge(Array.isArray(state.bag) ? state.bag.length : 0);
 
 }
 
@@ -1055,14 +1066,14 @@ function makeHeading(text) {
  * as a collection to work towards.
  */
 function renderInventory() {
-  ui.bagRods.textContent = '';
+  ui.inventoryRods.textContent = '';
   for (const id of RODS_BY_PRICE) {
     if (ownsRod(state.owned, id)) {
-      ui.bagRods.appendChild(makeRodRow(id, { owned: true, onDone: renderInventory }));
+      ui.inventoryRods.appendChild(makeRodRow(id, { owned: true, onDone: renderInventory }));
     }
   }
 
-  ui.bagFish.textContent = '';
+  ui.inventoryFish.textContent = '';
   let landed = 0;
   for (const fish of FISH) {
     const best = state.bestiary[fish.id];
@@ -1089,10 +1100,10 @@ function renderInventory() {
     }
 
     row.append(name, weight);
-    ui.bagFish.appendChild(row);
+    ui.inventoryFish.appendChild(row);
   }
 
-  if (ui.bagEmpty) ui.bagEmpty.hidden = landed > 0;
+  if (ui.inventoryEmpty) ui.inventoryEmpty.hidden = landed > 0;
 }
 
 /** The shop is for buying; what you own lives in the inventory. */
@@ -1486,7 +1497,7 @@ function renderShop() {
 
 /** One overlay at a time: opening either panel closes the other. */
 function openShop() {
-  ui.bag.hidden = true;
+  ui.inventory.hidden = true;
   renderShop();
   ui.shopPanel.hidden = false;
   ui.shopClose.focus();
@@ -1498,73 +1509,73 @@ function closeShop() {
 }
 
 /**
- * The creel count in the HUD. Split from paintCreel() because the badge is
- * permanent and the rows are not: a catch lands in the creel without the panel
+ * The bag count in the HUD. Split from paintBag() because the badge is
+ * permanent and the rows are not: a catch lands in the bag without the panel
  * ever being opened, and a fish nobody can see in the HUD is a fish that looks
  * like it vanished.
  */
-function paintCreelBadge(count) {
-  if (!ui.creelCount) return;
-  ui.creelCount.textContent = count ? `(${count})` : '';
+function paintBagBadge(count) {
+  if (!ui.bagCount) return;
+  ui.bagCount.textContent = count ? `(${count})` : '';
 }
 
 /**
- * The creel: every landed fish, with both choices on each row.
+ * The bag: every landed fish, with both choices on each row.
  *
  * A catch is worth nothing until you do something with it. Sell pays rod coins;
  * feed raises that seal's bond, which adds luck. The two compete for the same
  * fish, which is the only reason the bag is a decision rather than a queue.
  */
-function paintCreel() {
-  if (!ui.creelList) return;
-  const bag = Array.isArray(state.creel) ? state.creel : [];
+function paintBag() {
+  if (!ui.bagList) return;
+  const bag = Array.isArray(state.bag) ? state.bag : [];
   const seal = SEALS.find((s) => s.id === state.equippedSeal) ?? null;
 
-  paintCreelBadge(bag.length);
+  paintBagBadge(bag.length);
 
-  if (ui.creelSummary) {
-    ui.creelSummary.textContent = bag.length
-      ? `${bag.length} fish in the creel, worth ${creelWorth(bag).toLocaleString('en-US')} rod coins.`
-      : 'Nothing in the creel. Fish something and it waits here.';
+  if (ui.bagSummary) {
+    ui.bagSummary.textContent = bag.length
+      ? `${bag.length} fish in the bag, worth ${bagWorth(bag).toLocaleString('en-US')} rod coins.`
+      : 'Nothing in the bag. Fish something and it waits here.';
   }
 
-  ui.creelList.textContent = '';
+  ui.bagList.textContent = '';
   if (bag.length === 0) return;
 
   bag.forEach((entry, index) => {
     const fish = fishById(entry.fishId);
     if (!fish) return;
-    const worth = creelEntryValue(entry);
+    const worth = bagEntryValue(entry);
 
     const row = document.createElement('div');
-    row.className = 'creel__row';
+    row.className = 'bag__row';
 
     const what = document.createElement('div');
-    what.className = 'creel__what';
+    what.className = 'bag__what';
     what.innerHTML = `
-      <span class="creel__portrait" style="--fish-hue:${fish.hue}"></span>
-      <span class="creel__titles">
-        <b class="creel__name">${entry.mutation ? entry.mutation + ' ' : ''}${fish.name}</b>
-        <span class="creel__meta">${fish.rarity} \u00b7 ${entry.weight} kg</span>
+      <span class="bag__portrait" style="--fish-hue:${fish.hue}"></span>
+      <span class="bag__titles">
+        <b class="bag__name">${entry.mutation ? entry.mutation + ' ' : ''}${fish.name}</b>
+        <span class="bag__meta">${fish.rarity} \u00b7 ${entry.weight} kg</span>
       </span>`;
 
     const actions = document.createElement('div');
-    actions.className = 'creel__actions';
+    actions.className = 'bag__actions';
 
     const sell = document.createElement('button');
-    sell.className = 'btn btn--small creel__sell';
+    sell.className = 'btn btn--small bag__sell';
     sell.textContent = `Sell ${worth.toLocaleString('en-US')}`;
     sell.addEventListener('click', () => {
-      const result = sellFromCreel(state.creel, index);
+      const result = sellFromBag(state.bag, index);
       if (!result.ok) return say(result.reason);
       state.coins += result.coins;
-      state.creel = result.creel;
-      save(); paintChrome(); paintCreel();
+      state.bag = result.bag;
+      save(); paintChrome(); paintBag();
       say(`${fish.name} sold for ${result.coins.toLocaleString('en-US')} coins.`);
     });
 
     const feed = document.createElement('button');
-    feed.className = 'btn btn--small creel__feed';
+    feed.className = 'btn btn--small bag__feed';
     // No seal, no feeding: say why, rather than a button that cannot work.
     if (!seal) {
       feed.textContent = 'Feed';
@@ -1573,11 +1584,11 @@ function paintCreel() {
     } else {
       feed.textContent = `Feed ${seal.name}`;
       feed.addEventListener('click', () => {
-        const result = feedToBond(state.creel, index, state.bond, seal.id);
+        const result = feedToBond(state.bag, index, state.bond, seal.id);
         if (!result.ok) return say(result.reason);
-        state.creel = result.creel;
+        state.bag = result.bag;
         state.bond = result.bond;
-        save(); paintChrome(); paintCreel();
+        save(); paintChrome(); paintBag();
         sealChatter();
         say(`${fish.name} fed to ${seal.name}. Bond ${bondCount(state.bond, seal.id)}.`);
       });
@@ -1587,30 +1598,30 @@ function paintCreel() {
     actions.appendChild(feed);
     row.appendChild(what);
     row.appendChild(actions);
-    ui.creelList.appendChild(row);
+    ui.bagList.appendChild(row);
   });
 }
 
-function openCreel() {
-  if (!ui.creel) return;
-  paintCreel();
-  ui.creel.removeAttribute('hidden');
+function openBagPanel() {
+  if (!ui.bagPanel) return;
+  paintBag();
+  ui.bagPanel.removeAttribute('hidden');
 }
 
-function closeCreel() {
-  ui.creel?.setAttribute('hidden', '');
+function closeBagPanel() {
+  ui.bagPanel?.setAttribute('hidden', '');
 }
 
 function openBag() {
   ui.shopPanel.hidden = true;
   renderInventory();
-  ui.bag.hidden = false;
-  ui.bagClose.focus();
+  ui.inventory.hidden = false;
+  ui.inventoryClose.focus();
 }
 
 function closeBag() {
-  ui.bag.hidden = true;
-  ui.bagOpen.focus();
+  ui.inventory.hidden = true;
+  ui.inventoryOpen.focus();
 }
 
 /* ------------------------------------------------------------------- input */
@@ -1676,7 +1687,7 @@ addEventListener('keyup', (event) => {
   if (event.code === 'Space') release();
 });
 // Casting is a press on the open water. Every panel -- the rod shop, the seals,
-// the creel, the index, the lakes -- is a CHILD of #lake, so binding press()
+// the bag, the index, the lakes -- is a CHILD of #lake, so binding press()
 // straight to the lake meant clicking a button in the shop cast the rod. The
 // shake prompts are the only things inside the lake that used to stop
 // propagation, which is exactly why this went unnoticed: nothing else was tested.
@@ -1714,7 +1725,8 @@ ui.sealOpen?.addEventListener('click', openSealShop);
 ui.sellFinds?.addEventListener('click', sellFinds);
 ui.sealClose?.addEventListener('click', closeSealShop);
 ui.shopClose.addEventListener('click', closeShop);
-ui.bagOpen?.addEventListener('click', openBag);
+ui.inventoryOpen?.addEventListener('click', openBag);
+ui.bagOpenBtn?.addEventListener('click', openBagPanel);
 ui.indexOpen?.addEventListener('click', openIndex);
 ui.lakePicker?.addEventListener('click', openLakes);
 ui.lakeClose?.addEventListener('click', closeLakes);
@@ -1726,10 +1738,14 @@ ui.indexClose?.addEventListener('click', closeIndex);
 ui.indexPanel?.addEventListener('click', (event) => {
   if (event.target === ui.indexPanel) closeIndex();
 });
-ui.bagClose?.addEventListener('click', closeBag);
+ui.inventoryClose?.addEventListener('click', closeBag);
+ui.bagCloseBtn?.addEventListener('click', closeBagPanel);
 // Clicking the scrim outside the panel closes it, same as the shop.
-ui.bag?.addEventListener('click', (event) => {
-  if (event.target === ui.bag) closeBag();
+ui.inventory?.addEventListener('click', (event) => {
+ui.bagPanel?.addEventListener('click', (event) => {
+  if (event.target === ui.bagPanel) closeBagPanel();
+});
+  if (event.target === ui.inventory) closeBag();
 });
 ui.shopPanel.addEventListener('click', (event) => {
   if (event.target === ui.shopPanel) closeShop();
@@ -1805,9 +1821,9 @@ paintChrome();
 // Fill the picker now as well as on open, so its rows exist and their locked
 // state is readable without having to open it.
 renderLakes();
-// The creel count is a HUD badge, so it has to be right on load -- a returning
+// The bag count is a HUD badge, so it has to be right on load -- a returning
 // player should see how many fish are waiting without opening the panel.
-paintCreel();
+paintBag();
 // A seal already on the dock at boot has already met you, so it says hello. No
 // seal means no chatter, so a fresh save is still quiet.
 sealChatter();
