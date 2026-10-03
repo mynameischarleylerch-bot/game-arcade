@@ -1268,7 +1268,10 @@ test('the seal speaks in its own bubble when you land something', async () => {
   }, 78);
 
   const bubble = ctx.doc.getElementById('fa-bubble');
-  assert.equal(bubble.hasAttribute('hidden'), true, 'the bubble starts closed');
+  // A seal already with you is already talking -- it was never a wait-until-caught
+  // thing. What matters is that landing a fish gives it something NEW to say.
+  assert.equal(bubble.hasAttribute('hidden'), false,
+    'a seal with you is already talking on the dock');
 
   await landOne(ctx, 78);
   assert.equal(bubble.hasAttribute('hidden'), false, 'the seal must speak on a catch');
@@ -1363,4 +1366,54 @@ test('duplicating a catch raises a notice of its own', async () => {
   for (const card of notifyFn.querySelectorAll('.notice')) {
     assert.ok(card.textContent.length > 5, 'a notice must say something');
   }
+});
+
+test('the seal has something to say while you are waiting, not only on a catch', async () => {
+  // It used to speak only inside landFish(), which meant the seal was silent for
+  // the entire cast-and-wait -- and the one moment it did speak was covered by
+  // the catch card. So it appeared to say nothing, ever.
+  const ctx = await seedSave({
+    coins: 0, rodId: 'bamboo', owned: ['bamboo'], bestiary: {}, areaId: 'aero-lake',
+    xp: 0, ownedSeals: [SEALS[0].id], equippedSeal: SEALS[0].id, lost: [], giftedRods: [],
+    sealCoins: 0,
+  }, 84);
+
+  // The seal is equipped in this save, so it is already talking at boot -- which
+  // is the fix: it used to wait for a catch, and the catch card then covered it.
+  assert.equal(ctx.doc.getElementById('fa-bubble').hasAttribute('hidden'), false,
+    'a seal already with you must be talking before you have caught anything');
+  const said = ctx.doc.getElementById('fa-bubble-text').textContent;
+  assert.ok(said.length > 8, `the seal must say something, bubble said "${said}"`);
+  assert.match(said, /\b(you|your)\b/i, 'and speak to the player');
+});
+
+test('the seal keeps talking between catches, so the dock is not silent', async () => {
+  const src = readFileSync(new URL('../vendor/fru-angler/angler.js', import.meta.url), 'utf8');
+  // sealSays must be reachable from more than landFish alone.
+  const calls = (src.match(/sealSays\(/g) || []).length;
+  assert.ok(calls >= 3,
+    `the seal needs several chances to speak, found ${calls} call sites`);
+  assert.match(src, /function sealChatter|sealChatter\(/,
+    'and an idle line of its own, not only reactions');
+});
+
+test('the seal speaks again after the catch card is dismissed', async () => {
+  // Between catches is the whole of the rest of the game. If the seal only talks
+  // inside landFish(), the dock is silent for every cast, wait and re-cast.
+  const ctx = await seedSave({
+    coins: 0, rodId: 'bamboo', owned: ['bamboo'], bestiary: {}, areaId: 'aero-lake',
+    xp: 0, ownedSeals: [SEALS[0].id], equippedSeal: SEALS[0].id, lost: [], giftedRods: [],
+    sealCoins: 0,
+  }, 85);
+  await landOne(ctx, 85);
+  const onLanding = ctx.doc.getElementById('fa-bubble-text').textContent;
+
+  ctx.doc.getElementById('catch-again').dispatchEvent(
+    new ctx.win.MouseEvent('click', { bubbles: true }));
+
+  const after = ctx.doc.getElementById('fa-bubble-text').textContent;
+  assert.equal(ctx.doc.getElementById('fa-bubble').hasAttribute('hidden'), false,
+    'the seal must still be talking once the card closes');
+  assert.notEqual(after, onLanding,
+    'and should have moved on to a new line, not be frozen on the last catch');
 });

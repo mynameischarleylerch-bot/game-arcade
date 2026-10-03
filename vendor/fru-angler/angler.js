@@ -22,11 +22,11 @@ import {
  SEALS, LOST_ITEMS,
  levelFrom, xpForCatch, xpForLevel, luckFor, luckFromLevel,
  rollLostItem, lostItemsFor, sellLostItems, lostItemById,
- buySeal, equipSeal, sealComment, sealDuplicates,
-} from './fishing.js?v=2026-10-03-f';
+ buySeal, equipSeal, sealComment, sealDuplicates, sealIdleLine,
+} from './fishing.js?v=2026-10-03-g';
 import {
   reelConfig, stepReel as advance, reelOutcomeFor, isCaught, lineSnapped,
-} from './reel.js?v=2026-10-03-f';
+} from './reel.js?v=2026-10-03-g';
 
 /* ------------------------------------------------------------------ tuning */
 
@@ -265,6 +265,21 @@ function sealSays(line) {
   const shown = text.length > 42 ? `${text.slice(0, 41)}\u2026` : text;
   ui.bubbleText.textContent = shown;
   ui.bubble.removeAttribute('hidden');
+}
+
+/**
+ * Have the seal say something on its own.
+ *
+ * Called when a seal is equipped and whenever the player returns to idle, so the
+ * dock is not silent. `n` advances which idle line comes out, which keeps it
+ * deterministic for tests.
+ */
+let chatter = 0;
+function sealChatter() {
+  const seal = SEALS.find((item) => item.id === state.equippedSeal) ?? null;
+  if (!seal) return;
+  chatter += 1;
+  sealSays(sealIdleLine(seal, { areaId: state.areaId, count: chatter }));
 }
 
 /** A brief card for a duplicate, a gift or a sale. */
@@ -959,6 +974,7 @@ function renderSealShop() {
         if (!result.ok) return say(result.reason);
         state.equippedSeal = result.sealId;
         save(); renderSealShop(); paintChrome();
+        sealChatter();   // the seal introduces itself, on the dock, unprompted
         say(`${seal.name} settles onto the dock beside you.`);
       });
     } else {
@@ -970,6 +986,7 @@ function renderSealShop() {
         state.ownedSeals = [...state.ownedSeals, seal.id];
         state.equippedSeal = seal.id;
         save(); renderSealShop(); paintChrome();
+        sealChatter();
         say(`${seal.name} comes home with you.`);
       });
     }
@@ -1151,7 +1168,11 @@ ui.hookSet?.addEventListener('click', () => {
   if (state.phase !== 'bite' || !state.bitten) return;
   hook(state.bitten);
 });
-ui.catchAgain.addEventListener('click', () => { setPhase('idle'); say(IDLE_HINT); });
+ui.catchAgain.addEventListener('click', () => {
+  setPhase('idle');
+  say(IDLE_HINT);
+  sealChatter();   // back to idle, so it has an opinion again
+});
 ui.shopOpen.addEventListener('click', openShop);
 ui.sealOpen?.addEventListener('click', openSealShop);
 ui.sellFinds?.addEventListener('click', sellFinds);
@@ -1241,4 +1262,7 @@ paintChrome();
 // Fill the picker now as well as on open, so its rows exist and their locked
 // state is readable without having to open it.
 renderLakes();
+// A seal already on the dock at boot has already met you, so it says hello. No
+// seal means no chatter, so a fresh save is still quiet.
+sealChatter();
 requestAnimationFrame(frame);

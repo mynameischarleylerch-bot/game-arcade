@@ -1387,3 +1387,33 @@ test('the two currencies are genuinely separate things', () => {
   assert.doesNotMatch(source, new RegExp('coins\\\\s*[:=][^;]*SEALS?\\\\.price'),
     'seal prices must never be converted into rod money');
 });
+
+test('every seal has idle lines, and every one speaks to the player', () => {
+  // Two bugs hid here at once: a duplicated `idle:` key on one seal, where the
+  // second silently won and another seal ended up with none, and idle lines that
+  // were pure narration -- the seal talking about the weather, not to you.
+  for (const seal of SEALS) {
+    assert.ok(Array.isArray(seal.idle) && seal.idle.length >= 3,
+      `${seal.id} needs at least three idle lines`);
+    for (const line of seal.idle) {
+      assert.match(line, /\b(you|your)\b/i,
+        `${seal.id} must speak to the player, said "${line}"`);
+    }
+  }
+});
+
+test('a seal has exactly one idle list, not two silently fighting', () => {
+  const source = readFileSync(new URL('../vendor/fru-angler/fishing.js', import.meta.url), 'utf8');
+  for (const seal of SEALS) {
+    // Bound the block by the NEXT seal, not by the first `},` -- an idle line
+    // containing that sequence would otherwise truncate the search.
+    // Search inside the SEALS table only: `id: 'abyss'` also names a ROD, and
+    // RODS comes first in the file, so a whole-file search finds the wrong one.
+    const table = source.slice(source.indexOf('export const SEALS = ['));
+    const start = table.indexOf(`id: '${seal.id}',`);
+    const after = table.indexOf("id: '", start + 10);
+    const block = table.slice(start, after === -1 ? table.length : after);
+    const ids = (block.match(/idle:\s*\[/g) || []).length;
+    assert.equal(ids, 1, `${seal.id} declares ${ids} idle lists -- a duplicate key silently wins`);
+  }
+});

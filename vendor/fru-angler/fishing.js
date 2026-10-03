@@ -871,6 +871,11 @@ export const SEALS = [
   {
     id: 'bubbles', name: 'Bubbles', home: 'aero-lake',
     luck: 0.8, dupeChance: 0.06, level: 1, price: 900, hue: 195,
+    idle: [
+      'Hello. The water is nice today, is it not. Enjoy your cast.',
+      'I am watching your bobber. It is not moving.',
+      'You are the one doing all the work.',
+    ],
     line: 'Watches your line like it is a very slow television.',
     comments: {
       favourite: 'That is my favourite, and you found it. Do not tell the others.',
@@ -881,6 +886,11 @@ export const SEALS = [
   {
     id: 'tangerine', name: 'Tangerine', home: 'doric-delta',
     luck: 1.0, dupeChance: 0.07, level: 4, price: 2600, hue: 24,
+    idle: [
+      'Warm water. Terrible organisation, but you will manage.',
+      'Aim at the straight part. There is always one, if you look.',
+      'You are holding that rod like a shopping bag.',
+    ],
     line: 'Lies on the warmest plank and judges your casting.',
     comments: {
       favourite: 'That is the one. You found the exact one.',
@@ -891,6 +901,11 @@ export const SEALS = [
   {
     id: 'moss', name: 'Moss', home: 'eco-marsh',
     luck: 1.1, dupeChance: 0.08, level: 8, price: 5400, hue: 110,
+    idle: [
+      'Quiet now. Good. You are doing well.',
+      'The reeds are doing most of the work. You are welcome.',
+      'I like it here. Do not tell the ice you brought me.',
+    ],
     line: 'Mostly water and entirely opinion.',
     comments: {
       favourite: 'You found it in the good water. I knew you would.',
@@ -901,6 +916,11 @@ export const SEALS = [
   {
     id: 'frost', name: 'Frost', home: 'glacier-fjord',
     luck: 1.2, dupeChance: 0.09, level: 13, price: 9800, hue: 198,
+    idle: [
+      'Cold enough to keep your line honest.',
+      'I have one eye open for you. The other is for the weather.',
+      'Bore through it. That is all this lake asks of you.',
+    ],
     line: 'Keeps one eye open, which is more than the ice does.',
     comments: {
       favourite: 'Colder than me. You will not find colder.',
@@ -910,6 +930,11 @@ export const SEALS = [
   },
   {
     id: 'abyss', name: 'Abyss', home: 'dark-aero-deep',
+    idle: [
+      'Down here the light stops first, and you will not miss it.',
+      'I have been down longer than your dock has existed.',
+      'Something moved just past your hook. It was probably me.',
+    ],
     luck: 1.4, dupeChance: 0.11, level: 19, price: 19000, hue: 232,
     line: 'Sits where the light gives up and says nothing for a while.',
     comments: {
@@ -919,6 +944,26 @@ export const SEALS = [
     },
   },
 ];
+
+/**
+ * What the seal says when nothing is happening.
+ *
+ * The seal used to speak only when a fish was landed, which meant the dock was
+ * silent for the whole cast-and-wait and the one moment it did talk was behind the
+ * catch card. These lines give it a voice in between.
+ */
+export function sealIdleLine(seal, { areaId = null, count = 0 } = {}) {
+  if (!seal?.idle?.length) return '';
+  const lines = seal.idle;
+  // Deterministic: the same state gives the same line, so tests can pin it.
+  return lines[Math.abs(Math.floor(count)) % lines.length];
+}
+
+/** Every line a seal can say, idle included. Used by the index and the tests. */
+export function sealLines(seal) {
+  if (!seal) return [];
+  return [...(seal.idle ?? []), ...Object.values(seal.comments ?? {})];
+}
 
 /**
  * What the seal says about a catch.

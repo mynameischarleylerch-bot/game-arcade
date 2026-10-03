@@ -642,3 +642,41 @@ test('the HUD readouts all sit in a pill, none left as bare text', () => {
   assert.doesNotMatch(hud, /hud__spacer/, 'the HUD must not depend on a bare spacer');
   assert.match(hud, /class="hud__nav"/, 'the nav cluster must be in the bar');
 });
+
+test('the catch overlay must not blank the scene, or the seal is invisible when it speaks', () => {
+  // The seal only ever speaks when a fish is landed -- which is exactly when the
+  // catch overlay opens. The overlay still spans the lake, because it has to take
+  // the click; what it must not do is cover the dock in flat opaque colour. It
+  // used to be rgba(6,51,79,.45) plus a blur across the whole scene, which put the
+  // seal's bubble behind it at precisely the moment the seal had something to say.
+  const scrim = rule('.catch, .shop');
+  assert.ok(scrim, 'the catch overlay must be styled');
+  assert.doesNotMatch(scrim, /backdrop-filter/,
+    'the catch scrim must not blur the scene -- it hides the dock and the seal');
+  assert.match(scrim, /radial-gradient/,
+    'the scrim must be a vignette around the card, not a flat sheet');
+  // And it must let clicks through to the card without swallowing the lake.
+  assert.match(scrim, /pointer-events:\s*none/,
+    'the scrim must not eat clicks meant for the card');
+});
+
+test('the catch card is lifted above its own scrim', () => {
+  // The scrim is a sibling of the card, so the card needs a z-index of its own or
+  // the vignette paints over the fish it is dimming everything for.
+  const card = rule('.catch__card');
+  assert.ok(card, 'the catch card must be styled');
+  assert.match(card, /z-index:\s*2/,
+    'the card must sit above the scrim that dims the scene behind it');
+});
+
+test('the seal is drawn from a real seal silhouette, not a blob', () => {
+  // The reference is a bean-shaped seal: heavy rump, descending back, no visible
+  // tail or flippers, a blunt muzzle and one glossy eye. A generic ellipse with a
+  // dot for an eye does not read as a seal.
+  const page = PAGE.slice(PAGE.indexOf('id="fa-pet"'));
+  const pet = page.slice(0, page.indexOf('</g>') + 4);
+  assert.match(pet, /path\s+d="M[^"]*C/, 'the body must be a drawn path, not an ellipse');
+  assert.ok((pet.match(/circle/g) || []).length <= 2,
+    'a seal is one eye and a nose, not a scatter of circles');
+  assert.match(pet, /fill="url\(#fa-pet-/, 'and it keeps the Aero gradient');
+});
