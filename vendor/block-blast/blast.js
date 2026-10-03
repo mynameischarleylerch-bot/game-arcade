@@ -118,3 +118,59 @@ export function applyMove(state, boardAfterPlacement, cellCount) {
     cleared,
   };
 }
+
+/* ---------------------------------------------------------------- dealing */
+
+/** Can this block go anywhere on the board at all? */
+export function fitsAnywhere(board, cells) {
+  for (let y = 0; y < SIZE; y += 1) {
+    for (let x = 0; x < SIZE; x += 1) {
+      if (canPlace(board, cells, x, y)) return true;
+    }
+  }
+  return false;
+}
+
+/** Is there at least one placeable block in this tray? */
+export function hasAnyMove(board, keys) {
+  return keys.some((key) => fitsAnywhere(board, PIECES[key].cells));
+}
+
+/**
+ * Deal TRAY_SIZE blocks.
+ *
+ * Returns the array of keys, with a `dead` flag attached. `dead` is true when any
+ * dealt block cannot be placed anywhere — the real game's game-over condition.
+ *
+ * It is checked against the board as it stands right now, before the player has had
+ * a chance to use anything, which is what makes a 3x3 arriving into a cluttered
+ * board fatal.
+ */
+export function dealTray(board, rng = Math.random) {
+  const keys = Array.from({ length: TRAY_SIZE }, () => weightedPick(rng));
+  keys.dead = !hasAnyMove(board, keys);
+  return keys;
+}
+
+/** A fresh run: empty board, no score, a full tray. */
+export function newGame(rng = Math.random) {
+  const board = emptyBoard();
+  const tray = dealTray(board, rng);
+  return { board, score: 0, combo: 0, tray, over: tray.dead === true };
+}
+
+/**
+ * Start the next round: a new tray is dealt, while the board and score carry over.
+ * The run is over if the new tray holds a block that cannot be placed.
+ */
+export function nextRound(game, rng = Math.random) {
+  if (game.over) return game;
+  const tray = dealTray(game.board, rng);
+  return {
+    board: game.board,
+    score: game.score,
+    combo: game.combo,
+    tray,
+    over: tray.dead === true,
+  };
+}

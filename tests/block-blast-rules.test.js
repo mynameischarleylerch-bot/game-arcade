@@ -13,6 +13,7 @@ import { PIECES, PIECE_KEYS, weightedPick } from '../vendor/block-blast/pieces.j
 import {
   SIZE, emptyBoard, inBounds, canPlace, place, cellAt, widthOf, heightOf,
   fullLines, clearLines, scorePlacement, scoreLines, applyMove,
+  fitsAnywhere, hasAnyMove, dealTray, newGame, nextRound, TRAY_SIZE,
 } from '../vendor/block-blast/blast.js';
 
 test('every block is a list of distinct in-range cells', () => {
@@ -196,4 +197,71 @@ test('applyMove is total: it returns the score gained, the combo and the cleared
   assert.equal(result.cleared.rows.length + result.cleared.cols.length, 1);
   // And the board it hands back has that line gone.
   assert.deepEqual(result.board[7], Array(SIZE).fill(0));
+});
+
+test('an empty board fits every block', () => {
+  const board = emptyBoard();
+  for (const key of PIECE_KEYS) {
+    assert.equal(fitsAnywhere(board, PIECES[key].cells), true,
+      `${key} should fit an empty board`);
+  }
+});
+
+test('a block with no room anywhere is reported as unfittable', () => {
+  // Fill everything except one cell.
+  const board = emptyBoard();
+  for (let y = 0; y < SIZE; y += 1) {
+    for (let x = 0; x < SIZE; x += 1) if (!(y === 0 && x === 0)) board[y][x] = 1;
+  }
+  assert.equal(fitsAnywhere(board, PIECES.dot.cells), true, 'the 1x1 still fits the hole');
+  assert.equal(fitsAnywhere(board, PIECES.i2.cells), false, 'a domino needs two cells');
+  assert.equal(fitsAnywhere(board, PIECES.big.cells), false, 'the 3x3 cannot fit');
+});
+
+test('the run ends only when nothing in the tray can be placed', () => {
+  const nearlyFull = emptyBoard();
+  for (let y = 0; y < SIZE; y += 1) {
+    for (let x = 0; x < SIZE; x += 1) if (!(y === 0 && x === 0)) nearlyFull[y][x] = 1;
+  }
+  assert.equal(hasAnyMove(nearlyFull, ['dot']), true, 'one usable block keeps the run alive');
+  assert.equal(hasAnyMove(nearlyFull, ['i2']), false, 'nothing usable ends it');
+  assert.equal(hasAnyMove(nearlyFull, ['i2', 'dot']), true,
+    'one usable block in the tray is enough');
+});
+
+test('dealing three blocks returns three, and reports if any cannot fit', () => {
+  const deal = dealTray(emptyBoard(), () => 0.5);
+  assert.equal(deal.length, TRAY_SIZE);
+  for (const key of deal) assert.ok(PIECE_KEYS.includes(key));
+  assert.equal(deal.dead, false, 'an empty board can always take three blocks');
+
+  // Force every draw to be a 3x3, which cannot fit the one remaining cell.
+  const blocked = emptyBoard();
+  for (let y = 0; y < SIZE; y += 1) {
+    for (let x = 0; x < SIZE; x += 1) if (!(y === 0 && x === 0)) blocked[y][x] = 1;
+  }
+  const dead = dealTray(blocked, () => 0.999999);
+  assert.equal(dead.dead, true, 'a tray of 3x3s ends the run');
+});
+
+test('a new game starts empty with a score of zero and a full tray', () => {
+  const game = newGame(() => 0.5);
+  assert.equal(game.score, 0);
+  assert.equal(game.combo, 0);
+  assert.equal(game.over, false);
+  assert.equal(game.tray.length, TRAY_SIZE);
+  assert.deepEqual(game.board, emptyBoard());
+});
+
+test('a new round refills the tray but carries the board and score over', () => {
+  const game = newGame(() => 0.5);
+  const spent = nextRound(game, () => 0.5);
+  assert.equal(spent.tray.length, TRAY_SIZE);
+  assert.equal(spent.board, game.board, 'the board carries over untouched');
+  assert.equal(spent.score, game.score);
+});
+
+test('a finished game is never handed a new round', () => {
+  const game = { board: emptyBoard(), score: 500, combo: 2, tray: ['dot'], over: true };
+  assert.equal(nextRound(game, () => 0.5), game, 'the run is over; nothing happens');
 });
