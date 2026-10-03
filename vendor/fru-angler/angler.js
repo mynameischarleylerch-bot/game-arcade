@@ -11,7 +11,7 @@ import {
   fishWeight, canCatch, catchValue, startingLoadout, buyRod, recordCatch,
 } from './fishing.js?v=2026-10-01-a';
 import {
-  reelConfig, stepReel as advance, reelOutcomeFor, isCaught,
+  reelConfig, stepReel as advance, reelOutcomeFor, isCaught, lineSnapped,
 } from './reel.js?v=2026-10-01-a';
 
 /* ------------------------------------------------------------------ tuning */
@@ -292,6 +292,12 @@ function closeShop() {
 
 function press(event) {
   if (event.type === 'mousedown' || event.type === 'touchstart') event.preventDefault();
+  // Pressing while idle is what starts a cast. 'result' is deliberately ignored:
+  // a snapped line has to be dismissed with the button, not by flailing at the lake.
+  if (state.phase === 'idle') {
+    beginCast();
+    return;
+  }
   if (state.phase === 'casting' || state.phase === 'reeling') state.holding = true;
 }
 
