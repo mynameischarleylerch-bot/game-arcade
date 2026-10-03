@@ -259,6 +259,25 @@
   .rod:disabled { cursor: not-allowed; opacity: .55; }
   .rod--equipped { border-color: var(--deep); box-shadow: 0 0 0 2px rgba(1,87,155,.18) inset; }
   .rod__row { display: flex; justify-content: space-between; gap: .6rem; font-weight: 600; }
+  .btn--small { padding: .2rem .7rem; font-size: .82rem; font-weight: 600; }
+  .hud__badge {
+    display: inline-block; margin-left: .3rem; padding: 0 .4em;
+    border-radius: 999px; background: rgba(1,87,155,.12); color: var(--deep);
+    font-variant-numeric: tabular-nums;
+  }
+
+  /* One row per species: the heaviest landed, or a placeholder if none. */
+  .catch {
+    display: flex; align-items: baseline; justify-content: space-between; gap: .6rem;
+    padding: .45rem .6rem; border-radius: 10px;
+    border: 1px solid rgba(1,87,155,.16);
+    background: var(--shine);
+  }
+  .catch[data-caught="false"] { opacity: .55; }
+  .catch__name { font-weight: 600; }
+  .catch__weight { font-size: .82rem; color: var(--ink-soft); font-variant-numeric: tabular-nums; }
+  .catch__none { font-size: .8rem; color: var(--ink-soft); font-style: italic; }
+
   .shop__section {
     margin: .7rem 0 .3rem; font-size: .72rem; font-weight: 700;
     letter-spacing: .09em; text-transform: uppercase; color: var(--ink-soft);
@@ -304,6 +323,9 @@
     <div class="hud">
       <span>¤ <b id="coins">0</b></span>
       <span>Rod <b id="rod">—</b></span>
+      <button id="inventory-open" class="btn btn--small" type="button" aria-haspopup="dialog">
+        Inventory <b id="inventory-count" class="hud__badge">1 rod</b>
+      </button>
       <span class="hud__spacer"></span>
       <span class="hud__dim" id="rod-stats"></span>
     </div>
@@ -392,6 +414,26 @@
         </div>
       </div>
 
+      <div class="shop" id="inventory-panel" hidden>
+        <div class="shop__panel" role="dialog" aria-modal="true" aria-labelledby="inventory-title">
+          <h2 class="shop__title" id="inventory-title">Inventory</h2>
+          <p class="shop__wallet">Everything you are carrying.</p>
+
+          <h3 class="shop__section">Your rods</h3>
+          <div class="shop__list" id="inventory-rods"></div>
+
+          <h3 class="shop__section">Your fish</h3>
+          <p class="shop__wallet" id="inventory-empty" hidden>
+            Nothing landed yet. Cast and reel something in.
+          </p>
+          <div class="shop__list" id="inventory-fish"></div>
+
+          <p style="margin:.9rem 0 0">
+            <button class="btn" id="inventory-close" type="button">Close</button>
+          </p>
+        </div>
+      </div>
+
       <div class="shop" id="shop-panel" hidden>
         <div class="shop__panel" role="dialog" aria-modal="true" aria-labelledby="shop-title">
           <h2 class="shop__title" id="shop-title">Rods</h2>
@@ -411,6 +453,6 @@
     </div>
   </div>
 
-  <script type="module" src="./angler.js?v=2026-10-01-i"></script>
+  <script type="module" src="./angler.js?v=2026-10-01-j"></script>
 </body>
 </html>

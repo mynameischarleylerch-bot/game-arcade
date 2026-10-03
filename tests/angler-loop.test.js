@@ -208,14 +208,22 @@ test('the shop lists every rod and a purchase upgrades the equipped one', async 
   ctx.doc.getElementById('shop-open').click();
   assert.equal(ctx.doc.getElementById('shop-panel').hidden, false);
 
-  const buttons = ctx.doc.querySelectorAll('#shop-list .rod');
-  assert.equal(buttons.length, 5, 'all five rods are offered');
-  assert.equal(buttons[0].disabled, true, 'the equipped rod cannot be bought again');
-  assert.equal(buttons[0].textContent.includes('equipped'), true);
-  assert.equal(buttons[4].disabled, true, 'the top rod is unaffordable on the starting wallet');
+  const buttons = [...ctx.doc.querySelectorAll('#shop-list .rod')];
+  assert.equal(buttons.length, 4, 'the shop offers the four rods you do not own');
+
+  // The shop no longer lists the equipped rod, so nothing here says "equipped".
+  assert.equal(buttons.some((b) => b.textContent.includes('equipped')), false,
+    'the shop is for buying only');
+
+  // Cheapest first: the willow is affordable on the starting wallet, the titan is not.
+  assert.equal(buttons[0].dataset.rod, 'willow');
+  assert.equal(buttons[0].disabled, false, 'the willow is affordable to start with');
+  assert.equal(buttons[buttons.length - 1].dataset.rod, 'titan');
+  assert.equal(buttons[buttons.length - 1].disabled, true,
+    'the top rod is unaffordable on the starting wallet');
 
   const coinsBefore = Number(text(ctx, 'coins'));
-  const buyable = [...buttons].find((b) => !b.disabled && b.textContent.includes('buy'));
+  const buyable = buttons.find((b) => !b.disabled && b.textContent.includes('buy'));
   buyable.click();
 
   assert.match(text(ctx, 'rod'), /Willow Rod|Carbon Float/, 'the rod changed');
@@ -332,14 +340,14 @@ const rodAppearance = (ctx) => ({
   tip: ctx.doc.getElementById('rod-tip').getAttribute('cx'),
 });
 
-test('the shop separates your rods from the ones for sale', async () => {
+test('the shop is for buying, and points at the inventory for owned rods', async () => {
   const ctx = await boot(14);
   ctx.doc.getElementById('shop-open').click();
-  const headings = [...ctx.doc.querySelectorAll('.shop__section')].map((h) => h.textContent);
-  assert.match(headings[0], /Your rods \(1\)/, `headings were ${JSON.stringify(headings)}`);
-  assert.ok(headings.some((h) => /For sale/.test(h)), 'there must be a for-sale section');
-  assert.ok(shopRow(ctx, 'bamboo'), 'the starting rod is in your rods');
-  assert.ok(shopRow(ctx, 'willow'), 'and other rods are for sale');
+  const headings = [...ctx.doc.querySelectorAll('#shop-list .shop__section')]
+    .map((h) => h.textContent);
+  assert.match(headings[0], /For sale \(4\)/, `headings were ${JSON.stringify(headings)}`);
+  assert.equal(shopRow(ctx, 'bamboo'), null, 'the rod you own is not sold to you again');
+  assert.ok(shopRow(ctx, 'willow'), 'rods you do not own are listed');
 });
 
 test('a rod you own can be re-equipped for free', async () => {
@@ -348,14 +356,15 @@ test('a rod you own can be re-equipped for free', async () => {
   // Buy the willow with the starting wallet (it starts with exactly its price).
   shopRow(ctx, 'willow').click();
 
-  assert.equal(shopRow(ctx, 'willow').dataset.state, 'equipped', 'buying equips it');
+  assert.match(text(ctx, 'rod'), /Willow Rod/, 'buying equips it');
   const coinsAfterBuy = Number(text(ctx, 'coins'));
 
-  // Now go back to the bamboo pole: no cost, still in the inventory.
-  shopRow(ctx, 'bamboo').click();
+  // Now go back to the bamboo pole, from the inventory: no cost, no re-buy.
+  ctx.doc.getElementById('inventory-open').click();
+  bagRow(ctx, 'bamboo').click();
   assert.equal(text(ctx, 'rod'), 'Bamboo Pole');
   assert.equal(Number(text(ctx, 'coins')), coinsAfterBuy, 're-equipping must be free');
-  assert.ok(shopRow(ctx, 'willow'), 'the willow is still owned after re-equipping');
+  assert.ok(bagRow(ctx, 'willow'), 'the willow is still owned after re-equipping');
 });
 
 test('the visible rod changes when you equip a different one', async () => {
@@ -403,7 +412,118 @@ test('a save with no inventory at all still loads', async () => {
   localStorage.setItem('fru-angler-save', JSON.stringify({ coins: 99, bestiary: {} }));
   await import('../vendor/fru-angler/angler.js?run=19b');
   assert.match(text(ctx, 'rod'), /Bamboo Pole/);
-  ctx.doc.getElementById('shop-open').click();
-  assert.match(ctx.doc.querySelector('.shop__section').textContent, /Your rods \(1\)/,
+  ctx.doc.getElementById('inventory-open').click();
+  assert.equal(ctx.doc.querySelectorAll('#inventory-rods .rod').length, 1,
     'an old save gets the starting rod only');
+});
+
+
+/* --------------------------------------------------------- inventory UI */
+
+/**
+ * The rods and fish you own lived inside the shop panel, so there was no inventory
+ * button at all — nothing to click to see what you had. There is now a real one in
+ * the top bar, and the shop is for buying.
+ */
+
+const bag = (ctx) => ctx.doc.getElementById('inventory-panel');
+const bagRow = (ctx, rodId) =>
+  ctx.doc.querySelector(`#inventory-rods .rod[data-rod="${rodId}"]`);
+
+test('there is an inventory button in the top bar, separate from the shop', async () => {
+  const ctx = await boot(20);
+  const invBtn = ctx.doc.getElementById('inventory-open');
+  assert.ok(invBtn, 'the inventory button must exist');
+  assert.match(invBtn.textContent, /inventory/i, 'and it must say so');
+  assert.ok(ctx.doc.getElementById('shop-open'), 'the shop button should still exist');
+  assert.notEqual(invBtn.id, ctx.doc.getElementById('shop-open').id,
+    'inventory must not be the shop button wearing a different label');
+});
+
+test('the inventory button shows how many rods you carry', async () => {
+  const ctx = await boot(21);
+  assert.match(ctx.doc.getElementById('inventory-count').textContent, /1 rod/,
+    'one rod at the start, singular');
+
+  ctx.doc.getElementById('shop-open').click();
+  [...ctx.doc.querySelectorAll('#shop-list .rod')].find((b) => !b.disabled).click();
+  assert.match(ctx.doc.getElementById('inventory-count').textContent, /2 rods/,
+    'and plural once you buy another');
+});
+
+test('opening the inventory shows the rods you own and can equip them', async () => {
+  const ctx = await boot(22);
+  ctx.doc.getElementById('inventory-open').click();
+  assert.equal(bag(ctx).hidden, false, 'the panel opens');
+
+  assert.match(ctx.doc.querySelector('#inventory-rods').previousElementSibling.textContent,
+    /your rods/i);
+  assert.ok(bagRow(ctx, 'bamboo'), 'your starting rod is listed');
+  assert.equal(bagRow(ctx, 'bamboo').dataset.state, 'equipped');
+  assert.equal(bagRow(ctx, 'willow'), null, 'rods you do not own are not listed');
+});
+
+test('equipping from the inventory works and is free', async () => {
+  const ctx = await boot(23);
+  ctx.doc.getElementById('shop-open').click();
+  [...ctx.doc.querySelectorAll('#shop-list .rod')].find((b) => !b.disabled).click();
+  const coins = Number(text(ctx, 'coins'));
+
+  ctx.doc.getElementById('inventory-open').click();
+  bagRow(ctx, 'bamboo').click();
+
+  assert.match(text(ctx, 'rod'), /Bamboo Pole/, 'the rod changed');
+  assert.equal(Number(text(ctx, 'coins')), coins, 'and it cost nothing');
+  assert.equal(bagRow(ctx, 'bamboo').dataset.state, 'equipped');
+});
+
+test('the inventory lists every fish, showing the heaviest landed', async () => {
+  const ctx = await boot(24);
+  ctx.doc.getElementById('inventory-open').click();
+  const rows = ctx.doc.querySelectorAll('#inventory-fish .catch');
+  assert.equal(rows.length, 6, 'all six species are listed even before you catch them');
+  assert.equal([...rows].filter((r) => r.dataset.caught === 'true').length, 0,
+    'nothing caught yet');
+
+  // Land a fish, then reopen.
+  assert.equal(castAndWaitForBite(ctx), true);
+  for (let i = 0; i < 60 * 60; i += 1) {
+    const ui = reelUi(ctx);
+    if (ui.playerLeft + ui.playerWidth / 2 < ui.fish) key(ctx, 'keydown');
+    else key(ctx, 'keyup');
+    step(ctx);
+    if (!ctx.doc.getElementById('catch').hidden) break;
+  }
+  ctx.doc.getElementById('inventory-open').click();
+  const caught = [...ctx.doc.querySelectorAll('#inventory-fish .catch')]
+    .filter((r) => r.dataset.caught === 'true');
+  assert.equal(caught.length, 1, 'exactly the fish just landed');
+  assert.match(caught[0].textContent, /kg/, 'and its weight is shown');
+  assert.match(caught[0].textContent, /Glidefin/, 'the right species');
+});
+
+test('closing the inventory returns focus to its button', async () => {
+  const ctx = await boot(25);
+  ctx.doc.getElementById('inventory-open').click();
+  assert.equal(bag(ctx).hidden, false);
+  ctx.doc.getElementById('inventory-close').click();
+  assert.equal(bag(ctx).hidden, true);
+  assert.equal(ctx.doc.activeElement.id, 'inventory-open');
+});
+
+test('only one panel is open at a time', async () => {
+  const ctx = await boot(26);
+  ctx.doc.getElementById('shop-open').click();
+  assert.equal(ctx.doc.getElementById('shop-panel').hidden, false);
+  ctx.doc.getElementById('inventory-open').click();
+  assert.equal(bag(ctx).hidden, false, 'the inventory opened');
+  assert.equal(ctx.doc.getElementById('shop-panel').hidden, true,
+    'and the shop closed, rather than stacking two overlays');
+});
+
+test('an empty inventory panel still lists all six fish', async () => {
+  const ctx = await boot(27);
+  ctx.doc.getElementById('inventory-open').click();
+  assert.equal(ctx.doc.querySelectorAll('#inventory-fish .catch').length, 6);
+  assert.match(ctx.doc.getElementById('inventory-rods').textContent, /Bamboo/);
 });

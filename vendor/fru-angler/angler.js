@@ -10,10 +10,11 @@ import {
   castQuality, castDistance, biteDelayFor, rollFish, rollMutation,
   fishWeight, canCatch, catchValue, startingLoadout, buyRod, recordCatch,
   startingInventory, ownsRod, addRodToInventory, equipRod, rodArt, RODS_BY_PRICE,
-} from './fishing.js?v=2026-10-01-i';
+  fishById,
+} from './fishing.js?v=2026-10-01-j';
 import {
   reelConfig, stepReel as advance, reelOutcomeFor, isCaught, lineSnapped,
-} from './reel.js?v=2026-10-01-i';
+} from './reel.js?v=2026-10-01-j';
 
 /* ------------------------------------------------------------------ tuning */
 
@@ -37,6 +38,9 @@ const ui = {
   catchValue: el('catch-value'), catchAgain: el('catch-again'),
   shopPanel: el('shop-panel'), shopList: el('shop-list'), shopCoins: el('shop-coins'),
   shopOpen: el('shop-open'), shopClose: el('shop-close'),
+  bag: el('inventory-panel'), bagRods: el('inventory-rods'), bagFish: el('inventory-fish'),
+  bagEmpty: el('inventory-empty'), bagCount: el('inventory-count'),
+  bagOpen: el('inventory-open'), bagClose: el('inventory-close'),
   coins: el('coins'), rod: el('rod'), rodStats: el('rod-stats'), bestiary: el('bestiary'),
   message: el('message'),
   line: el('line'),
@@ -123,6 +127,12 @@ function paintChrome() {
     `luck ${current.luck.toFixed(1)} · up to ${current.maxKg} kg`;
   const found = Object.keys(state.bestiary).length;
   ui.bestiary.textContent = `${found}/${FISH.length} species landed`;
+
+  // The button says how many rods you carry, so the inventory is findable at a glance.
+  if (ui.bagCount) {
+    const rods = state.owned.length;
+    ui.bagCount.textContent = `${rods} ${rods === 1 ? 'rod' : 'rods'}`;
+  }
   paintRod();
 }
 
@@ -351,85 +361,132 @@ function loseFish(reason) {
 /* -------------------------------------------------------------------- shop */
 
 /**
- * The shop lists the inventory and the catalogue separately: what you own (and can
- * re-equip for free) above, what you could buy below.
+ * One row per rod, used by both panels. In the shop it can also buy; in the
+ * inventory it only equips, because you already own it.
  */
+function makeRodRow(id, { owned, onDone }) {
+  const spec = RODS[id];
+  const equipped = id === state.rodId;
+  const art = rodArt(id);
+  const affordable = state.coins >= spec.price;
+
+  const button = document.createElement('button');
+  button.type = 'button';
+  button.className = `rod${equipped ? ' rod--equipped' : ''}`;
+  button.dataset.rod = id;
+  button.dataset.state = equipped ? 'equipped' : owned ? 'owned' : 'unowned';
+  button.disabled = equipped || (!owned && !affordable);
+
+  const tag = equipped ? 'equipped' : owned ? 'equip' : affordable ? 'buy' : 'not enough coins';
+  button.innerHTML =
+    `<span class="rod__row"><span>${spec.name}</span>`
+    + `<span>${owned ? '<i class="rod__swatch" style="background:' + art.colour + '"></i>' : '¤' + spec.price}</span></span>`
+    + `<span class="rod__stats">control ${spec.control.toFixed(2)} · resilience ${spec.resilience.toFixed(2)} · `
+    + `luck ${spec.luck.toFixed(1)} · max ${spec.maxKg} kg</span>`
+    + `<span class="rod__blurb">${spec.blurb}</span>`
+    + `<span class="rod__state">${tag}</span>`;
+
+  button.addEventListener('click', () => {
+    if (owned) {
+      const result = equipRod(state.owned, id);
+      if (!result.ok) return;
+      state.rodId = result.rodId;
+    } else {
+      const result = buyRod(state, id);
+      if (!result.ok) {
+        button.querySelector('.rod__state').textContent = result.reason;
+        return;
+      }
+      state.coins = result.coins;
+      state.owned = addRodToInventory(state.owned, id);
+      state.rodId = id;
+    }
+    save();
+    paintChrome();
+    onDone();
+  });
+
+  return button;
+}
+
+/** A heading above a group of rows. */
+function makeHeading(text) {
+  const h = document.createElement('h3');
+  h.className = 'shop__section';
+  h.textContent = text;
+  return h;
+}
+
+/**
+ * The inventory: the rods you own (re-equip free) and every species, showing the
+ * heaviest landed. Caught and uncaught fish are both listed so the bestiary reads
+ * as a collection to work towards.
+ */
+function renderInventory() {
+  ui.bagRods.textContent = '';
+  for (const id of RODS_BY_PRICE) {
+    if (ownsRod(state.owned, id)) {
+      ui.bagRods.appendChild(makeRodRow(id, { owned: true, onDone: renderInventory }));
+    }
+  }
+
+  ui.bagFish.textContent = '';
+  let landed = 0;
+  for (const fish of FISH) {
+    const best = state.bestiary[fish.id];
+    const got = typeof best === 'number' && best > 0;
+    if (got) landed += 1;
+
+    const row = document.createElement('div');
+    row.className = 'catch';
+    row.dataset.caught = String(got);
+    row.dataset.fish = fish.id;
+
+    const name = document.createElement('span');
+    name.className = 'catch__name';
+    name.textContent = fish.name;
+    name.style.color = RARITY_COLOURS[fish.rarity] ?? '';
+
+    const weight = document.createElement('span');
+    if (got) {
+      weight.className = 'catch__weight';
+      weight.textContent = `best ${best} kg`;
+    } else {
+      weight.className = 'catch__none';
+      weight.textContent = 'not caught';
+    }
+
+    row.append(name, weight);
+    ui.bagFish.appendChild(row);
+  }
+
+  if (ui.bagEmpty) ui.bagEmpty.hidden = landed > 0;
+}
+
+/** The shop is for buying; what you own lives in the inventory. */
 function renderShop() {
   ui.shopCoins.textContent = state.coins;
   ui.shopList.textContent = '';
 
-  const owned = new Set(state.owned);
-  const makeRow = (id, isOwned) => {
-    const spec = RODS[id];
-    const equipped = id === state.rodId;
-    const art = rodArt(id);
-    const affordable = state.coins >= spec.price;
-
-    const button = document.createElement('button');
-    button.type = 'button';
-    button.className = `rod${equipped ? ' rod--equipped' : ''}`;
-    button.dataset.rod = id;
-    button.dataset.state = equipped ? 'equipped' : isOwned ? 'owned' : 'unowned';
-    // Equipping is always allowed once you own it; buying needs the coins.
-    button.disabled = equipped || (!isOwned && !affordable);
-
-    const tag = equipped ? 'equipped' : isOwned ? 'equip' : affordable ? 'buy' : 'not enough coins';
-    button.innerHTML =
-      `<span class="rod__row"><span>${spec.name}</span>` +
-      `<span>${isOwned ? '<i class="rod__swatch" style="background:' + art.colour + '"></i>' : '¤' + spec.price}</span></span>`
-      + `<span class="rod__stats">control ${spec.control.toFixed(2)} · resilience ${spec.resilience.toFixed(2)} · `
-      + `luck ${spec.luck.toFixed(1)} · max ${spec.maxKg} kg</span>`
-      + `<span class="rod__blurb">${spec.blurb}</span>`
-      + `<span class="rod__state">${tag}</span>`;
-
-    button.addEventListener('click', () => {
-      if (isOwned) {
-        const result = equipRod(state.owned, id);
-        if (!result.ok) return;
-        state.rodId = result.rodId;
-      } else {
-        const result = buyRod(state, id);
-        if (!result.ok) {
-          button.querySelector('.rod__state').textContent = result.reason;
-          return;
-        }
-        state.coins = result.coins;
-        state.owned = addRodToInventory(state.owned, id);
-        state.rodId = id;
-      }
-      save();
-      paintChrome();
-      renderShop();
-    });
-
-    return button;
-  };
-
-  const heading = (text) => {
-    const h = document.createElement('h3');
-    h.className = 'shop__section';
-    h.textContent = text;
-    ui.shopList.appendChild(h);
-  };
-
-  heading(`Your rods (${state.owned.length})`);
-  for (const id of RODS_BY_PRICE) {
-    if (ownsRod(state.owned, id)) ui.shopList.appendChild(makeRow(id, true));
-  }
-
   const forSale = RODS_BY_PRICE.filter((id) => !ownsRod(state.owned, id));
-  heading('For sale');
-  for (const id of forSale) ui.shopList.appendChild(makeRow(id, false));
+  ui.shopList.appendChild(makeHeading(`For sale (${forSale.length})`));
 
   if (forSale.length === 0) {
     const done = document.createElement('p');
     done.className = 'shop__owned-all';
-    done.textContent = 'You own every rod in the game.';
+    done.textContent = 'You own every rod. Open your inventory to pick one.';
     ui.shopList.appendChild(done);
+    return;
+  }
+
+  for (const id of forSale) {
+    ui.shopList.appendChild(makeRodRow(id, { owned: false, onDone: renderShop }));
   }
 }
 
+/** One overlay at a time: opening either panel closes the other. */
 function openShop() {
+  ui.bag.hidden = true;
   renderShop();
   ui.shopPanel.hidden = false;
   ui.shopClose.focus();
@@ -438,6 +495,18 @@ function openShop() {
 function closeShop() {
   ui.shopPanel.hidden = true;
   ui.shopOpen.focus();
+}
+
+function openBag() {
+  ui.shopPanel.hidden = true;
+  renderInventory();
+  ui.bag.hidden = false;
+  ui.bagClose.focus();
+}
+
+function closeBag() {
+  ui.bag.hidden = true;
+  ui.bagOpen.focus();
 }
 
 /* ------------------------------------------------------------------- input */
@@ -479,6 +548,12 @@ addEventListener('blur', release);
 ui.catchAgain.addEventListener('click', () => { setPhase('idle'); say(IDLE_HINT); });
 ui.shopOpen.addEventListener('click', openShop);
 ui.shopClose.addEventListener('click', closeShop);
+ui.bagOpen?.addEventListener('click', openBag);
+ui.bagClose?.addEventListener('click', closeBag);
+// Clicking the scrim outside the panel closes it, same as the shop.
+ui.bag?.addEventListener('click', (event) => {
+  if (event.target === ui.bag) closeBag();
+});
 ui.shopPanel.addEventListener('click', (event) => {
   if (event.target === ui.shopPanel) closeShop();
 });

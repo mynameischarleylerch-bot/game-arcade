@@ -166,6 +166,28 @@ test("the shipped line path agrees with where angler.js puts the tip", () => {
     `the initial line start y=${start[2]} should be the lure at y=${lure[2]}`);
 });
 
+test('the inventory button and panel are in the markup', () => {
+  // The whole point of the change: there must be a discoverable Inventory button,
+  // not just a shop panel that happens to list what you own.
+  assert.match(PAGE, /id="inventory-open"/, 'the inventory button must exist');
+  assert.match(PAGE, /id="inventory-count"/, 'and show how many rods you carry');
+  assert.match(PAGE, /id="inventory-panel"/, 'the panel must exist');
+  assert.match(PAGE, /id="inventory-rods"/, 'with a place for your rods');
+  assert.match(PAGE, /id="inventory-fish"/, 'and a place for your fish');
+  assert.match(PAGE, /id="inventory-close"/, 'and a way to close it');
+  // The button must be labelled, or it is not discoverable.
+  assert.match(PAGE, /id="inventory-open"[^>]*>\s*Inventory/, 'it must say Inventory');
+  // Both panels must start closed.
+  assert.match(PAGE, /id="inventory-panel"[^>]*\bhidden\b/);
+  assert.match(PAGE, /id="shop-panel"[^>]*\bhidden\b/);
+});
+
+test('the inventory has styling for its rows and badge', () => {
+  assert.match(PAGE, /\.hud__badge/, 'the count badge needs styling');
+  assert.match(PAGE, /\.catch\b/, 'the fish rows need styling');
+  assert.match(PAGE, /\.catch__weight/, 'and their weights');
+});
+
 test('the shop styles the inventory sections', () => {
   assert.match(PAGE, /\.shop__section/, 'inventory/for-sale headings need styling');
   assert.match(PAGE, /\.rod__swatch/, 'the rod colour chip needs styling');
