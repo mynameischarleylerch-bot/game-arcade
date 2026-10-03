@@ -17,10 +17,10 @@ import {
  areaUnlocked,
  areaProgress,
  fishEntry,
-} from './fishing.js?v=2026-10-01-r';
+} from './fishing.js?v=2026-10-01-s';
 import {
   reelConfig, stepReel as advance, reelOutcomeFor, isCaught, lineSnapped,
-} from './reel.js?v=2026-10-01-r';
+} from './reel.js?v=2026-10-01-s';
 
 /* ------------------------------------------------------------------ tuning */
 
