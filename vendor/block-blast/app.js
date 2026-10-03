@@ -10,7 +10,7 @@
  * will promise moves the game then refuses.
  */
 import {
-  SIZE, place, applyMove, nextRound, newGame, widthOf, heightOf,
+  SIZE, canPlace, place, applyMove, nextRound, newGame, widthOf, heightOf,
 } from './blast.js';
 import { PIECES } from './pieces.js';
 
@@ -176,8 +176,10 @@ function clearPreview() {
 /**
  * Highlight where a held block would land.
  *
- * Uses the same rule the drop uses, so the preview cannot promise a move the game
- * then refuses. Illegal cells are marked red rather than left alone.
+ * The WHOLE placement is checked with canPlace, not cell by cell. Marking each
+ * cell by whether it happens to be free meant a 3-wide block hovering at x=6 lit
+ * up the anchor cell even though the block hung off the right edge — so the
+ * preview promised a move the drop then refused.
  */
 function preview(cell) {
   clearPreview();
@@ -187,13 +189,16 @@ function preview(cell) {
   const oy = Number(cell.dataset.y);
   ui.board.style.setProperty('--hue', String(piece.hue));
 
+  const legal = canPlace(game.board, piece.cells, ox, oy);
   for (const [dx, dy] of piece.cells) {
     const x = ox + dx;
     const y = oy + dy;
+    // Off-board cells have no element to mark; the anchor still turns red, which
+    // is what tells the player the drop will not take.
     if (x < 0 || x >= SIZE || y < 0 || y >= SIZE) continue;
     const target = ui.board.querySelector(`.cell[data-x="${x}"][data-y="${y}"]`);
     if (!target) continue;
-    target.classList.add(cellAt(x, y) === 0 ? 'is-target' : 'is-blocked');
+    target.classList.add(legal ? 'is-target' : 'is-blocked');
   }
 }
 

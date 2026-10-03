@@ -9,6 +9,7 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
 import { JSDOM } from 'jsdom';
+import { PIECES } from '../vendor/block-blast/pieces.js';
 
 const PAGE = readFileSync(
   new URL('../vendor/block-blast/index.html', import.meta.url), 'utf8',
@@ -104,4 +105,85 @@ test('restarting gives a clean board and a zero score', async () => {
     'restart clears the board');
   assert.equal(doc.getElementById('score').textContent, '0');
   assert.equal(doc.querySelectorAll('#tray .tray__block').length, 3, 'and refills the tray');
+});
+
+test('holding a block previews where it lands', async () => {
+  const win = await boot(6);
+  const doc = win.document;
+  const block = doc.querySelector('#tray .tray__block');
+  const heldKey = block.dataset.key;
+
+  mouse(win, 'mousedown', block);
+  mouse(win, 'mousemove', cellAt(doc, 3, 3));
+
+  const targets = doc.querySelectorAll('#board .cell.is-target');
+  assert.ok(targets.length > 0, 'a legal cell should preview the landing cells');
+
+  // The preview must cover the cells of the block actually held.
+  const piece = PIECES[heldKey];
+  assert.equal(targets.length, piece.cells.length,
+    `previewing ${heldKey} should cover ${piece.cells.length} cells, got ${targets.length}`);
+});
+
+test('the preview marks a cell the block cannot use as blocked, not as valid', async () => {
+  const win = await boot(7);
+  const doc = win.document;
+
+  // Land a block, so there is something to overlap.
+  mouse(win, 'mousedown', doc.querySelector('#tray .tray__block'));
+  mouse(win, 'mousedown', cellAt(doc, 0, 0));
+
+  const occupied = doc.querySelector('#board .cell[data-filled="true"]');
+  assert.ok(occupied, 'precondition: something is on the board');
+
+  mouse(win, 'mousedown', doc.querySelector('#tray .tray__block'));
+  mouse(win, 'mousemove', occupied);
+
+  const blocked = doc.querySelector('#board .cell.is-blocked');
+  assert.ok(blocked, 'an occupied cell must be marked blocked');
+  assert.equal(doc.querySelector('#board .cell.is-blocked')?.dataset.filled, 'true');
+});
+
+test('the preview is cleared once the block is dropped', async () => {
+  const win = await boot(8);
+  const doc = win.document;
+  mouse(win, 'mousedown', doc.querySelector('#tray .tray__block'));
+  mouse(win, 'mousemove', cellAt(doc, 2, 2));
+  assert.ok(doc.querySelectorAll('#board .is-target, #board .is-blocked').length > 0,
+    'precondition: a preview is showing');
+
+  mouse(win, 'mousedown', cellAt(doc, 6, 6));
+  assert.equal(doc.querySelectorAll('#board .is-target, #board .is-blocked').length, 0,
+    'the preview must not survive the drop');
+});
+
+test('the preview never promises a move the game would refuse', async () => {
+  // The strong property: every cell the preview lights up must genuinely be in
+  // bounds and empty. If that holds, the drop cannot be refused — the preview
+  // and the drop use the same rule, so they cannot disagree.
+  const win = await boot(9);
+  const doc = win.document;
+  const block = doc.querySelector('#tray .tray__block');
+  const piece = PIECES[block.dataset.key];
+
+  mouse(win, 'mousedown', block);
+  for (let y = 0; y < 8; y += 1) {
+    for (let x = 0; x < 8; x += 1) {
+      mouse(win, 'mousemove', cellAt(doc, x, y));
+      const shown = [...doc.querySelectorAll('#board .cell.is-target')]
+        .map((c) => [Number(c.dataset.x), Number(c.dataset.y)]);
+
+      for (const [cx, cy] of shown) {
+        // Marked cells exist in the DOM, so they are in bounds by construction.
+        // What must hold is that they are genuinely free.
+        const cell = cellAt(doc, cx, cy);
+        assert.equal(cell.dataset.filled, 'false',
+          `preview lit ${cx},${cy}, but that cell is occupied`);
+      }
+      // Either the whole block fits (and every cell is lit) or none of it is.
+      assert.ok(shown.length === 0 || shown.length === piece.cells.length,
+        `hovering ${x},${y} lit ${shown.length} of ${piece.cells.length} cells — ` +
+        'a partial preview would promise a move that cannot be made');
+    }
+  }
 });
