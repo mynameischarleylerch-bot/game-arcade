@@ -1,7 +1,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import {
-  RODS, FISH, castQuality, castDistance, biteDelayFor, rollFish, rollMutation,
+  RODS, FISH, RARITY_ORDER, RARITY_COLOURS, castQuality, castDistance, biteDelayFor, rollFish, rollMutation,
   fishWeight, catchValue, canCatch, buyRod, startingLoadout,
   startingInventory, ownsRod, addRodToInventory, equipRod, rodArt, RODS_BY_PRICE,
   fishSvg, FISH_SHAPES, hookLineFor, AREAS, areaUnlocked,
@@ -173,8 +173,10 @@ test('buyRod rejects an unknown rod id', () => {
 });
 
 test('fish are ordered from common to mythical', () => {
-  const order = ['Common', 'Uncommon', 'Rare', 'Legendary', 'Mythical'];
-  const ranks = FISH.map((f) => order.indexOf(f.rarity));
+  // Derived from RARITY_ORDER. A local copy went stale the moment Epic was
+  // added: indexOf returned -1 for it, so every Epic fish read as a step
+  // backwards and this test failed on a correctly ordered table.
+  const ranks = FISH.map((f) => RARITY_ORDER.indexOf(f.rarity));
   for (let i = 1; i < ranks.length; i += 1) {
     assert.ok(ranks[i] >= ranks[i - 1], 'rarity must not go backwards down the table');
   }
@@ -503,7 +505,7 @@ test('every fish has its own line for the moment you hook it', () => {
 test('the hook line speaks in second person, like the player is there', () => {
   // The example the request gave: "You feel the power of the environment".
   for (const fish of FISH) {
-    assert.match(fish.hook, /\b(You|you|your|You')\b/,
+    assert.match(fish.hook, /\b(you|your|you're|yours)\b/i,
       `${fish.name} should address the player: "${fish.hook}"`);
   }
 });
@@ -589,8 +591,10 @@ test('later lakes are strictly harder than earlier ones', () => {
   // last. Otherwise a new lake is a downgrade.
   const weightOf = (area) => area.fish.reduce((sum, id) => {
     const f = FISH.find((x) => x.id === id);
-    return sum + (f.rarity === 'Common' ? 1 : f.rarity === 'Uncommon' ? 2
-      : f.rarity === 'Rare' ? 3 : f.rarity === 'Legendary' ? 4 : 5);
+    // Derived from RARITY_ORDER, so a new tier is scored correctly rather than
+    // collapsing into the last branch. The old ternary gave every tier it did
+    // not name the Mythical score, which made the whole check inert.
+    return sum + 1 + Math.max(0, RARITY_ORDER.indexOf(f.rarity));
   }, 0) / area.fish.length;
 
   for (let i = 1; i < AREAS.length; i += 1) {
@@ -766,5 +770,81 @@ test('every lake is fishable once you have the right rod', () => {
     const strongEnough = rods.some((id) => RODS[id].maxKg >= heaviest);
     assert.ok(strongEnough,
       `no rod that works ${area.name} can land its ${heaviest} kg heaviest fish`);
+  }
+});
+
+test('there are six rarity tiers, with Epic between Rare and Legendary', () => {
+  assert.deepEqual(RARITY_ORDER,
+    ['Common', 'Uncommon', 'Rare', 'Epic', 'Legendary', 'Mythical']);
+});
+
+test('every rarity has a colour, and none is a flat default', () => {
+  for (const rarity of RARITY_ORDER) {
+    assert.match(RARITY_COLOURS[rarity] ?? '', /^#[0-9a-f]{6}$/i,
+      `${rarity} needs a colour`);
+  }
+  assert.notEqual(RARITY_COLOURS.Epic, RARITY_COLOURS.Legendary,
+    'Epic must be distinguishable from Legendary');
+});
+
+test('every fish sits in a known tier', () => {
+  for (const fish of FISH) {
+    assert.ok(RARITY_ORDER.includes(fish.rarity),
+      `${fish.id} has rarity ${fish.rarity}, which is not a tier`);
+  }
+});
+
+test('every lake carries at least one fish of each high tier', () => {
+  for (const area of AREAS) {
+    const held = area.fish.map((id) => FISH.find((f) => f.id === id)?.rarity);
+    for (const rarity of ['Rare', 'Epic', 'Legendary', 'Mythical']) {
+      assert.ok(held.includes(rarity),
+        `${area.name} has no ${rarity}; it only has ${[...new Set(held)].join(', ')}`);
+    }
+  }
+});
+
+test('every lake still has at least six species', () => {
+  for (const area of AREAS) {
+    assert.ok(area.fish.length >= 6, `${area.name} holds only ${area.fish.length}`);
+  }
+});
+
+test('every fish belongs to a lake, and no lake lists a fish that does not exist', () => {
+  const known = new Set(FISH.map((f) => f.id));
+  const used = new Set();
+  for (const area of AREAS) {
+    for (const id of area.fish) {
+      assert.ok(known.has(id), `${area.name} lists unknown fish ${id}`);
+      used.add(id);
+    }
+  }
+  // An unreachable fish would silently inflate the species count.
+  const orphans = FISH.filter((f) => !used.has(f.id)).map((f) => f.id);
+  assert.deepEqual(orphans, [], `no lake holds ${orphans.join(', ')}`);
+});
+
+test('every Epic fish is actually Epic, and rarer fish weigh less than common ones', () => {
+  const epic = FISH.filter((f) => f.rarity === 'Epic');
+  assert.ok(epic.length >= AREAS.length, `expected an Epic per lake, found ${epic.length}`);
+  const commonWeight = Math.max(...FISH.filter((f) => f.rarity === 'Common').map((f) => f.weight));
+  for (const fish of epic) {
+    assert.ok(fish.weight < commonWeight,
+      `${fish.id} is Epic but weighs ${fish.weight}, not rarer than a Common`);
+  }
+});
+
+test('every fish draws a shape that exists, so none renders as a fallback', () => {
+  for (const fish of FISH) {
+    assert.ok(FISH_SHAPES[fish.draw], `${fish.id} draws with unknown shape "${fish.draw}"`);
+    assert.equal(typeof fish.hue, 'number', `${fish.id} has no hue`);
+    assert.ok(fish.hue >= 0 && fish.hue < 360, `${fish.id} hue ${fish.hue} is out of range`);
+  }
+});
+
+test('every fish says something when it is hooked', () => {
+  for (const fish of FISH) {
+    const line = hookLineFor(fish);
+    assert.ok(line && line.length >= 20, `${fish.id} has no hook line`);
   }
 });

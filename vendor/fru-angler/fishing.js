@@ -146,6 +146,17 @@ export const RODS_BY_PRICE = Object.keys(RODS)
  * Fisch's. Rarity order matches Fisch's so the difficulty curve reads the same.
  */
 export const FISH = [
+/* ---- the Epic tier, and the high tiers every lake was missing ------- *
+   * Until now each lake held a band of tiers and the rarer fish only turned up
+   * in the deepest water. Every lake now carries Rare, Epic, Legendary and
+   * Mythical, so a beginner can meet something genuinely rare on lake one and
+   * still have a Mythical to chase at the bottom.
+   *
+   * Epic weights are chosen together, not per fish: the index shows the real
+   * odds per tier, and those must stay strictly monotonic. Epic as a whole has
+   * to weigh more than Legendary (24) and less than Rare (48).
+   */
+
   { id: 'glidefin', name: 'Glidefin', rarity: 'Common', pricePerKg: 4, minKg: 0.4, maxKg: 2, fight: 0.35, hue: 195, draw: 'slim', weight: 30,
     hook: 'The wind picks up. You feel something small skimming across the top.' },
   { id: 'sunscale', name: 'Sunscale', rarity: 'Common', pricePerKg: 7, minKg: 0.5, maxKg: 2.4, fight: 0.4, hue: 48, draw: 'slim', weight: 22,
@@ -168,12 +179,16 @@ export const FISH = [
     hook: 'A shadow crosses the line. You feel it gone before you see it.' },
   { id: 'lanternjack', name: 'Lantern Jack', rarity: 'Uncommon', pricePerKg: 28, minKg: 1.8, maxKg: 6.4, fight: 0.72, hue: 55, draw: 'flat', weight: 10,
     hook: 'A pale light moves under the surface. You feel it drift, unhurried.' },
-  { id: 'snowsmelt', name: 'Snowsmelt', rarity: 'Uncommon', pricePerKg: 30, minKg: 2.6, maxKg: 9, fight: 0.76, hue: 190, draw: 'slim', weight: 9,
+  { id: 'snowsmelt', name: 'Snowsmelt', rarity: 'Uncommon', pricePerKg: 30, minKg: 2.6, maxKg: 9, fight: 0.73, hue: 190, draw: 'slim', weight: 9,
     hook: 'Meltwater runs down the line. You feel the cold coming from upstream.' },
   { id: 'mudsole', name: 'Mud Sole', rarity: 'Rare', pricePerKg: 58, minKg: 3.5, maxKg: 12, fight: 0.74, hue: 88, draw: 'flat', weight: 8,
     hook: 'The line goes slack and stays slack. You feel it working something over.' },
   { id: 'doric-dab', name: 'DORFic Dab', rarity: 'Rare', pricePerKg: 55, minKg: 0.8, maxKg: 3.4, fight: 0.75, hue: 45, draw: 'flat', weight: 12,
     hook: 'The line drags low. You feel whatever this is hugging the bottom.' },
+  { id: 'glowmote', name: 'Glowmote', rarity: 'Rare', pricePerKg: 88, minKg: 24, maxKg: 70, fight: 0.75, hue: 200, draw: 'slim', weight: 7,
+    hook: 'A small cold light on your line, dragging its own glow behind it.' },
+  { id: 'prismminnow', name: 'Prism Minnow', rarity: 'Rare', pricePerKg: 15, minKg: 1.2, maxKg: 3.6, fight: 0.76, hue: 250, draw: 'slim', weight: 3,
+    hook: 'The water breaks into colours, and you spot something small and bright inside it.' },
   { id: 'orangebarbel', name: 'Orange Barbel', rarity: 'Rare', pricePerKg: 62, minKg: 4, maxKg: 14, fight: 0.78, hue: 32, draw: 'deep', weight: 8,
     hook: 'You feel it dive for the warm bottom and hold there, heavy and sure.' },
   { id: 'emberfin', name: 'Emberfin', rarity: 'Rare', pricePerKg: 76, minKg: 4.5, maxKg: 16, fight: 0.8, hue: 12, draw: 'long', weight: 7,
@@ -182,10 +197,24 @@ export const FISH = [
     hook: 'You feel something long decide to move, and then it simply does.' },
   { id: 'frostfin', name: 'Frostfin', rarity: 'Rare', pricePerKg: 88, minKg: 6, maxKg: 22, fight: 0.84, hue: 196, draw: 'long', weight: 6,
     hook: 'Ice ticks against the line. You feel it hold perfectly still, waiting.' },
+  { id: 'canopycat', name: 'Canopy Catfish', rarity: 'Epic', pricePerKg: 71, minKg: 12, maxKg: 34, fight: 0.85, hue: 145, draw: 'deep', weight: 5,
+    hook: 'Something broad moves under the reeds, and not one of them shifts for you.' },
+  { id: 'haloherring', name: 'Halo Herring', rarity: 'Epic', pricePerKg: 34, minKg: 3, maxKg: 9, fight: 0.86, hue: 285, draw: 'deep', weight: 12,
+    hook: 'A ring of light rides the surface beside it, and you have never seen one down there.' },
+  { id: 'aurorachar', name: 'Aurora Char', rarity: 'Epic', pricePerKg: 96, minKg: 20, maxKg: 58, fight: 0.87, hue: 250, draw: 'deep', weight: 4,
+    hook: 'It glows green and violet under the ice, and you could swear the ice approves.' },
+  { id: 'eventhorizon', name: 'Event Horizon', rarity: 'Epic', pricePerKg: 190, minKg: 38, maxKg: 105, fight: 0.88, hue: 305, draw: 'long', weight: 5,
+    hook: 'Your line goes slack, then tightens all at once. Something enormous turns over.' },
+  { id: 'rivetray', name: 'Rivet Ray', rarity: 'Epic', pricePerKg: 52, minKg: 5, maxKg: 15, fight: 0.89, hue: 265, draw: 'flat', weight: 5,
+    hook: 'It holds one perfectly straight line, and you watch the channel narrow behind it.' },
   { id: 'blueglass', name: 'Blueglass', rarity: 'Legendary', pricePerKg: 168, minKg: 9, maxKg: 34, fight: 0.87, hue: 215, draw: 'deep', weight: 4,
     hook: 'You feel something turn over, slow and heavy, like a pane of glass.' },
+  { id: 'daylight', name: 'Daylight Marlin', rarity: 'Legendary', pricePerKg: 96, minKg: 6, maxKg: 22, fight: 0.87, hue: 15, draw: 'long', weight: 3,
+    hook: 'It comes up sideways and the whole lake turns over underneath it, for you.' },
   { id: 'eco-gar', name: 'Eco Gar', rarity: 'Legendary', pricePerKg: 140, minKg: 12, maxKg: 40, fight: 0.88, hue: 110, draw: 'long', weight: 8,
     hook: 'You feel the power of the environment surge up the line.' },
+  { id: 'signalfin', name: 'Signalfin', rarity: 'Legendary', pricePerKg: 128, minKg: 9, maxKg: 26, fight: 0.88, hue: 5, draw: 'slim', weight: 3,
+    hook: 'Three short pulls, then a long one. You read it as a message, not a fight.' },
   { id: 'rimepike', name: 'Rime Pike', rarity: 'Legendary', pricePerKg: 155, minKg: 10, maxKg: 38, fight: 0.9, hue: 205, draw: 'long', weight: 5,
     hook: 'You feel the cold come off the line in waves. It is not struggling. It is waiting.' },
   { id: 'deepglow', name: 'Deepglow', rarity: 'Legendary', pricePerKg: 205, minKg: 16, maxKg: 60, fight: 0.93, hue: 262, draw: 'long', weight: 4,
@@ -196,23 +225,31 @@ export const FISH = [
     hook: 'The line goes dead, and then you feel it pull again, from straight down.' },
   { id: 'voidpike', name: 'Voidpike', rarity: 'Mythical', pricePerKg: 355, minKg: 26, maxKg: 96, fight: 0.98, hue: 285, draw: 'long', weight: 2,
     hook: 'You feel it take the line and hold it, out past where light gives up.' },
+  { id: 'zenith', name: 'Zenith Koi', rarity: 'Mythical', pricePerKg: 260, minKg: 7, maxKg: 26, fight: 0.98, hue: 300, draw: 'long', weight: 1,
+    hook: 'You realise you have been fishing the surface of the sun this entire time.' },
+  { id: 'civiceel', name: 'Civic Eel', rarity: 'Mythical', pricePerKg: 340, minKg: 11, maxKg: 30, fight: 0.99, hue: 340, draw: 'long', weight: 1,
+    hook: 'The current stops to let it past, and you understand you should wait your turn.' },
+  { id: 'verdant', name: 'Verdant Warden', rarity: 'Mythical', pricePerKg: 410, minKg: 16, maxKg: 44, fight: 0.99, hue: 250, draw: 'long', weight: 1,
+    hook: 'The marsh lights up from below it. You feel the environment push back.' },
   { id: 'glacier-char', name: 'Glacier Char', rarity: 'Mythical', pricePerKg: 320, minKg: 30, maxKg: 110, fight: 1, hue: 275, draw: 'long', weight: 4,
     hook: 'The cold runs up your arm. This one is older than the ice.' },
   { id: 'lastlantern', name: 'Lastlantern', rarity: 'Mythical', pricePerKg: 420, minKg: 30, maxKg: 120, fight: 1, hue: 190, draw: 'long', weight: 1,
     hook: 'You feel the line go warm for the first time in your life.' },
+
 ];;
 
 export const RARITY_COLOURS = {
   Common: '#7ea8bd',
   Uncommon: '#7aa84a',
   Rare: '#e07b2a',
+  Epic: '#7b3fe4',        // violet: sits between Rare's orange and Mythical's purple
   Legendary: '#c8a02e',
   Mythical: '#8b5cf6',
 };
 
 /* Rare first, so an index or a guide can walk the tiers in order without
    re-declaring them. Exported at the bottom of this file. */
-const RARITY_ORDER = ['Common', 'Uncommon', 'Rare', 'Legendary', 'Mythical'];
+const RARITY_ORDER = ['Common', 'Uncommon', 'Rare', 'Epic', 'Legendary', 'Mythical'];
 
 /* The share of casts each tier accounts for, as a percentage. rollFish() picks a
    fish by weight within the whole table, so these are derived from the weights
@@ -261,10 +298,18 @@ export function rollFish(roll, rod, areaId) {
   const table = pool.length ? pool : FISH;
 
   const luck = Math.max(0, rod?.luck || 0);
-  const weights = table.map((fish, index) => {
+  // Depth comes from the fish's RARITY, not its position in the lake's list.
+  //
+  // It used to be the pool index over the whole table, which meant a lake's
+  // ordering decided what luck did. Dark Aero Deep lists its Mythicals first, so
+  // adding a Rare and an Epic after them left the Mythicals at depth ~0 — a
+  // luckier rod could not make them any more likely, which is backwards. Now a
+  // Mythical is always deeper than a Rare, wherever it sits.
+  const top = Math.max(1, RARITY_ORDER.length - 1);
+  const weights = table.map((fish) => {
     const base = fish.weight ?? 1;
-    const depth = index / Math.max(1, FISH.length - 1);
-    const boost = fish.rarity === 'Common' ? 1 : 1 + luck * depth * 2;
+    const tier = RARITY_ORDER.indexOf(fish.rarity);
+    const boost = tier <= 0 ? 1 : 1 + luck * (tier / top) * 2;
     return base * boost;
   });
 
@@ -663,7 +708,8 @@ export const AREAS = [
     blurb: 'Still, bright water under a very large sun.',
     locked: false,
     trait: null,
-    fish: ['glidefin', 'aero-minnow', 'sunscale', 'ripplefin', 'bubbleperch', 'glossdace'],
+    fish: ['glidefin', 'aero-minnow', 'sunscale', 'ripplefin', 'bubbleperch', 'glossdace',
+      'prismminnow', 'haloherring', 'daylight', 'zenith'],
     palette: {
       skyTop: '#81d4fa', skyMid: '#b3e5fc', skyFloor: '#f4fbff',
       water: '#2f81c4', accent: '#4fc3f7',
@@ -677,7 +723,8 @@ export const AREAS = [
     blurb: 'Warm orange shallows cut by straight geometric channels.',
     locked: true,
     trait: null,
-    fish: ['coralpike', 'duskdarter', 'metro-trout', 'doric-dab', 'orangebarbel', 'emberfin'],
+    fish: ['coralpike', 'duskdarter', 'metro-trout', 'doric-dab', 'orangebarbel', 'emberfin',
+      'rivetray', 'signalfin', 'civiceel'],
     palette: {
       skyTop: '#f7c894', skyMid: '#fbe0c4', skyFloor: '#fffaf4',
       water: '#c2701f', accent: '#e07b2a',
@@ -692,7 +739,8 @@ export const AREAS = [
     locked: true,
     trait: 'flex',
     traitNote: 'needs a rod that can reach over the reeds',
-    fish: ['reedcarp', 'lanternjack', 'mudsole', 'mirrorpike', 'eco-gar', 'coralpike'],
+    fish: ['reedcarp', 'lanternjack', 'mudsole', 'mirrorpike', 'eco-gar', 'coralpike',
+      'canopycat', 'verdant'],
     palette: {
       skyTop: '#a8cf8f', skyMid: '#c8e0b0', skyFloor: '#f6faf0',
       water: '#4e7a35', accent: '#7aa84a',
@@ -707,7 +755,8 @@ export const AREAS = [
     locked: true,
     trait: 'ice',
     traitNote: 'needs a rod that can bore through the ice',
-    fish: ['snowsmelt', 'frostfin', 'rimepike', 'blueglass', 'glacier-char', 'mirrorpike'],
+    fish: ['snowsmelt', 'frostfin', 'rimepike', 'blueglass', 'glacier-char', 'mirrorpike',
+      'aurorachar'],
     palette: {
       skyTop: '#cfe6f5', skyMid: '#e3f1f9', skyFloor: '#fbfdff',
       water: '#3f7fa8', accent: '#7fc4e8',
@@ -722,7 +771,8 @@ export const AREAS = [
     locked: true,
     trait: 'reinforced',
     traitNote: 'needs a rod reinforced enough for the pressure',
-    fish: ['deepglow', 'pressurefin', 'voidpike', 'blackmirror', 'lastlantern', 'glacier-char'],
+    fish: ['deepglow', 'pressurefin', 'voidpike', 'blackmirror', 'lastlantern', 'glacier-char',
+      'glowmote', 'eventhorizon'],
     palette: {
       skyTop: '#0f2027', skyMid: '#122a34', skyFloor: '#0a141a',
       water: '#06222e', accent: '#29b6f6',

@@ -4,7 +4,7 @@ import {
   reelConfig, stepReel, isContained, containedFraction,
   reelOutcomeFor, reelOutcome, isCaught, lineSnapped,
 } from '../vendor/fru-angler/reel.js';
-import { RODS, FISH } from '../vendor/fru-angler/fishing.js';
+import { RODS, FISH, RARITY_ORDER } from '../vendor/fru-angler/fishing.js';
 
 const CFG = reelConfig({ fight: 0.6, control: 0.24, resilience: 0.7 });
 
@@ -384,20 +384,33 @@ test('the starting rod can land every fish, including the Mythical', () => {
 });
 
 test('rarity still costs a weak player something', () => {
-  // The win rate should fall as rarity climbs. If every fish lands at 100% the
-  // rods have nothing to offer and the Mythical is a formality.
+  // The claim is about RARITY, so measure it per rarity band rather than per
+  // table row. Comparing adjacent rows tested two other things by accident: the
+  // order of the FISH table, and 200-run sampling noise, which reaches +-0.03
+  // here — larger than the old 0.02 tolerance. A band mean averages that out.
+  //
+  // More runs also costs less than it sounds: the simulation is pure, so this is
+  // arithmetic, not wall-clock waiting.
   const weak = { lag: 7, error: 0.14 };
-  const rates = FISH.map((f) => ({
-    name: f.name,
-    rate: winRate(reelConfig({ fight: f.fight, control: RODS.bamboo.control, resilience: RODS.bamboo.resilience }), weak),
-  }));
-  for (let i = 1; i < rates.length; i += 1) {
-    assert.ok(rates[i].rate <= rates[i - 1].rate + 0.02,
-      `${rates[i].name} should not be easier than ${rates[i - 1].name}: ` +
-      `${rates[i - 1].rate} -> ${rates[i].rate}`);
+  const rateFor = (fight) => winRate(
+    reelConfig({ fight, control: RODS.bamboo.control, resilience: RODS.bamboo.resilience }),
+    { ...weak, runs: 600 },
+  );
+
+  const byRarity = RARITY_ORDER.map((rarity) => {
+    const fish = FISH.filter((f) => f.rarity === rarity);
+    const rates = fish.map((f) => rateFor(f.fight));
+    return { rarity, n: fish.length, mean: rates.reduce((s, v) => s + v, 0) / rates.length };
+  });
+
+  for (let i = 1; i < byRarity.length; i += 1) {
+    assert.ok(byRarity[i].mean <= byRarity[i - 1].mean + 0.01,
+      `${byRarity[i].rarity} should not be easier than ${byRarity[i - 1].rarity}: ` +
+      `${byRarity[i - 1].mean.toFixed(3)} -> ${byRarity[i].mean.toFixed(3)}`);
   }
+
   // And a Mythical must be measurably harder than a Common.
-  const spread = rates[0].rate - rates[rates.length - 1].rate;
+  const spread = byRarity[0].mean - byRarity[byRarity.length - 1].mean;
   assert.ok(spread >= 0.05,
     `the Common-to-Mythical gap should be visible to a weak player, got ${Math.round(spread * 100)}%`);
 });

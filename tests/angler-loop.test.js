@@ -368,10 +368,12 @@ test('a landed fish shows rarity as filled blocks, not colour', async () => {
     if (!ctx.doc.getElementById('catch').hidden) break;
   }
   const pips = ctx.doc.querySelectorAll('#catch-rarity .catch__pip');
-  assert.equal(pips.length, 5, 'five rarity blocks, one per tier');
+  // Derived, not restated: adding a tier must not need this test edited.
+  assert.equal(pips.length, RARITY_ORDER.length,
+    `one rarity block per tier, expected ${RARITY_ORDER.length}`);
   const filled = [...pips].filter((p) => p.classList.contains('is-on'));
-  assert.ok(filled.length >= 1 && filled.length <= 5);
-  assert.match(ctx.doc.getElementById('catch-rarity').getAttribute('aria-label'), /Rarity \d of 5/);
+  assert.ok(filled.length >= 1 && filled.length <= RARITY_ORDER.length);
+  assert.match(ctx.doc.getElementById('catch-rarity').getAttribute('aria-label'), new RegExp(`Rarity \\d of ${RARITY_ORDER.length}`));
 });
 
 
@@ -746,15 +748,18 @@ test('there is a fish index listing every fish with its rarity', () => {
   // RARITY_ORDER is declared privately and re-exported in this module's bottom
   // export list, so check the export is reachable (proven by the import at the
   // top of this file) rather than pinning one syntax.
-  assert.ok(RARITY_ORDER.length === 5, 'the rarity order must be importable');
+  assert.ok(RARITY_ORDER.length >= 3, 'the rarity order must be importable');
   assert.match(source, /export function fishIndex\(/,
     'a single function that builds the index');
 });
 
 test('the fish index covers every fish, grouped by rarity, in rarity order', () => {
+  // This also asserts no tier is empty, which is why adding Epic to RARITY_ORDER
+  // failed here until Epic actually had fish in it.
   // Imported lazily so this test file works before the export exists.
   const groups = fishIndex();
-  assert.equal(groups.length, 5, `expected 5 rarity groups, got ${groups.length}`);
+  assert.equal(groups.length, RARITY_ORDER.length,
+    `one group per tier, expected ${RARITY_ORDER.length}, got ${groups.length}`);
 
   const names = RARITY_ORDER.map((tier) => tier);
   assert.deepEqual(groups.map((g) => g.rarity), names,
