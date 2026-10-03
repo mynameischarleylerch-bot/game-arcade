@@ -150,7 +150,7 @@ const text = (ctx, id) => ctx.doc.getElementById(id).textContent;
 
 test('the game boots with a rod, a wallet and the idle hint', async () => {
   const ctx = await boot(1);
-  assert.equal(text(ctx, 'rod'), 'Bamboo Pole');
+  assert.equal(text(ctx, 'rod'), 'Splinter');
   assert.ok(Number(text(ctx, 'coins')) > 0, 'starts with coins');
   assert.equal(text(ctx, 'message').length > 0, true, 'tells the player what to do');
   assert.equal(text(ctx, 'bestiary'), `0/${FISH.length} species landed`);
@@ -272,7 +272,7 @@ test('the shop lists every rod and a purchase upgrades the equipped one', async 
   const buyable = buttons.find((b) => !b.disabled && b.textContent.includes('buy'));
   buyable.click();
 
-  assert.match(text(ctx, 'rod'), /Willow Rod|Carbon Float/, 'the rod changed');
+  assert.match(text(ctx, 'rod'), /Greenstalk|Graphite Whisper/, 'the rod changed');
   const coinsAfter = Number(text(ctx, 'coins'));
   assert.ok(coinsAfter < coinsBefore, 'the purchase was charged');
   assert.match(text(ctx, 'rod-stats'), /up to 8 kg/, 'the new weight ceiling is shown');
@@ -291,7 +291,7 @@ test('progress and wallet survive a reload', async () => {
   await import('../vendor/fru-angler/angler.js?run=8b');
 
   assert.equal(text(first, 'coins'), '4321');
-  assert.equal(text(first, 'rod'), 'Carbon Float');
+  assert.equal(text(first, 'rod'), 'Graphite Whisper');
   assert.equal(text(first, 'bestiary'), `1/${FISH.length} species landed`);
 });
 
@@ -300,7 +300,7 @@ test('a corrupt save falls back to a playable loadout', async () => {
   localStorage.setItem('fru-angler-save', '{ not json');
   await import('../vendor/fru-angler/angler.js?run=9b');
   assert.equal(text(ctx, 'coins'), '240', 'falls back to the starting wallet');
-  assert.match(text(ctx, 'rod'), /Bamboo Pole/);
+  assert.match(text(ctx, 'rod'), /Splinter/);
 });
 
 test('an unknown saved rod id is ignored rather than breaking the HUD', async () => {
@@ -309,7 +309,7 @@ test('an unknown saved rod id is ignored rather than breaking the HUD', async ()
     coins: 50, rodId: 'hypercarbon', bestiary: null,
   }));
   await import('../vendor/fru-angler/angler.js?run=10b');
-  assert.equal(text(ctx, 'rod'), 'Bamboo Pole', 'an unknown rod falls back to the cheapest');
+  assert.equal(text(ctx, 'rod'), 'Splinter', 'an unknown rod falls back to the cheapest');
   assert.equal(text(ctx, 'bestiary'), `0/${FISH.length} species landed`,
     'a null bestiary is not trusted');
 });
@@ -406,13 +406,13 @@ test('a rod you own can be re-equipped for free', async () => {
   // Buy the willow with the starting wallet (it starts with exactly its price).
   shopRow(ctx, 'willow').click();
 
-  assert.match(text(ctx, 'rod'), /Willow Rod/, 'buying equips it');
+  assert.match(text(ctx, 'rod'), /Greenstalk/, 'buying equips it');
   const coinsAfterBuy = Number(text(ctx, 'coins'));
 
   // Now go back to the bamboo pole, from the inventory: no cost, no re-buy.
   ctx.doc.getElementById('inventory-open').click();
   bagRow(ctx, 'bamboo').click();
-  assert.equal(text(ctx, 'rod'), 'Bamboo Pole');
+  assert.equal(text(ctx, 'rod'), 'Splinter');
   assert.equal(Number(text(ctx, 'coins')), coinsAfterBuy, 're-equipping must be free');
   assert.ok(bagRow(ctx, 'willow'), 'the willow is still owned after re-equipping');
 });
@@ -420,13 +420,13 @@ test('a rod you own can be re-equipped for free', async () => {
 test('the visible rod changes when you equip a different one', async () => {
   const ctx = await boot(16);
   const before = rodAppearance(ctx);
-  assert.match(text(ctx, 'rod'), /Bamboo Pole/);
+  assert.match(text(ctx, 'rod'), /Splinter/);
 
   ctx.doc.getElementById('shop-open').click();
   shopRow(ctx, 'willow').click();
 
   const after = rodAppearance(ctx);
-  assert.match(text(ctx, 'rod'), /Willow Rod/);
+  assert.match(text(ctx, 'rod'), /Greenstalk/);
   assert.notEqual(after.shaft, before.shaft, 'the rod colour must change');
   assert.notEqual(after.d, before.d, 'the rod shape/length must change');
   assert.ok(Number(after.width) > Number(before.width), 'and the better rod is thicker');
@@ -440,7 +440,7 @@ test('the rod in the scene matches the equipped rod after a reload', async () =>
   }));
   await import('../vendor/fru-angler/angler.js?run=17b');
 
-  assert.match(text(ctx, 'rod'), /Oak Lance/);
+  assert.match(text(ctx, 'rod'), /Deeproot/);
   const art = rodAppearance(ctx);
   assert.equal(art.shaft, '#7d4f2e', 'the oak rod colour must be drawn after reload');
   assert.equal(art.width, '2.4');
@@ -453,7 +453,7 @@ test('a save with a rod you do not own falls back rather than equipping it', asy
   }));
   await import('../vendor/fru-angler/angler.js?run=18b');
 
-  assert.match(text(ctx, 'rod'), /Bamboo Pole/,
+  assert.match(text(ctx, 'rod'), /Splinter/,
     'the HUD must not claim a rod the save does not own');
 });
 
@@ -461,7 +461,7 @@ test('a save with no inventory at all still loads', async () => {
   const ctx = await boot(19);
   localStorage.setItem('fru-angler-save', JSON.stringify({ coins: 99, bestiary: {} }));
   await import('../vendor/fru-angler/angler.js?run=19b');
-  assert.match(text(ctx, 'rod'), /Bamboo Pole/);
+  assert.match(text(ctx, 'rod'), /Splinter/);
   ctx.doc.getElementById('inventory-open').click();
   assert.equal(ctx.doc.querySelectorAll('#inventory-rods .rod').length, 1,
     'an old save gets the starting rod only');
@@ -522,7 +522,7 @@ test('equipping from the inventory works and is free', async () => {
   ctx.doc.getElementById('inventory-open').click();
   bagRow(ctx, 'bamboo').click();
 
-  assert.match(text(ctx, 'rod'), /Bamboo Pole/, 'the rod changed');
+  assert.match(text(ctx, 'rod'), /Splinter/, 'the rod changed');
   assert.equal(Number(text(ctx, 'coins')), coins, 'and it cost nothing');
   assert.equal(bagRow(ctx, 'bamboo').dataset.state, 'equipped');
 });
@@ -575,7 +575,7 @@ test('an empty inventory panel still lists all six fish', async () => {
   const ctx = await boot(27);
   ctx.doc.getElementById('inventory-open').click();
   assert.equal(ctx.doc.querySelectorAll('#inventory-fish .species').length, FISH.length);
-  assert.match(ctx.doc.getElementById('inventory-rods').textContent, /Bamboo/);
+  assert.match(ctx.doc.getElementById('inventory-rods').textContent, /Splinter/);
 });
 
 

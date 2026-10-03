@@ -848,3 +848,94 @@ test('every fish says something when it is hooked', () => {
     assert.ok(line && line.length >= 20, `${fish.id} has no hook line`);
   }
 });
+
+test('eight ordinary rods stand between the first two lakes', () => {
+  const ordinary = Object.values(RODS).filter((r) => r.traits.length === 0);
+  assert.equal(ordinary.length, 8, `expected 8 no-trait rods, found ${ordinary.length}`);
+});
+
+test('the ordinary rods are the eight cheapest, and every trait rod costs a premium', () => {
+  const ordinary = Object.values(RODS).filter((r) => r.traits.length === 0)
+    .sort((a, b) => a.price - b.price);
+  const dearest = ordinary[ordinary.length - 1];
+  for (const rod of Object.values(RODS)) {
+    if (rod.traits.length > 0) {
+      assert.ok(rod.price > dearest.price,
+        `${rod.id} is a specialist at ${rod.price} but the dearest ordinary rod is only ${dearest.price}`);
+    }
+  }
+});
+
+test('every rod has its own artwork, and upgrades get longer and thicker', () => {
+  const byPrice = RODS_BY_PRICE.map((id) => ({ id, look: rodArt(id) }));
+  for (let i = 1; i < byPrice.length; i += 1) {
+    const prev = byPrice[i - 1];
+    const cur = byPrice[i];
+    assert.ok(cur.look.width >= prev.look.width,
+      `${cur.id} (${cur.look.width}) is thinner than ${prev.id} (${prev.look.width})`);
+    assert.notEqual(cur.look.colour, prev.look.colour, `${cur.id} shares ${prev.id}'s colour`);
+  }
+  const colours = byPrice.map((r) => r.look.colour);
+  assert.equal(new Set(colours).size, colours.length, 'two rods share a colour');
+  const widths = byPrice.map((r) => r.look.width);
+  assert.equal(new Set(widths).size, widths.length, 'two rods share a thickness');
+});
+
+test('no rod is named after its own material', () => {
+  for (const rod of Object.values(RODS)) {
+    assert.doesNotMatch(rod.name, /^(Bamboo|Willow|Carbon|Oak)\b/,
+      `${rod.id} is still named after what it is made of: ${rod.name}`);
+  }
+});
+
+test('every rod name is unique and reads as a Frutiser thing', () => {
+  const names = Object.values(RODS).map((r) => r.name);
+  assert.equal(new Set(names).size, names.length, 'two rods share a name');
+  for (const name of names) {
+    assert.equal(name, name.trim(), `"${name}" has stray whitespace`);
+    assert.doesNotMatch(name, /\s-\s|[_-]/, `"${name}" should read as a name, not an id`);
+  }
+});
+
+test('every rod has a blurb with something to say', () => {
+  for (const rod of Object.values(RODS)) {
+    assert.ok(rod.blurb?.length >= 18, `${rod.id} needs a fuller blurb: "${rod.blurb}"`);
+    assert.match(rod.blurb, /[.!?]$/, `${rod.id} blurb should end in punctuation`);
+  }
+});
+
+test('a rod gains stats as it costs more, or the upgrade is pointless', () => {
+  const byPrice = RODS_BY_PRICE.map((id) => RODS[id]);
+  for (let i = 1; i < byPrice.length; i += 1) {
+    const prev = byPrice[i - 1];
+    const cur = byPrice[i];
+    // Specialists pay for access, so their maxKg may dip; luck must not.
+    assert.ok(cur.luck >= prev.luck,
+      `${cur.id} costs more than ${prev.id} but has less luck`);
+    assert.ok(cur.lureSpeed >= prev.lureSpeed,
+      `${cur.id} costs more than ${prev.id} but lures slower`);
+    assert.ok(cur.control >= prev.control,
+      `${cur.id} costs more than ${prev.id} but is harder to steer`);
+  }
+});
+
+test('DORFic Delta is gated by the channel trait, and a rod can open it', () => {
+  const delta = AREAS.find((a) => a.id === 'doric-delta');
+  assert.equal(delta.trait, 'channel');
+  assert.ok(delta.traitNote, 'the gate must explain itself');
+  const carry = Object.values(RODS).filter((r) => r.traits.includes('channel'));
+  assert.ok(carry.length >= 1, 'no rod can fish DORFic Delta');
+  assert.equal(rodWorksIn(carry[0].id, 'doric-delta'), true);
+  assert.equal(rodWorksIn('bamboo', 'doric-delta'), false);
+});
+
+test('every trait lake has a note and at least one rod that opens it', () => {
+  for (const area of AREAS) {
+    if (!area.trait) continue;
+    assert.ok(area.traitNote, `${area.name} has a trait but no traitNote`);
+    const carry = Object.values(RODS).filter((r) => r.traits.includes(area.trait));
+    assert.ok(carry.length >= 1, `${area.name} can never be fished`);
+    const check = rodCheckIn(carry[0].id, area.id);
+    assert.equal(check.ok, true, `${carry[0].id} should work in ${area.name}: ${check.reason}`);
+  }
+});
