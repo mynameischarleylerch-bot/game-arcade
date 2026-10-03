@@ -6,7 +6,7 @@ import {
   startingInventory, ownsRod, addRodToInventory, equipRod, rodArt, RODS_BY_PRICE,
   fishSvg, FISH_SHAPES, hookLineFor, AREAS, areaUnlocked,
   rodWorksIn, rodCheckIn,
- areaProgress, levelFrom, xpForCatch, luckFromLevel, luckFor, LOST_ITEMS, rollLostItem, lostItemsFor, SEALS, buySeal, equipSeal, sealComment, sealDuplicates,} from '../vendor/fru-angler/fishing.js';
+ areaProgress, levelFrom, xpForCatch, luckFromLevel, luckFor, LOST_ITEMS, rollLostItem, lostItemsFor, SEALS, buySeal, equipSeal, sealComment, sealDuplicates, visitArea,} from '../vendor/fru-angler/fishing.js';
 
 test('the starting wallet can afford exactly one upgrade from the cheapest rod', () => {
   const loadout = startingLoadout();
@@ -1283,5 +1283,60 @@ test('seals are the sink for junk, and cost more than a lake of it earns', () =>
     const bestCast = junk.reduce((s, i) => s + i.value, 0);
     assert.ok(seal.price > bestCast,
       `${seal.name} costs ${seal.price} but one cast can net ${bestCast} — too cheap`);
+  }
+});
+
+test('arriving in a lake you cannot fish hands you its rod, once', () => {
+  const start = { owned: AREAS[0].requiredRods, rodId: 'horizon', giftedRods: [] };
+  const arrived = visitArea(start, 'doric-delta');
+
+  assert.equal(arrived.gifted, 'channel', 'first arrival must gift the channel rod');
+  assert.ok(arrived.owned.includes('channel'), 'and it must be in the bag');
+  assert.equal(arrived.rodId, 'channel', 'and equipped, so you can fish there now');
+  assert.equal(rodWorksIn(arrived.rodId, 'doric-delta'), true, 'which it must work in');
+  assert.deepEqual(arrived.giftedRods, ['channel'], 'and the gift is remembered');
+
+  // Coming back must not hand over a second one.
+  assert.equal(visitArea(arrived, 'doric-delta').gifted, null, 'no second gift');
+  assert.equal(visitArea(arrived, 'doric-delta').owned.filter((r) => r === 'channel').length, 1);
+});
+
+test('the gift is recorded, so leaving and returning cannot farm it', () => {
+  let s = visitArea({ owned: AREAS[0].requiredRods, rodId: 'horizon', giftedRods: [] }, 'doric-delta');
+  s = visitArea(s, 'eco-marsh');
+  s = visitArea(s, 'glacier-fjord');
+  s = visitArea(s, 'doric-delta');
+  assert.equal(s.gifted, null, 'returning to a gifted lake must not re-gift');
+  assert.equal(s.owned.filter((r) => r === 'channel').length, 1, 'still only one rod');
+});
+
+test('a lake you can already fish gifts you nothing', () => {
+  const start = { owned: [...AREAS[0].requiredRods, 'channel'], rodId: 'horizon', giftedRods: [] };
+  const arrived = visitArea(start, 'doric-delta');
+  assert.equal(arrived.gifted, null, 'you already had the rod');
+  assert.equal(arrived.rodId, 'horizon', 'and keep the rod you had');
+});
+
+test('an untraited lake never gifts anything', () => {
+  const start = { owned: ['bamboo'], rodId: 'bamboo', giftedRods: [] };
+  const arrived = visitArea(start, 'aero-lake');
+  assert.equal(arrived.gifted, null, 'Aero Lake has no trait, so there is nothing to hand over');
+  assert.equal(arrived.areaId, 'aero-lake');
+});
+
+test('an unknown lake falls back to the first rather than crashing', () => {
+  const arrived = visitArea({ owned: ['bamboo'], rodId: 'bamboo', giftedRods: [] }, 'no-such-lake');
+  assert.equal(arrived.areaId, AREAS[0].id);
+});
+
+test('every trait lake has exactly one gift rod, and it is the first listed', () => {
+  for (const area of AREAS) {
+    if (!area.trait) continue;
+    const gift = area.requiredRods[0];
+    assert.ok(RODS[gift], `${area.name} lists no gift rod`);
+    assert.ok(RODS[gift].traits.includes(area.trait),
+      `${gift} is the gift for ${area.name} but carries ${RODS[gift].traits.join(',')}`);
+    assert.equal(rodWorksIn(gift, area.id), true,
+      `the gift must actually fish ${area.name}`);
   }
 });

@@ -12,7 +12,7 @@ import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
 import { JSDOM } from 'jsdom';
 import { FISH, RARITY_ORDER, fishIndex, hookLineFor, AREAS,
-         RODS, RODS_BY_PRICE, SEALS } from '../vendor/fru-angler/fishing.js';
+         RODS, RODS_BY_PRICE, SEALS } from '../vendor/fru-angler/fishing.js?v=2026-10-02-a';
 
 const PAGE = readFileSync(
   new URL('../vendor/fru-angler/index.html', import.meta.url),
@@ -1094,4 +1094,50 @@ test('the dock pet is styled in Aero glass, not a flat blob', async () => {
   }, 68);
   const pet = ctx.doc.getElementById('fa-pet');
   assert.match(pet.innerHTML, /url\(#fa-pet/, 'the pet must be filled with its gradient');
+});
+
+test('travelling to a locked lake hands you its rod, once, for real', async () => {
+  // Cleared and rod-complete for Aero Lake, so DORFic Delta is open to travel to.
+  const first = AREAS[0];
+  const ctx = await seedSave({
+    coins: 0, rodId: 'horizon', owned: [...first.requiredRods],
+    bestiary: Object.fromEntries(first.fish.map((id) => [id, 1])),
+    areaId: 'aero-lake', xp: 0, ownedSeals: [], equippedSeal: null, lost: [], giftedRods: [],
+  }, 69);
+
+  const row = [...ctx.doc.querySelectorAll('#lake-list .lake-row')]
+    .find((r) => r.textContent.includes('DORFic Delta'));
+  assert.equal(row.getAttribute('aria-disabled'), 'false', 'DORFic Delta should be open');
+  row.dispatchEvent(new ctx.win.MouseEvent('click', { bubbles: true }));
+
+  assert.match(ctx.doc.getElementById('rod').textContent, /Straightwater/,
+    `the channel rod should have been handed over, rod shows "${ctx.doc.getElementById('rod').textContent}"`);
+  assert.match(ctx.doc.getElementById('message').textContent, /Straightwater|lying by the water/);
+  assert.equal(ctx.doc.getElementById('rod-stats').textContent.includes('luck'), true);
+});
+
+test('the gift cannot be farmed by leaving and coming back', async () => {
+  const first = AREAS[0];
+  const ctx = await seedSave({
+    coins: 0, rodId: 'horizon', owned: [...first.requiredRods],
+    bestiary: Object.fromEntries(first.fish.map((id) => [id, 1])),
+    areaId: 'aero-lake', xp: 0, ownedSeals: [], equippedSeal: null, lost: [], giftedRods: [],
+  }, 70);
+
+  const travel = (name) => {
+    const row = [...ctx.doc.querySelectorAll('#lake-list .lake-row')]
+      .find((r) => r.textContent.includes(name));
+    assert.ok(row, `${name} must be listed`);
+    row.dispatchEvent(new ctx.win.MouseEvent('click', { bubbles: true }));
+  };
+
+  travel('DORFic Delta');
+  assert.match(ctx.doc.getElementById('rod').textContent, /Straightwater/);
+  travel('Aero Lake');
+  travel('DORFic Delta');
+  // Still exactly one channel rod, and nothing new was handed over.
+  const saved = JSON.parse(ctx.win.localStorage.getItem('fru-angler-save'));
+  assert.equal(saved.owned.filter((r) => r === 'channel').length, 1,
+    'the rod must never duplicate');
+  assert.deepEqual(saved.giftedRods, ['channel'], 'the gift is recorded once');
 });

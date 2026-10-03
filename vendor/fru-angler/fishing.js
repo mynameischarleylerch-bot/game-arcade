@@ -1002,6 +1002,47 @@ export function hookLineFor(fish) {
 
 /* ------------------------------------------------------------------ areas */
 
+/* ------------------------------------------------------------ arrival gifts */
+
+/**
+ * Move to `areaId`, and take whatever that lake owes you.
+ *
+ * Arriving somewhere you have no rod for is not an experience worth shipping, so
+ * a trait lake hands you its own rod — the first one in `requiredRods` — once, in
+ * the bag and already equipped. The gift is recorded, so leaving and coming back
+ * cannot farm it, and a lake you can already fish never gifts anything.
+ *
+ * Pure: returns a new object and never touches the one passed in.
+ */
+export function visitArea(progress, areaId) {
+  const area = AREAS.find((a) => a.id === areaId) ?? AREAS[0];
+  const owned = Array.isArray(progress?.owned) ? [...progress.owned] : [];
+  const giftedRods = Array.isArray(progress?.giftedRods) ? [...progress.giftedRods] : [];
+  const base = { ...progress, owned, giftedRods, areaId: area.id };
+
+  const already = { ...base, rodId: progress?.rodId, gifted: null };
+
+  // Nothing to hand over if the lake has no trait, or you can already fish it.
+  if (!area.trait || rodWorksIn(progress?.rodId, area.id)) return already;
+  if (owned.some((id) => rodWorksIn(id, area.id))) return already;
+
+  const giftId = area.requiredRods?.[0];
+  if (!giftId || !RODS[giftId]) return already;
+  // Once only. An old save has no giftedRods at all, which correctly means the
+  // player has not been gifted yet.
+  if (giftedRods.includes(giftId)) return already;
+
+  return {
+    ...base,
+    owned: addRodToInventory(owned, giftId),
+    // Record the gift. Without this line the once-only check above could never
+    // fire and the lake would hand over a free rod every single visit.
+    giftedRods: [...giftedRods, giftId],
+    rodId: giftId,
+    gifted: giftId,
+  };
+}
+
 /**
  * The lakes, in order. Each is a Frutiger world with its own light, and each is
  * harder than the last — a lake is unlocked by clearing the one before it.

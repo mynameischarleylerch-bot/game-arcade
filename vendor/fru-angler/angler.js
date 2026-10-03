@@ -18,7 +18,7 @@ import {
  areaProgress,
  rodWorksIn,
  rodCheckIn,
- fishEntry,
+ fishEntry, visitArea,
  SEALS, LOST_ITEMS,
  levelFrom, xpForCatch, xpForLevel, luckFor, luckFromLevel,
  rollLostItem, lostItemsFor,
@@ -98,6 +98,7 @@ const state = {
   ownedSeals: [],      // every seal bought, cheapest first
   equippedSeal: null,  // the ONE of them sitting on the dock with you
   lost: [],            // lost items recovered, newest last
+  giftedRods: [],      // rods handed over on arrival, so they cannot be farmed
 };
 
 const rod = () => RODS[state.rodId];
@@ -140,6 +141,11 @@ function load() {
     state.lost = Array.isArray(saved.lost)
       ? saved.lost.filter((id) => LOST_ITEMS.some((item) => item.id === id))
       : [];
+    // Rods already handed over. An old save has none, which correctly means the
+    // player has not been gifted yet -- they will be, on their first arrival.
+    state.giftedRods = Array.isArray(saved.giftedRods)
+      ? saved.giftedRods.filter((id) => RODS[id])
+      : [];
     // A saved lake is only honoured if it is genuinely open. A save naming a lake
     // the player has not earned must not drop them into the Mythical water.
     if (typeof saved.areaId === 'string') {
@@ -162,6 +168,7 @@ function save() {
       ownedSeals: state.ownedSeals,
       equippedSeal: state.equippedSeal,
       lost: state.lost,
+      giftedRods: state.giftedRods,
     }));
   } catch {
     // Storage blocked: the session still plays, it just will not persist.
@@ -725,10 +732,12 @@ function renderLakes() {
       state_.textContent = bits.join(' · ');
     }
 
-    // A trait you cannot satisfy is shown as shut even once the fish are landed,
-    // because that is the truth: you cannot cast there.
+    // A lake you have not the rod for is still travelable: arriving hands you that
+    // lake's rod. Marking it disabled said you could not go there, which was true
+    // before the arrival gift and is not any more. What it CANNOT do is let you
+    // cast there with the rod in your hand, so that is what the row says now.
     const usable = rodWorksIn(state.rodId, area.id);
-    if (!usable && open) row.setAttribute('aria-disabled', 'true');
+    if (!usable && open) row.dataset.needsRod = area.trait ?? 'a different rod';
 
     row.append(swatch, label, state_);
     if (area.trait) {
@@ -738,12 +747,27 @@ function renderLakes() {
       label.appendChild(tag);
     }
     if (open && !here) {
+      // Travelling is allowed even without the right rod -- that is the point of
+      // the arrival gift. Only casting is refused, and that is checked at the water.
       row.addEventListener('click', () => {
-        state.areaId = area.id;
+        // Going through visitArea() means a lake you cannot fish yet hands you
+        // its own rod, once, already equipped -- so arriving somewhere locked to
+        // your gear is never a dead end.
+        const moved = visitArea(state, area.id);
+        state.areaId = moved.areaId;
+        state.owned = moved.owned;
+        state.giftedRods = moved.giftedRods;
+        state.rodId = moved.rodId;
         paintArea(area);
+        paintChrome();
         save();
         renderLakes();
         closeLakes();
+        if (moved.gifted) {
+          say(`${RODS[moved.gifted].name} was lying by the water. It is yours now.`);
+        } else {
+          say(area.blurb);
+        }
       });
     }
     ui.lakeList.appendChild(row);
