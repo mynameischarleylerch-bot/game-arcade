@@ -29,7 +29,37 @@
 <header class="hero">
   <h1 class="hero__title">Aero Arcade</h1>
   <p class="hero__sub">Games I build. Each one plays right here in the page.</p>
-  <button id="theme-toggle" class="btn btn--ghost hero__theme" type="button">Theme: Frutiger Aero</button>
+  <div class="hero__bar">
+    <button id="theme-toggle" class="btn btn--ghost hero__theme" type="button">Theme: Frutiger Aero</button>
+
+    <!-- MSN Messenger contact card: avatar, status, and the 4x4 display-picture grid. -->
+    <div class="msn" data-msn data-open="false">
+      <button class="msn__toggle" type="button" data-msn-toggle aria-expanded="false">
+        <span class="msn__face-wrap">
+          <img class="msn__face" data-msn-face src="./assets/avatars/avatar-01.svg" alt="" width="40" height="40">
+          <span class="msn__dot" data-msn-dot></span>
+        </span>
+        <span class="msn__text">
+          <span class="msn__label" data-msn-label>Online</span>
+        </span>
+      </button>
+
+      <div class="msn__panel" data-msn-panel hidden>
+        <p class="msn__hint" data-msn-hint></p>
+
+        <h2 class="msn__title">Display picture</h2>
+        <div class="msn__grid" data-msn-grid role="group" aria-label="Choose a display picture"></div>
+
+        <h2 class="msn__title">Status</h2>
+        <div class="msn__statuses" data-msn-statuses role="group" aria-label="Choose a status"></div>
+
+        <label class="msn__nick-row">
+          <span>Nickname</span>
+          <input type="text" class="msn__nick" data-msn-nick maxlength="18" autocomplete="off" spellcheck="false">
+        </label>
+      </div>
+    </div>
+  </div>
 </header>
 
 <main class="panel">
@@ -45,7 +75,9 @@
 <script type="module" src="./src/app.js?v=2026-10-01-c"></script>
 <script type="module">
   import { initThemeButton } from './src/theme-ui.js?v=2026-10-01-a';
+  import { initAvatar } from './src/avatar-ui.js?v=2026-10-01-a';
   initThemeButton(window);
+  initAvatar(document);
 </script>
 </body>
 </html>

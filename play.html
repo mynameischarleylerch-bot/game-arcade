@@ -26,6 +26,30 @@
   </div>
   <button id="fullscreen" class="btn btn--aqua" type="button">Fullscreen</button>
   <button id="theme-toggle" class="btn btn--ghost" type="button">Theme: Frutiger Aero</button>
+
+  <!-- MSN Messenger contact card, same as the index page. -->
+  <div class="msn" data-msn data-open="false">
+    <button class="msn__toggle" type="button" data-msn-toggle aria-expanded="false">
+      <span class="msn__face-wrap">
+        <img class="msn__face" data-msn-face src="./assets/avatars/avatar-01.svg" alt="" width="36" height="36">
+        <span class="msn__dot" data-msn-dot></span>
+      </span>
+      <span class="msn__text">
+        <span class="msn__label" data-msn-label>Online</span>
+      </span>
+    </button>
+    <div class="msn__panel" data-msn-panel hidden>
+      <p class="msn__hint" data-msn-hint></p>
+      <h2 class="msn__title">Display picture</h2>
+      <div class="msn__grid" data-msn-grid role="group" aria-label="Choose a display picture"></div>
+      <h2 class="msn__title">Status</h2>
+      <div class="msn__statuses" data-msn-statuses role="group" aria-label="Choose a status"></div>
+      <label class="msn__nick-row">
+        <span>Nickname</span>
+        <input type="text" class="msn__nick" data-msn-nick maxlength="18" autocomplete="off" spellcheck="false">
+      </label>
+    </div>
+  </div>
 </header>
 <div id="stage" class="stage">
   <iframe id="frame" class="stage__frame" title="game" allow="fullscreen; autoplay; gamepad"></iframe>
@@ -37,13 +61,15 @@
   import { gameSlugFromSearch } from './src/router.js?v=2026-10-01-a';
 
   const slug = gameSlugFromSearch(window.location.search);
-  const response = await fetch('./games.config.json');
+  const response = await fetch('./games.config.json?v=2026-10-01-c');
   const config = await response.json();
   initPlayer({ window, config, slug });
 </script>
 <script type="module">
   import { initThemeButton } from './src/theme-ui.js?v=2026-10-01-a';
+  import { initAvatar } from './src/avatar-ui.js?v=2026-10-01-a';
   initThemeButton(window);
+  initAvatar(document);
 </script>
 </body>
 </html>

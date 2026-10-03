@@ -860,3 +860,136 @@ kbd {
   --backdrop-size: auto, 34px 34px;
   --backdrop-opacity: 1;
 }
+
+/* ==================================================================== MSN
+ * The Messenger contact card: a 4x4 display-picture grid and the classic
+ * status list, in the same Aero glass as everything else. Colours come from
+ * tokens so the card follows whichever theme is active.
+ */
+
+.hero__bar {
+  display: flex; align-items: center; justify-content: center;
+  gap: 0.6rem; flex-wrap: wrap;
+  margin-top: 0.6rem;
+}
+
+.msn { position: relative; }
+
+.msn__toggle {
+  display: flex; align-items: center; gap: 0.5rem;
+  padding: 0.28rem 0.8rem 0.28rem 0.32rem; border-radius: 999px;
+  border: 1px solid var(--border);
+  background: var(--panel);
+  color: var(--ink);
+  font: inherit; cursor: pointer;
+  box-shadow: var(--shadow);
+  transition: transform 0.15s ease;
+}
+.msn__toggle:hover { transform: translateY(-1px); }
+.msn__toggle:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+
+/* The face sits in a glossy ring, MSN-style. */
+.msn__face-wrap { position: relative; display: block; line-height: 0; }
+
+.msn__face {
+  width: 40px; height: 40px; border-radius: 50%; display: block;
+  border: 2px solid var(--card);
+  box-shadow: 0 0 0 1px var(--border), 0 2px 6px rgba(0, 0, 0, 0.22);
+  background: var(--card);
+}
+
+.msn__dot {
+  position: absolute; right: -1px; bottom: -1px;
+  width: 13px; height: 13px; border-radius: 50%;
+  border: 2px solid var(--card);
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.3);
+}
+
+.msn__label { font-size: 0.9rem; font-weight: 600; white-space: nowrap; }
+
+/* Offline and invisible get the hollow MSN look. */
+.msn[data-status="offline"] .msn__dot,
+.msn[data-status="invisible"] .msn__dot { opacity: 0.45; }
+.msn[data-status="offline"] .msn__face { filter: grayscale(1) opacity(0.6); }
+.msn[data-status="invisible"] .msn__face { opacity: 0.75; }
+
+.msn__panel {
+  position: absolute; right: 0; top: calc(100% + 0.5rem); z-index: 40;
+  width: min(92vw, 20rem); padding: 0.9rem;
+  border-radius: 16px;
+  background: var(--panel-solid, var(--panel));
+  border: 1px solid var(--border);
+  box-shadow: var(--shadow-lg, 0 12px 32px rgba(0, 0, 0, 0.25));
+}
+.msn__panel[hidden] { display: none; }
+
+.msn__hint {
+  margin: 0 0 0.7rem; font-size: 0.78rem; color: var(--muted, var(--ink));
+  opacity: 0.85;
+}
+
+.msn__title {
+  margin: 0.8rem 0 0.4rem;
+  font-size: 0.72rem; font-weight: 700; letter-spacing: 0.09em;
+  text-transform: uppercase; opacity: 0.7;
+}
+
+/* The 4x4 grid, exactly as Messenger's display-picture picker. */
+.msn__grid {
+  display: grid; grid-template-columns: repeat(4, 1fr); gap: 0.3rem;
+}
+
+.msn__face-btn {
+  padding: 0; border-radius: 50%; cursor: pointer;
+  border: 2px solid transparent; background: none; line-height: 0;
+  transition: transform 0.12s ease, border-color 0.12s ease;
+}
+.msn__face-btn img { width: 100%; height: auto; display: block; border-radius: 50%; }
+.msn__face-btn:hover { transform: scale(1.09); }
+.msn__face-btn[aria-pressed="true"] {
+  border-color: var(--accent);
+  box-shadow: 0 0 0 2px var(--accent-line, var(--accent));
+}
+.msn__face-btn:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+
+.msn__statuses { display: grid; gap: 0.15rem; }
+
+.msn__status-btn {
+  display: flex; align-items: center; gap: 0.5rem;
+  padding: 0.32rem 0.5rem; border-radius: 9px;
+  border: 1px solid transparent; background: none;
+  color: var(--ink); font: inherit; font-size: 0.86rem; text-align: left;
+  cursor: pointer;
+}
+.msn__status-btn:hover { background: var(--card); }
+.msn__status-btn[aria-pressed="true"] {
+  border-color: var(--accent-line, var(--accent));
+  background: var(--card);
+  font-weight: 600;
+}
+.msn__status-btn:focus-visible { outline: 2px solid var(--accent); outline-offset: 1px; }
+
+.msn__pip {
+  flex: 0 0 auto; width: 11px; height: 11px; border-radius: 50%;
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.3);
+}
+
+.msn__nick-row {
+  display: grid; gap: 0.25rem; margin-top: 0.8rem;
+  font-size: 0.72rem; letter-spacing: 0.09em; text-transform: uppercase; opacity: 0.7;
+}
+.msn__nick {
+  padding: 0.35rem 0.5rem; border-radius: 9px;
+  border: 1px solid var(--border); background: var(--card); color: var(--ink);
+  font: inherit; font-size: 0.9rem; text-transform: none; letter-spacing: normal;
+}
+.msn__nick:focus-visible { outline: 2px solid var(--accent); outline-offset: 1px; }
+
+/* Inside the player header the card sits in a row, not an absolute dropdown,
+   so it must not be clipped by the stage. */
+.player-head .msn__toggle { padding: 0.24rem 0.7rem 0.24rem 0.28rem; }
+.player-head .msn__face { width: 36px; height: 36px; }
+
+@media (max-width: 520px) {
+  .msn__panel { right: auto; left: 50%; transform: translateX(-50%); }
+}
