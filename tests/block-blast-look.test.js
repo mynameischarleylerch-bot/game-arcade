@@ -137,3 +137,35 @@ test('the burst is decorative only and never intercepts a click', () => {
   assert.match(burst, /pointer-events:\s*none/,
     'a bloom must not swallow the drop that follows it');
 });
+
+test('the cover uses only hues the game actually has blocks for', () => {
+  // The cover is hand-drawn, so it can drift from the game. Every gem hue on the
+  // cover must exist in the block table, or the icon advertises colours you can
+  // never see.
+  const cover = readFileSync(new URL('../assets/covers/block-blast.svg', import.meta.url), 'utf8');
+  const pieces = readFileSync(new URL('../vendor/block-blast/pieces.js', import.meta.url), 'utf8');
+
+  const gameHues = new Set([...pieces.matchAll(/hue:\s*(\d+)/g)].map((m) => Number(m[1])));
+  const coverHues = [...cover.matchAll(/id="bb-h(\d+)"/g)].map((m) => Number(m[1]));
+
+  assert.ok(coverHues.length >= 5, `expected several gems on the cover, found ${coverHues.length}`);
+  for (const hue of coverHues) {
+    assert.ok(gameHues.has(hue),
+      `the cover shows hue ${hue}, which no block in the game uses`);
+  }
+});
+
+test('the cover is glossy Aero like the game it advertises', () => {
+  const cover = readFileSync(new URL('../assets/covers/block-blast.svg', import.meta.url), 'utf8');
+  const gradients = (cover.match(/<(linear|radial)Gradient/g) || []).length;
+  assert.ok(gradients >= 6, `a layered Aero cover needs several gradients, found ${gradients}`);
+  assert.match(cover, /filter="url\(#bb-glow\)"/, 'the gems need a glow');
+  assert.match(cover, /bb-sheen/, 'and a specular sheen');
+  assert.equal(cover.includes('crispEdges'), false, 'no pixel-art rendering');
+
+  // Every url(#x) must resolve, or a gradient is silently dropped.
+  const ids = new Set([...cover.matchAll(/id="([^"]+)"/g)].map((m) => m[1]));
+  for (const ref of [...cover.matchAll(/url\(#([^)]+)\)/g)].map((m) => m[1])) {
+    assert.ok(ids.has(ref), `the cover references #${ref}, which is not defined`);
+  }
+});
