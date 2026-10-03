@@ -763,6 +763,11 @@
     transition: opacity .18s ease, transform .18s ease;
     pointer-events: none;
   }
+  /* The pet lives in the scene SVG. `hidden` is an HTML attribute and
+     only hides HTML elements, so on an SVG <g> it does nothing at all --
+     the seal was painted on the dock with no seal equipped, over a bubble
+     that correctly stayed silent. It needs its own rule. */
+  #fa-pet-fit[hidden] { display: none; }
   .bubble[hidden]{
     display: none;
   }
@@ -1227,6 +1232,6 @@
     </div>
   </div>
 
-  <script type="module" src="./angler.js?v=2026-10-03-m"></script>
+  <script type="module" src="./angler.js?v=2026-10-03-n"></script>
 </body>
 </html>

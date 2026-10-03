@@ -907,3 +907,29 @@ test('the page is a whole document, not a truncated one', () => {
   assert.ok(scripts.some((src) => src.includes('angler.js')),
     `the game must still load, found scripts: ${scripts.join(', ') || 'none'}`);
 });
+
+test('the pet is hidden by CSS, not by the hidden attribute alone', () => {
+  // `hidden` is an HTML attribute. It works on <div> because the HTML user-agent
+  // sheet has a [hidden] rule. An SVG <g> gets no such rule in a real browser, so
+  // `hidden` on #fa-pet-fit did nothing there -- the seal stayed painted on the
+  // dock with no seal equipped, sitting over a bubble that correctly stayed
+  // silent. jsdom disagrees (it applies the HTML sheet to SVG), so no DOM test can
+  // catch this; only the stylesheet can be asserted.
+  assert.match(PAGE, /#fa-pet-fit\[hidden\]\s*\{[^}]*display:\s*none/,
+    `#fa-pet-fit needs its own [hidden] rule -- the attribute alone does nothing on an SVG <g>`);
+});
+
+test('every SVG group that JS toggles has a matching hidden rule', () => {
+  // paintPet() sets and removes `hidden` on the pet group. If the rule is missing
+  // the attribute is decorative and the toggle silently does nothing.
+  const src = readFileSync(new URL('../vendor/fru-angler/angler.js', import.meta.url), 'utf8');
+  const toggled = [...src.matchAll(/(?:ui\.\w+|group|holder)\.(?:setAttribute\('hidden'|removeAttribute\('hidden'\))/g)];
+  assert.ok(toggled.length > 0, 'sanity: paintPet toggles hidden at all');
+
+  // The svg groups in the markup that carry a hidden attribute in source.
+  const svgGroups = [...PAGE.matchAll(/<g[^>]*\bid="([^"]+)"[^>]*hidden/g)].map((m) => m[1]);
+  for (const id of svgGroups) {
+    const covered = new RegExp(`#?\\.?${id}\\[hidden\\]`).test(PAGE);
+    assert.ok(covered, `<g id="${id}" hidden> has no CSS rule to hide it`);
+  }
+});
