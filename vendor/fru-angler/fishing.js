@@ -36,7 +36,27 @@ export const MUTATIONS = [
  * lureSpeed: how fast the wait before a bite passes.
  * maxKg: the weight ceiling — land nothing heavier, or the line snaps.
  */
-export const RODS = {
+export const RODS = {/* ---- three more ordinary rods -----------------------------------
+   * The gate out of Aero Lake is eight no-trait rods, so there now are eight.
+   * They sit above Titan and below the specialists, each one a modest step up
+   * in luck, speed and weight rather than a leap.
+   */
+  /* ---- trait upgrades -------------------------------------------------
+   * Each trait lake's FIRST rod is handed over free on arrival. This second one
+   * is the rod you actually have to go and buy, which is what makes
+   * "own every rod with this lake's trait" mean anything beyond the gift.
+   */
+  /* ---- specialist rods ---------------------------------------------
+   * Each exists to open one gated lake, so each carries that lake's trait.
+   * Channel is the cheapest of the four, because it is also the rod you are
+   * handed free when you first arrive in DORFic Delta. It still carries a real
+   * premium over the dearest ordinary rod, so the gate still means something.
+   *
+   * Every specialist costs a real premium over the plain top rod: the gate has to
+   * be an economy decision, not a formality. Stats are otherwise comparable, so
+   * the player is paying for access rather than for power.
+   */
+
   bamboo: {
     id: 'bamboo', name: 'Splinter', price: 60,
     control: 0.20, resilience: 0.30, luck: 0, lureSpeed: 1, maxKg: 3,
@@ -56,76 +76,84 @@ export const RODS = {
     blurb: 'Light, springy, slightly smug.',
   },
   oak: {
-    id: 'oak', name: 'Deeproot', price: 3200,
+    id: 'oak', name: 'Deeproot', price: 5200,
     control: 0.40, resilience: 0.70, luck: 1.2, lureSpeed: 3.2, maxKg: 45,
     traits: [],
     blurb: 'Heavy enough to feel the water.',
   },
   titan: {
-    id: 'titan', name: 'Cloudlance', price: 11000,
+    id: 'titan', name: 'Cloudlance', price: 22000,
     control: 0.46, resilience: 0.85, luck: 1.8, lureSpeed: 4.2, maxKg: 120,
     traits: [],
     blurb: 'Absorbs thrashing like a rumour.',
   },
-
-  /* ---- three more ordinary rods -----------------------------------
-   * The gate out of Aero Lake is eight no-trait rods, so there now are eight.
-   * They sit above Titan and below the specialists, each one a modest step up
-   * in luck, speed and weight rather than a leap.
-   */
   zephyr: {
-    id: 'zephyr', name: 'Zephyr Spindle', price: 12800,
+    id: 'zephyr', name: 'Zephyr Spindle', price: 34000,
     control: 0.47, resilience: 0.80, luck: 1.9, lureSpeed: 4.4, maxKg: 150,
     traits: [],
     blurb: 'Weighs nothing. Catches nothing. Catches plenty, actually.',
   },
   quicksilver: {
-    id: 'quicksilver', name: 'Quicksilver Ribbon', price: 14200,
+    id: 'quicksilver', name: 'Quicksilver Ribbon', price: 48000,
     control: 0.48, resilience: 0.82, luck: 2.0, lureSpeed: 4.6, maxKg: 185,
     traits: [],
     blurb: 'Bends like it is apologising. Returns like it is not.',
   },
   horizon: {
-    id: 'horizon', name: 'Horizon Curve', price: 15600,
+    id: 'horizon', name: 'Horizon Curve', price: 64000,
     control: 0.49, resilience: 0.84, luck: 2.1, lureSpeed: 4.8, maxKg: 220,
     traits: [],
     blurb: 'Long enough that you forget you are holding it.',
   },
-
-  /* ---- specialist rods ---------------------------------------------
-   * Each exists to open one gated lake, so each carries that lake's trait.
-   * Channel is the cheapest of the four, because it is also the rod you are
-   * handed free when you first arrive in DORFic Delta. It still carries a real
-   * premium over the dearest ordinary rod, so the gate still means something.
-   *
-   * Every specialist costs a real premium over the plain top rod: the gate has to
-   * be an economy decision, not a formality. Stats are otherwise comparable, so
-   * the player is paying for access rather than for power.
-   */
   canopy: {
-    id: 'canopy', name: 'Fernwhisper', price: 16000,
+    id: 'canopy', name: 'Fernwhisper', price: 82000,
     control: 0.50, resilience: 0.86, luck: 2.2, lureSpeed: 5.1, maxKg: 240,
     traits: ['flex'],
     blurb: 'Reaches over the reeds without touching them.',
   },
   channel: {
-    id: 'channel', name: 'Straightwater', price: 17000,
+    id: 'channel', name: 'Straightwater', price: 95000,
     control: 0.52, resilience: 0.88, luck: 2.3, lureSpeed: 5.3, maxKg: 265,
     traits: ['channel'],
     blurb: 'Finds the one straight line through a maze of channels.',
   },
+  understory: {
+    id: 'understory', name: 'Understory', price: 102000,
+    control: 0.55, resilience: 0.90, luck: 2.4, lureSpeed: 5.5, maxKg: 285,
+    traits: ['flex'],
+    blurb: 'Goes under the canopy rather than over it, which the reeds prefer.',
+  },
+  spillway: {
+    id: 'spillway', name: 'Spillway', price: 118000,
+    control: 0.56, resilience: 0.91, luck: 2.5, lureSpeed: 5.7, maxKg: 300,
+    traits: ['channel'],
+    blurb: 'Reads the whole channel system at once and drops into the right one.',
+  },
   glacier: {
-    id: 'glacier', name: 'Glacier Lance', price: 24000,
-    control: 0.54, resilience: 0.90, luck: 2.5, lureSpeed: 5.6, maxKg: 300,
+    id: 'glacier', name: 'Glacier Lance', price: 140000,
+    control: 0.57, resilience: 0.93, luck: 2.6, lureSpeed: 5.9, maxKg: 330,
     traits: ['ice'],
     blurb: 'Bored through the ice. Useless anywhere warm.',
   },
+  glacierwall: {
+    id: 'glacierwall', name: 'Glacierwall', price: 165000,
+    control: 0.58, resilience: 0.93, luck: 2.7, lureSpeed: 6.1, maxKg: 330,
+    traits: ['ice'],
+    blurb: 'Bored a shaft straight down through two hundred metres of shelf.',
+  },
   abyss: {
-    id: 'abyss', name: 'Abyssal Rig', price: 42000,
-    control: 0.58, resilience: 0.96, luck: 2.9, lureSpeed: 6.0, maxKg: 420,
+    id: 'abyss', name: 'Abyssal Rig', price: 260000,
+    control: 0.60, resilience: 0.97, luck: 3.0, lureSpeed: 6.4, maxKg: 440,
     traits: ['reinforced'],
     blurb: 'Built for pressure. Heavy enough to be a nuisance on the bank.',
   },
+  trenchline: {
+    id: 'trenchline', name: 'Trenchline', price: 320000,
+    control: 0.62, resilience: 0.98, luck: 3.2, lureSpeed: 6.6, maxKg: 460,
+    traits: ['reinforced'],
+    blurb: 'Rated to the pressure at the bottom. The bottom knows it.',
+  },
+
 };
 
 /**
@@ -137,21 +165,29 @@ export const RODS = {
  * Upgrades get longer and thicker, so the progression is legible at a glance.
  */
 const ROD_LOOKS = {
-  bamboo: { path: 'M40.7 52 L52 40', width: 1.1, colour: '#c8a06a' },
-  willow: { path: 'M40.7 52 L55 35', width: 1.5, colour: '#a9714a' },
-  carbon: { path: 'M40.7 52 L58 31', width: 1.9, colour: '#4a6b7c' },
-  oak: { path: 'M40.7 52 L61 27', width: 2.4, colour: '#7d4f2e' },
-  titan: { path: 'M40.7 52 L64 23', width: 3.0, colour: '#8c9aa8' },
-  // Longer and thicker again, and tinted with their own lake, so the scene says
-  // which water this rod is built for.
-  canopy: { path: 'M40.7 52 L68 20', width: 3.9, colour: '#5f8f3f' },
-  zephyr:      { path: 'M40.7 52 L65 22', width: 3.2, colour: '#7fb8d8' },
-  quicksilver: { path: 'M40.7 52 L66 22', width: 3.5, colour: '#c3d4e0' },
-  horizon:     { path: 'M40.7 52 L67 21', width: 3.8, colour: '#4c6b80' },
-  channel:     { path: 'M40.7 52 L69 20', width: 4.0, colour: '#e07b2a' },
-  glacier:     { path: 'M40.7 52 L70 19', width: 4.1, colour: '#bfe4f5' },
-  abyss: { path: 'M40.7 52 L72 18', width: 4.4, colour: '#1d4a63' },
+  // In price order, and strictly monotone in length and thickness. The trait rods
+  // interleave with the ordinary ones, so the ladder has to be built as a whole --
+  // it was assembled a rod at a time and glacier and abyss both ended up
+  // configured backwards once the second rods arrived.
+  bamboo:      { path: 'M40.7 52 L52 40', width: 1.1, colour: '#c8a06a' },
+  willow:      { path: 'M40.7 52 L55 35', width: 1.5, colour: '#a9714a' },
+  carbon:      { path: 'M40.7 52 L58 31', width: 1.9, colour: '#4a6b7c' },
+  oak:         { path: 'M40.7 52 L61 27', width: 2.4, colour: '#7d4f2e' },
+  titan:       { path: 'M40.7 52 L64 23', width: 3.0, colour: '#8c9aa8' },
+  zephyr:      { path: 'M40.7 52 L66 22', width: 3.2, colour: '#7fb8d8' },
+  quicksilver: { path: 'M40.7 52 L67 21', width: 3.5, colour: '#c3d4e0' },
+  horizon:     { path: 'M40.7 52 L68 20', width: 3.8, colour: '#4c6b80' },
+  // Trait rods, tinted with the lake they open.
+  canopy:      { path: 'M40.7 52 L69 19', width: 3.9, colour: '#5f8f3f' },
+  channel:     { path: 'M40.7 52 L70 19', width: 4.0, colour: '#e07b2a' },
+  understory:  { path: 'M40.7 52 L71 18', width: 4.1, colour: '#7cb342' },
+  spillway:    { path: 'M40.7 52 L72 18', width: 4.2, colour: '#f0a35a' },
+  glacier:     { path: 'M40.7 52 L73 17', width: 4.3, colour: '#bfe4f5' },
+  glacierwall: { path: 'M40.7 52 L74 17', width: 4.4, colour: '#d8f0fb' },
+  abyss:       { path: 'M40.7 52 L75 16', width: 4.5, colour: '#1d4a63' },
+  trenchline:  { path: 'M40.7 52 L76 16', width: 4.6, colour: '#2b5f80' },
 };
+
 
 const LURE_OFFSET = 0.6;   // nudge the lure just past the tip so it sits on the end
 
@@ -925,7 +961,7 @@ export function xpForCatch(fish, kg = 0) {
 /** Total xp needed to have reached `level`. Rises steeply, so early ranks fly by. */
 export function xpForLevel(level) {
   const n = Math.max(0, Math.floor(Number(level) || 0) - 1);
-  return Math.round(48 * Math.pow(n, 1.5));
+  return Math.round(120 * Math.pow(n, 2.1));
 }
 
 const RANK_TITLES = [
@@ -1077,7 +1113,7 @@ export const AREAS = [
     locked: true,
     trait: 'channel',
     traitNote: 'needs a rod that can hold one straight line through the channels',
-    requiredRods: ['channel'],
+    requiredRods: ['channel', 'spillway'],
     fish: ['coralpike', 'duskdarter', 'metro-trout', 'doric-dab', 'orangebarbel', 'emberfin',
       'rivetray', 'signalfin', 'civiceel'],
     palette: {
@@ -1094,7 +1130,7 @@ export const AREAS = [
     locked: true,
     trait: 'flex',
     traitNote: 'needs a rod that can reach over the reeds',
-    requiredRods: ['canopy'],
+    requiredRods: ['canopy', 'understory'],
     fish: ['reedcarp', 'lanternjack', 'mudsole', 'mirrorpike', 'eco-gar', 'coralpike',
       'canopycat', 'verdant'],
     palette: {
@@ -1111,7 +1147,7 @@ export const AREAS = [
     locked: true,
     trait: 'ice',
     traitNote: 'needs a rod that can bore through the ice',
-    requiredRods: ['glacier'],
+    requiredRods: ['glacier', 'glacierwall'],
     fish: ['snowsmelt', 'frostfin', 'rimepike', 'blueglass', 'glacier-char', 'mirrorpike',
       'aurorachar'],
     palette: {
@@ -1128,7 +1164,7 @@ export const AREAS = [
     locked: true,
     trait: 'reinforced',
     traitNote: 'needs a rod reinforced enough for the pressure',
-    requiredRods: ['abyss'],
+    requiredRods: ['abyss', 'trenchline'],
     fish: ['deepglow', 'pressurefin', 'voidpike', 'blackmirror', 'lastlantern', 'glacier-char',
       'glowmote', 'eventhorizon'],
     palette: {

@@ -264,7 +264,7 @@ test('the shop lists every rod and a purchase upgrades the equipped one', async 
   // Cheapest first: the willow is affordable on the starting wallet, the titan is not.
   assert.equal(buttons[0].dataset.rod, 'willow');
   assert.equal(buttons[0].disabled, false, 'the willow is affordable to start with');
-  assert.equal(buttons[buttons.length - 1].dataset.rod, 'abyss',
+  assert.equal(buttons[buttons.length - 1].dataset.rod, RODS_BY_PRICE[RODS_BY_PRICE.length - 1],
     'the dearest rod is listed last');
   assert.equal(buttons[buttons.length - 1].disabled, true,
     'the top rod is unaffordable on the starting wallet');

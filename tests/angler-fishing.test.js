@@ -6,7 +6,7 @@ import {
   startingInventory, ownsRod, addRodToInventory, equipRod, rodArt, RODS_BY_PRICE,
   fishSvg, FISH_SHAPES, hookLineFor, AREAS, areaUnlocked,
   rodWorksIn, rodCheckIn,
- areaProgress, levelFrom, xpForCatch, luckFromLevel, luckFor, LOST_ITEMS, rollLostItem, lostItemsFor, SEALS, buySeal, equipSeal, sealComment, sealDuplicates, visitArea,} from '../vendor/fru-angler/fishing.js';
+ areaProgress, levelFrom, xpForCatch, luckFromLevel, luckFor, LOST_ITEMS, rollLostItem, lostItemsFor, SEALS, buySeal, equipSeal, sealComment, sealDuplicates, visitArea, xpForLevel,} from '../vendor/fru-angler/fishing.js';
 
 test('the starting wallet can afford exactly one upgrade from the cheapest rod', () => {
   const loadout = startingLoadout();
@@ -1074,8 +1074,8 @@ test('levels rise with catches and never fall', () => {
   assert.ok(first.title && first.title.length > 0, 'every rank needs a title');
 
   const xp = xpForCatch(FISH.find((f) => f.rarity === 'Common'), 1);
-  const later = levelFrom({ xp: xp * 5 });
-  assert.ok(later.level > first.level, 'catching must raise the rank');
+  const later = levelFrom({ xp: xpForLevel(2) + xp });
+  assert.ok(later.level > first.level, 'enough catching must raise the rank');
 
   // Pure: the same xp always gives the same rank.
   assert.deepEqual(levelFrom({ xp: 987 }), levelFrom({ xp: 987 }));
