@@ -14,20 +14,52 @@
 
      Every gameplay rule lives in fishing.js and reel.js; this file is the view. */
   :root {
+    /* Ink */
     --deep: #01579b;
     --deepest: #013a63;
     --ink-soft: #3d6b85;
+    --on-accent: #ffffff;
+
+    /* Sky and light */
     --sky-top: #b3e5fc;
     --sky-mid: #7fc4e8;
     --sky-floor: #4aa8d8;
     --sun: #fff9c4;
+    --sun-core: rgba(255, 255, 255, 0.95);
+    --haze-tint: rgba(255, 255, 255, 0.75);
+
+    /* Wood */
     --wood: #a9714a;
     --wood-deep: #7d4f2e;
-    --glass: linear-gradient(180deg, rgba(255,255,255,.62), rgba(255,255,255,.3) 55%, rgba(255,255,255,.16));
-    --shine: linear-gradient(180deg, #fff, rgba(255,255,255,.45));
+
+    /* Aero glass: the three-stop translucent panel fill */
+    --glass-top: rgba(255, 255, 255, 0.62);
+    --glass-mid: rgba(255, 255, 255, 0.3);
+    --glass-bot: rgba(255, 255, 255, 0.16);
+    --glass: linear-gradient(180deg, var(--glass-top), var(--glass-mid) 55%, var(--glass-bot));
+
+    /* Specular highlights */
+    --sheen: linear-gradient(180deg, rgba(255, 255, 255, 0.9), rgba(255, 255, 255, 0.5));
+    --sheen-faint: linear-gradient(180deg, rgba(255, 255, 255, 0.45), rgba(255, 255, 255, 0));
+    --gloss-strength: 0.9;
+
+    /* Hairlines and radii */
+    --hairline: rgba(255, 255, 255, 0.85);
+    --hairline-strong: rgba(255, 255, 255, 0.92);
+    --radius: 12px;
+    --radius-lg: 18px;
+
+    /* Shadows: each pairs a drop with the Aero top gloss */
+    --shadow-card: 0 6px 16px rgba(1, 87, 155, 0.22), inset 0 1px 0 var(--hairline-strong);
+    --shadow-panel: 0 18px 40px rgba(1, 87, 155, 0.22), inset 0 1px 0 var(--hairline);
+    --shadow-edge: inset 0 -1px 0 rgba(255, 255, 255, 0.5);
+    --shadow-lift: 0 10px 22px rgba(1, 87, 155, 0.28), inset 0 1px 0 #fff;
+
+    /* Accents */
+    --shine: linear-gradient(180deg, #fff, rgba(255, 255, 255, 0.45));
     --shine-on: linear-gradient(180deg, #81d4fa, #0288d1);
-    --ease: cubic-bezier(.22,.61,.36,1);
-    --shadow-card: 0 6px 16px rgba(1,87,155,.22), inset 0 1px 0 #fff;
+    --lime: #a3e635;
+    --ease: cubic-bezier(0.22, 0.61, 0.36, 1);
   }
 
   * { box-sizing: border-box; }

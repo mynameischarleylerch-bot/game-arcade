@@ -331,3 +331,24 @@ test('the closing group and the line comment are indented with their block', () 
       `${marker} is indented ${line.length - line.trimStart().length}, expected 8`);
   }
 });
+
+
+test('the game has the full set of Aero tokens', () => {
+  const start = PAGE.indexOf(':root {');
+  const root = PAGE.slice(start, PAGE.indexOf('}', start));
+  for (const token of [
+    '--glass-top', '--glass-mid', '--glass-bot',
+    '--sheen', '--hairline', '--radius', '--radius-lg',
+    '--shadow-card', '--shadow-panel', '--shadow-edge', '--gloss-strength',
+  ]) {
+    assert.match(root, new RegExp(`${token}\\s*:`), `missing token ${token}`);
+  }
+});
+
+test('the new tokens are all used, not just declared', () => {
+  // --sheen, --radius and --gloss-strength are consumed by Tasks 4-8; assert the
+  // whole set is eventually used, and the glass/hairline pair now.
+  for (const token of ['--glass-top', '--hairline']) {
+    assert.ok(PAGE.split(token).length > 2, `${token} is declared but never used`);
+  }
+});
