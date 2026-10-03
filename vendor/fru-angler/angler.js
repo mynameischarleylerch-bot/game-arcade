@@ -23,10 +23,10 @@ import {
  levelFrom, xpForCatch, xpForLevel, luckFor, luckFromLevel,
  rollLostItem, lostItemsFor, sellLostItems, lostItemById,
  buySeal, equipSeal, sealComment, sealDuplicates, sealIdleLine,
-} from './fishing.js?v=2026-10-03-k';
+} from './fishing.js?v=2026-10-03-m';
 import {
   reelConfig, stepReel as advance, reelOutcomeFor, isCaught, lineSnapped,
-} from './reel.js?v=2026-10-03-k';
+} from './reel.js?v=2026-10-03-m';
 
 /* ------------------------------------------------------------------ tuning */
 
@@ -73,6 +73,7 @@ const ui = {
   bubble: el('fa-bubble'), bubbleText: el('fa-bubble-text'),
   notify: el('notify'),
   sealShopCoins: el('seal-shop-coins'),  // inside the seal shop
+  sealHint: el('seal-shop-hint'),  // only shown with an empty dock
   findsList: el('finds-list'), sellFinds: el('sell-finds'),
   pet: el('fa-pet'),
   sealPanel: el('seal-shop-panel'), sealList: el('seal-shop-list'),
@@ -969,6 +970,22 @@ function renderSealShop() {
   // The seal shop shows SEAL coins, not rod coins. They are different currencies
   // and showing one number here made it look like the seal price was a rod price.
   ui.sealShopCoins.textContent = state.sealCoins;
+
+  // Seal coins have exactly one source: selling finds. With no seal and nothing
+  // on the dock, the shop is the only place that can say so -- otherwise five
+  // priced seals and an empty dock just read as a bug.
+  if (ui.sealHint) {
+    if (state.ownedSeals.length === 0) {
+      ui.sealHint.textContent =
+        'No seal yet. Fish until something turns up in your finds bag, sell it, '
+        + 'and the seal coins will pay for your first seal.';
+      ui.sealHint.removeAttribute('hidden');
+    } else {
+      ui.sealHint.setAttribute('hidden', '');
+      ui.sealHint.textContent = '';
+    }
+  }
+
   ui.sealList.textContent = '';
   paintFinds();
 

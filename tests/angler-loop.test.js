@@ -1477,3 +1477,46 @@ test('unequipping the seal removes the bubble and its words', async () => {
   assert.equal(bubble.classList.contains('is-speaking'), true,
     'a save with no seal must not leave the old bubble up');
 });
+
+test('the shop says how to get a seal when you own none', async () => {
+  // An empty dock with five priced seals and no explanation reads as "this is
+  // broken" or "I missed something". Seal coins come ONLY from selling finds, and
+  // nothing said so. This is the hint that closes that gap.
+  const ctx = await seedSave({
+    coins: 0, rodId: 'bamboo', owned: ['bamboo'], bestiary: {}, areaId: 'aero-lake',
+    xp: 0, ownedSeals: [], equippedSeal: null, lost: [], giftedRods: [], sealCoins: 4000,
+  }, 88);
+  ctx.doc.getElementById('seal-shop-open').dispatchEvent(
+    new ctx.win.MouseEvent('click', { bubbles: true }));
+
+  const hint = ctx.doc.getElementById('seal-shop-hint');
+  assert.ok(hint, 'the shop needs a hint element for a player who owns no seal');
+  assert.equal(hint.hasAttribute('hidden'), false, 'and it must be shown');
+  const text = hint.textContent;
+  assert.match(text, /fish|sell/i, 'it must say the words, not just "no seal"');
+  assert.match(text, /seal coins/i, 'and name the currency it produces');
+
+  // Buy the cheapest seal through the real UI -- the only way one can be obtained.
+  const first = ctx.doc.querySelector('.seal');
+  first.querySelector('.seal__equip').dispatchEvent(
+    new ctx.win.MouseEvent('click', { bubbles: true }));
+
+  assert.equal(ctx.doc.getElementById('seal-shop-hint').hasAttribute('hidden'), true,
+    'the hint must disappear once a seal is on the dock');
+  assert.equal(ctx.doc.getElementById('seal-shop-hint').textContent, '',
+    'and leave nothing behind');
+});
+
+test('the finds bag stays visible in the shop, since that is the way in', async () => {
+  const ctx = await seedSave({
+    coins: 0, rodId: 'bamboo', owned: ['bamboo'], bestiary: {}, areaId: 'aero-lake',
+    xp: 0, ownedSeals: [], equippedSeal: null, lost: [], giftedRods: [], sealCoins: 0,
+  }, 89);
+  // The bag is the ONLY source of Seal coins. Hiding it makes the shop
+  // unreachable, so it must not be tucked away or conditionally removed.
+  const shop = ctx.doc.getElementById('seal-shop-panel').textContent;
+  assert.match(shop, /Sell what you fish up/,
+    'the shop must keep saying where Seal coins come from');
+  assert.ok(ctx.doc.getElementById('sell-finds'),
+    'and the sell action must be in the shop, not somewhere else');
+});
