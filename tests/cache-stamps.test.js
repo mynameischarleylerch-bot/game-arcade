@@ -139,3 +139,35 @@ test('both HTML pages are on the current BUILD', () => {
     }
   }
 });
+
+test('no shipped file uses a path that assumes the site is served from a domain root', () => {
+  // Every asset reference must be ./-relative or an absolute URL. A leading slash
+  // ("/assets/x.svg") works when you open the file locally and 404s in production,
+  // and it is what would break the site the moment it moved to a different path.
+  //
+  // This is the rule that lets the whole repo be relocated by renaming it, so it
+  // is enforced here rather than remembered in the README.
+  const files = [
+    ...globSync('index.html'),
+    ...globSync('play.html'),
+    ...globSync('styles.css'),
+    ...globSync('src/*.js'),
+    ...globSync('vendor/**/*.html'),
+    ...globSync('vendor/**/*.js'),
+  ].map((path) => new URL(`../${path}`, import.meta.url));
+
+  const offenders = [];
+  for (const file of files) {
+    const name = file.pathname.split('/game-arcade/')[1] ?? file.pathname;
+    const text = readFileSync(file, 'utf8');
+    // matchAll() yields arrays, so the capture group is m[1], not m.group(1).
+    for (const m of text.matchAll(/(?:src|href)\s*=\s*["'](\/[^"'*][^"']*)["']/g)) {
+      offenders.push(`${name}: ${m[1]}`);
+    }
+    for (const m of text.matchAll(/versioned\(\s*["'](\/[^"']*)["']/g)) {
+      offenders.push(`${name}: ${m[1]}`);
+    }
+  }
+  assert.deepEqual(offenders, [],
+    `these paths assume the site lives at the domain root: ${offenders.join('; ')}`);
+});
