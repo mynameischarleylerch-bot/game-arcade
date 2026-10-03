@@ -11,10 +11,10 @@ import {
   fishWeight, canCatch, catchValue, startingLoadout, buyRod, recordCatch,
   startingInventory, ownsRod, addRodToInventory, equipRod, rodArt, RODS_BY_PRICE,
   fishById, fishSvg,
-} from './fishing.js?v=2026-10-01-m';
+} from './fishing.js?v=2026-10-01-o';
 import {
   reelConfig, stepReel as advance, reelOutcomeFor, isCaught, lineSnapped,
-} from './reel.js?v=2026-10-01-m';
+} from './reel.js?v=2026-10-01-o';
 
 /* ------------------------------------------------------------------ tuning */
 
