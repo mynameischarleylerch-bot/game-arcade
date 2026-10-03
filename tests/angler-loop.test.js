@@ -270,17 +270,24 @@ test('the scene draws the fishing line from the rod tip to the bobber', async ()
 
   assert.notEqual(line.getAttribute('d'), start, 'the line follows the cast');
 
-  // The end point must track the bobber. The start is read from the lure in the
-  // scene, so derive it here the same way rather than hardcoding it.
+  // The line's end IS the bobber, in the same 0..100 percentage space as the
+  // scene's viewBox. It used to be interpolated, which left the line short.
   const d = line.getAttribute('d');
-  const [, x, y] = d.match(/([\d.]+)\s+([\d.]+)$/).map(Number);
-  const lure = ctx.doc.querySelector('.scene__lure');
-  const tipX = parseFloat(lure.getAttribute('cx')) + 1.4;
-  const left = parseFloat(ctx.doc.getElementById('bobber').style.left);
-  const expectedX = tipX + (left / 100) * (100 - tipX);
-  assert.ok(Math.abs(x - expectedX) < 0.5,
-    `line end ${x} should match the bobber at ${left}% (expected ${expectedX.toFixed(2)})`);
-  assert.ok(Number.isFinite(y), 'the line end must have a y');
+  const end = d.trim().split(/\s+/).slice(-2).map(Number);
+  const bobber = ctx.doc.getElementById('bobber');
+  const left = parseFloat(bobber.style.left);
+  const top = parseFloat(bobber.style.top);
+  assert.ok(Math.abs(end[0] - left) < 0.5,
+    `line ends at x=${end[0]} but the bobber is at ${left}%`);
+  assert.ok(Math.abs(end[1] - top) < 0.5,
+    `line ends at y=${end[1]} but the bobber is at ${top}%`);
+
+  // And it must start at the measured rod tip. jsdom reports zero-sized rects, so
+  // this asserts the fallback is used rather than NaN creeping into the path.
+  const lineStart = d.match(/^M([\d.]+) ([\d.]+)/);
+  assert.ok(lineStart, `the line must start with M x y, got "${d}"`);
+  assert.ok(Number.isFinite(Number(lineStart[1])) && Number.isFinite(Number(lineStart[2])),
+    `the line start must be numbers, got "${d}"`);
 });
 
 test('the lake reports its phase so the bobber can restyle itself', async () => {

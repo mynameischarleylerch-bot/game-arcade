@@ -1,5 +1,5 @@
 /** Builds HTML strings from registry data. No DOM access — the browser gets a string. */
-import { versioned } from './build.js?v=2026-10-01-g';
+import { versioned } from './build.js?v=2026-10-01-h';
 
 const HTML_ESCAPES = { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' };
 

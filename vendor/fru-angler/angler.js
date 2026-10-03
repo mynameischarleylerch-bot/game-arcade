@@ -9,10 +9,10 @@ import {
   RODS, FISH, RARITY_ORDER, RARITY_COLOURS,
   castQuality, castDistance, biteDelayFor, rollFish, rollMutation,
   fishWeight, canCatch, catchValue, startingLoadout, buyRod, recordCatch,
-} from './fishing.js?v=2026-10-01-g';
+} from './fishing.js?v=2026-10-01-h';
 import {
   reelConfig, stepReel as advance, reelOutcomeFor, isCaught, lineSnapped,
-} from './reel.js?v=2026-10-01-g';
+} from './reel.js?v=2026-10-01-h';
 
 /* ------------------------------------------------------------------ tuning */
 
@@ -144,14 +144,41 @@ function clearShake() {
 }
 
 /**
- * Where the rod tip is, in the scene's percentage coordinates. Taken from the
- * lure's own position so the line always starts exactly where the rod ends.
+ * Where the rod tip actually renders, as a percentage of the lake.
+ *
+ * This has to be measured, not read from the lure's cx/cy: those are pre-transform
+ * viewBox units, and the scene uses preserveAspectRatio="none" plus a counter-scale
+ * on the figure group. Reading the attributes gave a point that was nowhere near
+ * where the rod actually ended, so the line started in mid-air.
  */
 function rodTip() {
   const lure = ui.lake.querySelector('.scene__lure');
-  const cx = parseFloat(lure?.getAttribute('cx') ?? 58);
-  const cy = parseFloat(lure?.getAttribute('cy') ?? 31);
-  return { x: cx + 1.4, y: cy + 2 };   // nudge onto the line itself
+  if (!lure || !ui.lake.getBoundingClientRect) return { x: 60, y: 33 };
+
+  const lake = ui.lake.getBoundingClientRect();
+  const dot = lure.getBoundingClientRect();
+  if (!lake.width || !lake.height || !dot.width) return { x: 60, y: 33 };
+
+  return {
+    x: ((dot.left + dot.width / 2 - lake.left) / lake.width) * 100,
+    y: ((dot.top + dot.height / 2 - lake.top) / lake.height) * 100,
+  };
+}
+
+/**
+ * The scene stretches to fill the lake, so a square viewBox on a wide box turns the
+ * round blob into an oval. Undo that for the figure group only: scale x by the
+ * ratio of the lake's height to its width, about the blob's own centre.
+ */
+function fitFigure() {
+  const group = document.getElementById('angler-fit');
+  const box = ui.lake.getBoundingClientRect();
+  if (!group || !box.width || !box.height) return;
+
+  // viewBox units are already stretched by width:height; correcting x by
+  // height/width makes one unit the same number of pixels on both axes.
+  const scale = box.height / box.width;
+  group.setAttribute('transform', `translate(33.2 0) scale(${scale.toFixed(4)} 1) translate(-33.2 0)`);
 }
 
 /** Move the bobber, its splash and the fishing line together. */
@@ -160,13 +187,16 @@ function placeBobber(left, top) {
   ui.bobber.style.top = `${top}%`;
   ui.splash.style.left = `${left}%`;
   ui.splash.style.top = `${top}%`;
-  // The line runs from the rod tip to the bobber. The tip is read from the scene
-  // rather than hardcoded here, so moving the rod can never desync the line.
+  // The line runs from the measured rod tip to the bobber. Both ends are
+  // percentages of the lake, which is exactly what the scene's 0..100 viewBox
+  // maps to, so the bobber end is simply (left, top) — it must NOT be
+  // interpolated, which put the line's end short of the bobber.
   const tip = rodTip();
-  const x = tip.x + (left / 100) * (100 - tip.x);
-  const y = tip.y + (top / 100) * (100 - tip.y);
+  const x = left;
+  const y = top;
   ui.line?.setAttribute('d',
-    `M${tip.x} ${tip.y} Q${((tip.x + x) / 2).toFixed(2)} ${((tip.y + y) / 2 + 6).toFixed(2)} `
+    `M${tip.x.toFixed(2)} ${tip.y.toFixed(2)} `
+    + `Q${((tip.x + x) / 2).toFixed(2)} ${((tip.y + y) / 2 + 6).toFixed(2)} `
     + `${x.toFixed(2)} ${y.toFixed(2)}`);
 }
 
@@ -409,6 +439,13 @@ function frame(now) {
 
 load();
 paintChrome();
+fitFigure();
+// The lake changes shape with the window, so the counter-scale must follow.
+if (typeof ResizeObserver === 'function') {
+  new ResizeObserver(fitFigure).observe(ui.lake);
+} else {
+  addEventListener('resize', fitFigure);
+}
 setPhase('idle');
 say(IDLE_HINT);
 requestAnimationFrame(frame);

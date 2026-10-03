@@ -107,12 +107,54 @@ test('the fishing line starts at the rod tip the lure marks', () => {
     `line should start at y=${Number(lure[2]) + 2}`);
 });
 
-test('angler.js derives the rod tip from the scene instead of hardcoding it', () => {
+test('angler.js measures the rod tip instead of reading cx/cy', () => {
   const src = readFileSync(new URL('../vendor/fru-angler/angler.js', import.meta.url), 'utf8');
   assert.match(src, /function rodTip\(/, 'rodTip() must exist');
-  assert.match(src, /scene__lure/, 'rodTip() must read the lure from the scene');
-  assert.equal(/const x = 56 \+/.test(src), false,
-    'the tip must not be a hardcoded number that can drift from the rod');
+  assert.match(src, /getBoundingClientRect/, 'rodTip() must measure the rendered lure');
+  assert.equal(/const cx = parseFloat\(lure\?\.getAttribute\('cx'\)/.test(src), false,
+    'cx/cy are pre-transform viewBox units, not where the lure actually renders');
+});
+
+test('the scene is not stretched: the angler keeps its proportions', () => {
+  // The lake is a wide box; a square viewBox with preserveAspectRatio="none"
+  // scales x and y independently, which is what turned the blob into an oval.
+  const stretchFix = readFileSync(
+    new URL('../vendor/fru-angler/angler.js', import.meta.url), 'utf8');
+  assert.match(stretchFix, /fitFigure|scale\(/,
+    'angler.js must counter-scale the figure to the lake aspect');
+  assert.match(stretchFix, /ResizeObserver|resize/,
+    'it must re-fit when the lake resizes');
+});
+
+test('the figure group is wrapped so it can be counter-scaled', () => {
+  // One group holding the blob, its gloss, the rod and the lure, so a single
+  // transform can keep them proportioned without touching the scenery.
+  assert.match(PAGE, /<g id="angler-fit">/, 'the figure group must exist');
+  const open = PAGE.indexOf('<g id="angler-fit">');
+  const close = PAGE.indexOf('</g>', open);
+  const inside = PAGE.slice(open, close);
+  assert.equal((inside.match(/<path\b/g) || []).length, 2,
+    'the figure and the rod, and nothing else');
+  assert.equal((inside.match(/<circle\b/g) || []).length, 1, 'just the lure');
+  assert.equal((inside.match(/<ellipse\b/g) || []).length, 2, 'the two gloss highlights');
+});
+
+test('the fishing line sits outside the counter-scaled group', () => {
+  const close = PAGE.indexOf('</g>', PAGE.indexOf('<g id="angler-fit">'));
+  const line = PAGE.indexOf('id="line"');
+  assert.ok(line > close,
+    'the line must not be counter-warped, or the curve distorts with the figure');
+});
+
+test("the shipped line path agrees with where angler.js puts the tip", () => {
+  // A mismatch here shows as the line jumping on the first cast.
+  const start = PAGE.match(/id="line" d="M([\d.]+) ([\d.]+)/);
+  const lure = PAGE.match(/class="scene__lure" cx="([\d.]+)" cy="([\d.]+)/);
+  assert.ok(start && lure, 'line and lure must both exist');
+  assert.equal(Number(start[1]), Number(lure[1]) + 1.4,
+    'the initial line start must equal rodTip().x');
+  assert.equal(Number(start[2]), Number(lure[2]) + 2,
+    'the initial line start must equal rodTip().y');
 });
 
 test('the perfect band is lime, the Aero "go" colour', () => {
