@@ -680,3 +680,30 @@ test('the seal is drawn from a real seal silhouette, not a blob', () => {
     'a seal is one eye and a nose, not a scatter of circles');
   assert.match(pet, /fill="url\(#fa-pet-/, 'and it keeps the Aero gradient');
 });
+
+test('the HUD names the currency, it does not just say "seal"', () => {
+  // It read "seal 0", which looks like a count of seals rather than a second
+  // currency -- and it is not one, since the pet sits on the dock, not in a
+  // wallet. Every other surface already says "seal coins".
+  const hud = PAGE.slice(PAGE.indexOf('class="hud"'), PAGE.indexOf('class="lake"'));
+  assert.match(hud, /Seal coins/,
+    'the HUD must name the currency in full');
+  assert.doesNotMatch(hud, />seal\s*<b id="seal-coins">/,
+    'a bare "seal" beside a number reads as a count of seals');
+});
+
+test('both currency surfaces name it the same way', () => {
+  // The HUD readout and the seal shop must agree, or the player has to learn two
+  // names for one number. This checks those two places directly rather than trying
+  // to separate prose from identifiers in source, which caught clearShake() and
+  // seal-shop-panel before it caught anything a player can read.
+  assert.match(PAGE, /Seal coins <b id="seal-coins">/, 'the HUD names the currency');
+  assert.match(PAGE, /<b id="seal-shop-coins">0<\/b> seal coins/, 'and so does the shop');
+  assert.doesNotMatch(PAGE, />seal <b id="seal-coins">/,
+    'the old bare "seal" label must not come back');
+
+  // And the refusal has to name it too, or it is the only place it is a number.
+  const rules = readFileSync(new URL('../vendor/fru-angler/fishing.js', import.meta.url), 'utf8');
+  assert.match(rules, /Not enough seal coins/,
+    'being turned away must say which currency was short');
+});
