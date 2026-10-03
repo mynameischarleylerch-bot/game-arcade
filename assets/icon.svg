@@ -1,0 +1,63 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" width="64" height="64" role="img" aria-label="Aero Arcade">
+  <title>Aero Arcade</title>
+  <!--
+    The site favicon: a glossy Aero orb, in the same family as the homepage avatars
+    so the browser tab looks like the page rather than a generic placeholder.
+
+    Both pages previously declared href="data:,", which renders nothing at all, so
+    the tab was blank. This is drawn small-first: at 16px the strong silhouette and
+    the two-tone sky read, and the fine detail does not turn to mush.
+  -->
+  <defs>
+    <!-- the sky behind the orb: bright at the top, deep at the bottom -->
+    <linearGradient id="icon-sky" x1="0.15" y1="0" x2="0.75" y2="1">
+      <stop offset="0" stop-color="#a8e2fb"/>
+      <stop offset="0.42" stop-color="#4fc3f7"/>
+      <stop offset="1" stop-color="#0f6fae"/>
+    </linearGradient>
+    <!-- the glassy cap, the Aero gloss -->
+    <radialGradient id="icon-sheen" cx="0.32" cy="0.24" r="0.62">
+      <stop offset="0" stop-color="#ffffff" stop-opacity=".95"/>
+      <stop offset="0.42" stop-color="#ffffff" stop-opacity=".28"/>
+      <stop offset="1" stop-color="#ffffff" stop-opacity="0"/>
+    </radialGradient>
+    <!-- the sun burning through behind the orb -->
+    <radialGradient id="icon-sun" cx="0.5" cy="0.5" r="0.5">
+      <stop offset="0" stop-color="#fffdf0" stop-opacity=".95"/>
+      <stop offset="1" stop-color="#fff9c4" stop-opacity="0"/>
+    </radialGradient>
+    <filter id="icon-glow" x="-30%" y="-30%" width="160%" height="160%">
+      <feGaussianBlur stdDeviation="1.6" result="b"/>
+      <feMerge>
+        <feMergeNode in="b"/>
+        <feMergeNode in="SourceGraphic"/>
+      </feMerge>
+    </filter>
+    <!-- clip the sheen and the horizon to the orb -->
+    <clipPath id="icon-clip">
+      <circle cx="32" cy="32" r="26"/>
+    </clipPath>
+  </defs>
+
+  <!-- the orb -->
+  <g filter="url(#icon-glow)">
+    <circle cx="32" cy="32" r="26" fill="url(#icon-sky)"/>
+  </g>
+
+  <g clip-path="url(#icon-clip)">
+    <!-- the sun behind, upper right -->
+    <circle cx="45" cy="19" r="13" fill="url(#icon-sun)"/>
+    <!-- water: a horizon across the lower third, the way the game's lakes read -->
+    <path d="M6 40 C18 36 26 44 38 40 C48 36.5 54 43 58 40 L58 58 L6 58 Z"
+          fill="#0b5a90" opacity=".55"/>
+    <path d="M6 46 C18 42 26 50 38 46 C48 42.5 54 49 58 46"
+          fill="none" stroke="#ffffff" stroke-width="1.6" stroke-linecap="round" opacity=".35"/>
+    <!-- the glassy cap -->
+    <circle cx="32" cy="32" r="26" fill="url(#icon-sheen)"/>
+  </g>
+
+  <!-- a crisp bright rim, so the orb reads against any tab colour -->
+  <circle cx="32" cy="32" r="26" fill="none" stroke="#ffffff" stroke-width="2.4" opacity=".85"/>
+  <!-- and a soft one inside it, for the Aero edge highlight -->
+  <circle cx="32" cy="32" r="23.4" fill="none" stroke="#eaf7ff" stroke-width="1" opacity=".55"/>
+</svg>

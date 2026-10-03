@@ -230,3 +230,61 @@ test('all sixteen are distinct colours', () => {
   }
   assert.equal(hues.size, 16, `expected 16 distinct ramps, found ${hues.size}`);
 });
+
+
+/* --------------------------------------------------------- the game cover */
+
+test('the Frutiger Angler cover shows the same angler as the game', () => {
+  const cover = readFileSync(new URL('../assets/covers/fru-angler.svg', import.meta.url), 'utf8');
+  const page = readFileSync(new URL('../vendor/fru-angler/index.html', import.meta.url), 'utf8');
+
+  // The cover was left showing the old angler - a body, legs and a red hat - after
+  // the in-game figure became the legless Messenger blob. An icon that contradicts
+  // the game is worse than a plain one.
+  assert.doesNotMatch(cover, /<rect[^>]*\bhat/i, 'the cover still has the old hat');
+  assert.match(cover, /class="cover-angler"/,
+    'the cover should mark the figure the same way the scene does');
+  assert.match(page, /class="scene__figure"/,
+    'and the scene must still have its own figure');
+
+  // Blob silhouette: one merged shape, no separate limbs or a hat brim.
+  const blob = cover.match(/class="cover-angler"[^>]*d="([^"]+)"/);
+  assert.ok(blob, 'the cover figure must be one path');
+  assert.ok(blob[1].length > 60, 'and a real silhouette');
+});
+
+test('the cover is glossy Aero, like the game it advertises', () => {
+  const cover = readFileSync(new URL('../assets/covers/fru-angler.svg', import.meta.url), 'utf8');
+  const gradients = (cover.match(/<(linear|radial)Gradient/g) || []).length;
+  assert.ok(gradients >= 5, `expected a layered Aero cover, found ${gradients} gradients`);
+  assert.match(cover, /class="cover-specular"/, 'needs a specular highlight');
+  assert.match(cover, /filter="url\(#cover-glow\)"/, 'and a glow on the figure');
+  assert.equal(/crispEdges/.test(cover), false, 'no pixel-art rendering');
+  assert.equal(/#[0-9a-f]{6}/i.test(cover) && cover.includes('feGaussianBlur'), true,
+    'blurs come from real filters');
+});
+
+test('every cover has a real favicon, and both pages link it', () => {
+  // data:, is an empty placeholder: the browser tab shows nothing at all.
+  for (const page of ['../index.html', '../play.html']) {
+    const html = readFileSync(new URL(page, import.meta.url), 'utf8');
+    const icon = html.match(/<link rel="icon"[^>]*>/);
+    assert.ok(icon, `${page} needs an icon link`);
+    assert.doesNotMatch(icon[0], /href="data:,"/,
+      `${page} still points at the empty placeholder`);
+    // The href carries a cache stamp, so match the path and ignore the query:
+    // tests/cache-stamps.test.js requires every asset reference to be versioned.
+    const href = icon[0].match(/href="([^"]+)"/)[1];
+    assert.match(href, /^\.\/assets\/icon\.svg(\?|$)/,
+      `${page} must point at the real icon file, got ${href}`);
+  }
+});
+
+test('the favicon is the Frutiger Aero mark and is a valid SVG', () => {
+  const icon = readFileSync(new URL('../assets/icon.svg', import.meta.url), 'utf8');
+  assert.match(icon, /^<svg[\s\S]*<\/svg>\s*$/, 'must be a single svg element');
+  assert.match(icon, /viewBox="0 0 64 64"/, 'square viewBox, so it does not distort');
+  assert.ok((icon.match(/<(linear|radial)Gradient/g) || []).length >= 2,
+    'the icon should be glossy, not flat');
+  assert.match(icon, /aria-label|<title>/, 'and carry a name for accessibility');
+});

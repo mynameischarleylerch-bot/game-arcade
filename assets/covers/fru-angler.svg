@@ -1,47 +1,142 @@
 <svg xmlns="http://www.w3.org/2000/svg" width="320" height="180" viewBox="0 0 160 90" role="img" aria-label="Frutiger Angler">
+  <title>Frutiger Angler</title>
+  <!--
+    The listing cover. This used to show an angler with a body, legs and a red hat,
+    left over from before the in-game figure became the legless Messenger blob. An
+    icon that contradicts the game is worse than a plain one, so it now draws the
+    same blob silhouette the scene draws, in the same Aero treatment.
+  -->
   <defs>
-    <linearGradient id="fa-cover-water" x1="0" y1="0" x2="0" y2="1">
-      <stop offset="0" stop-color="#5aa6cf"/><stop offset="0.4" stop-color="#2f81c4"/><stop offset="1" stop-color="#1b5e9c"/>
+    <linearGradient id="cover-sky" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#9fd8f7"/>
+      <stop offset="0.45" stop-color="#cdeafb"/>
+      <stop offset="1" stop-color="#f4fbff"/>
     </linearGradient>
-    <radialGradient id="fa-cover-sun" cx="0.5" cy="0.5" r="0.5">
-      <stop offset="0" stop-color="#fff9c4" stop-opacity=".95"/><stop offset="1" stop-color="#fff9c4" stop-opacity="0"/>
+    <linearGradient id="cover-water" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#63b3dd"/>
+      <stop offset="0.38" stop-color="#2f81c4"/>
+      <stop offset="1" stop-color="#144f86"/>
+    </linearGradient>
+    <linearGradient id="cover-shore" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#a9d8ec"/>
+      <stop offset="1" stop-color="#3f8fc0"/>
+    </linearGradient>
+    <linearGradient id="cover-wood" x1="0" y1="0" x2="0.25" y2="1">
+      <stop offset="0" stop-color="#c68a5e"/>
+      <stop offset="0.5" stop-color="#a9714a"/>
+      <stop offset="1" stop-color="#7d4f2e"/>
+    </linearGradient>
+    <!-- The blob, lit from the upper left and falling to a deep belly. -->
+    <linearGradient id="cover-angler-fill" x1="0.18" y1="0" x2="0.72" y2="1">
+      <stop offset="0" stop-color="#3fa8dc"/>
+      <stop offset="0.38" stop-color="#0e6ea8"/>
+      <stop offset="1" stop-color="#013a63"/>
+    </linearGradient>
+    <radialGradient id="cover-specular" cx="0.32" cy="0.22" r="0.6">
+      <stop offset="0" stop-color="#ffffff" stop-opacity=".85"/>
+      <stop offset="0.55" stop-color="#ffffff" stop-opacity=".2"/>
+      <stop offset="1" stop-color="#ffffff" stop-opacity="0"/>
     </radialGradient>
-    <radialGradient id="fa-cover-bob" cx="0.35" cy="0.3" r="0.7">
-      <stop offset="0" stop-color="#ffffff"/><stop offset="0.62" stop-color="#e53935"/><stop offset="1" stop-color="#a3231f"/>
+    <radialGradient id="cover-sun" cx="0.5" cy="0.5" r="0.5">
+      <stop offset="0" stop-color="#fffdf0" stop-opacity=".95"/>
+      <stop offset="0.45" stop-color="#fff9c4" stop-opacity=".6"/>
+      <stop offset="1" stop-color="#fff9c4" stop-opacity="0"/>
     </radialGradient>
+    <radialGradient id="cover-bob" cx="0.35" cy="0.28" r="0.75">
+      <stop offset="0" stop-color="#ffffff"/>
+      <stop offset="0.5" stop-color="#e53935"/>
+      <stop offset="1" stop-color="#9d211d"/>
+    </radialGradient>
+    <linearGradient id="cover-glass" x1="0" y1="0" x2="1" y2="0">
+      <stop offset="0" stop-color="#ffffff" stop-opacity="0"/>
+      <stop offset="0.45" stop-color="#ffffff" stop-opacity=".5"/>
+      <stop offset="0.55" stop-color="#ffffff" stop-opacity=".5"/>
+      <stop offset="1" stop-color="#ffffff" stop-opacity="0"/>
+    </linearGradient>
+    <!-- One glow reused for the figure and the bobber. -->
+    <filter id="cover-glow" x="-45%" y="-45%" width="190%" height="190%">
+      <feGaussianBlur stdDeviation="1.5" result="b"/>
+      <feMerge>
+        <feMergeNode in="b"/>
+        <feMergeNode in="b"/>
+        <feMergeNode in="SourceGraphic"/>
+      </feMerge>
+    </filter>
   </defs>
 
-  <rect width="160" height="90" fill="url(#fa-cover-water)"/>
-  <circle cx="140" cy="14" r="20" fill="url(#fa-cover-sun)"/>
+  <!-- sky, sun, then the water the scene drops into -->
+  <rect width="160" height="90" fill="url(#cover-sky)"/>
+  <circle class="cover-bloom" cx="139" cy="15" r="26" fill="url(#cover-sun)"/>
+  <circle cx="139" cy="15" r="9" fill="#fffde7" opacity=".9"/>
+  <circle cx="139" cy="15" r="5.5" fill="#ffffff" opacity=".95"/>
 
-  <!-- soft clouds, Aero style -->
-  <ellipse cx="34" cy="20" rx="22" ry="7" fill="#ffffff" opacity=".55"/>
-  <ellipse cx="58" cy="26" rx="16" ry="5" fill="#ffffff" opacity=".4"/>
+  <!-- soft Aero clouds -->
+  <ellipse cx="32" cy="18" rx="23" ry="7" fill="#ffffff" opacity=".6"/>
+  <ellipse cx="58" cy="25" rx="17" ry="5" fill="#ffffff" opacity=".45"/>
 
   <!-- far shore, rising to the right -->
-  <path fill="#5aa6cf" d="M0 60 L16 57 L32 60 L48 54 L64 57 L80 51 L96 54 L112 47 L128 50 L144 43 L160 40 L160 90 L0 90 Z"/>
-  <rect x="0" y="64" width="160" height="26" fill="url(#fa-cover-water)"/>
-  <rect x="10" y="72" width="20" height="1.6" rx="0.8" fill="#ffffff" opacity=".3"/>
-  <rect x="104" y="78" width="26" height="1.6" rx="0.8" fill="#ffffff" opacity=".3"/>
+  <path class="cover-shore" fill="url(#cover-shore)"
+        d="M0 58 L16 55 L32 58 L48 52 L64 55 L80 49 L96 52 L112 45 L128 48 L144 41 L160 38 L160 62 L0 62 Z"/>
 
-  <!-- pier: deck with a lit top edge, two legs -->
-  <rect x="0" y="46" width="64" height="5" fill="#a9714a"/>
-  <rect x="0" y="46" width="64" height="1.6" fill="#c68a5e"/>
-  <rect x="13" y="51" width="6" height="39" fill="#7d4f2e"/>
-  <rect x="44" y="51" width="6" height="39" fill="#7d4f2e"/>
+  <!-- the lake -->
+  <rect x="0" y="58" width="160" height="32" fill="url(#cover-water)"/>
+  <!-- caustics: the light ripples that say "underwater" -->
+  <g class="cover-caustics" fill="none" stroke="#ffffff" stroke-linecap="round">
+    <path d="M0 66 C18 61 36 71 54 66 C72 61 90 71 108 66 C126 61 144 71 160 66"
+          stroke-width="1.4" opacity=".34"/>
+    <path d="M0 76 C18 71 36 81 54 76 C72 71 90 81 108 76 C126 71 144 81 160 76"
+          stroke-width="1.1" opacity=".24"/>
+  </g>
 
-  <!-- the angler, silhouetted with a red hat -->
-  <rect x="47" y="35" width="4" height="11" rx="2" fill="#013a63"/>
-  <circle cx="49" cy="28" r="4" fill="#013a63"/>
-  <rect x="43" y="25" width="12" height="2.4" rx="1.2" fill="#e53935"/>
+  <!-- bubbles, the signature Aero motif -->
+  <g class="cover-bubbles" fill="#ffffff">
+    <circle cx="96" cy="72" r="2.2" opacity=".5"/>
+    <circle cx="112" cy="64" r="1.5" opacity=".42"/>
+    <circle cx="126" cy="78" r="2.8" opacity=".34"/>
+    <circle cx="84" cy="82" r="1.8" opacity=".4"/>
+  </g>
 
-  <!-- rod, lure, line and bobber -->
-  <path stroke="#7d4f2e" stroke-width="2.2" fill="none" stroke-linecap="round" d="M52 37 L78 16"/>
-  <circle cx="79" cy="15" r="2.2" fill="#e53935"/>
-  <path stroke="#ffffff" stroke-width="1" fill="none" opacity=".85" d="M80 17 Q92 32 110 58"/>
-  <circle cx="113" cy="61" r="5.5" fill="url(#fa-cover-bob)"/>
-  <ellipse cx="111" cy="59" rx="1.8" ry="1.4" fill="#ffffff" opacity=".8"/>
-  <ellipse cx="113" cy="68" rx="9" ry="2.4" fill="none" stroke="#ffffff" stroke-width="1.4" opacity=".7"/>
+  <!-- pier: a varnished deck on two legs -->
+  <rect class="cover-deck" x="0" y="45" width="66" height="5.5" rx="1" fill="url(#cover-wood)"/>
+  <rect x="0" y="45" width="66" height="1.8" fill="#e0ab7e" opacity=".8"/>
+  <rect class="cover-leg" x="13" y="50.5" width="6" height="39.5" fill="url(#cover-wood)"/>
+  <rect class="cover-leg" x="45" y="50.5" width="6" height="39.5" fill="url(#cover-wood)"/>
+
+  <!--
+    The angler: the same legless Messenger blob the scene draws. One merged path -
+    head flowing into a body with shoulder lobes, no arms and no legs - so the
+    icon and the game show the same character.
+  -->
+  <g filter="url(#cover-glow)">
+    <path class="cover-angler"
+          d="M47.5 27.6 C49.9 27.6 51.8 29.5 51.8 31.9 C51.8 33.6 51.1 34.9 49.9 35.8
+             C51.1 36.1 52 36.6 52.9 37.4 C54.1 38.4 55 39.8 55 41.3
+             C55 44.8 51.7 47 47.5 47 C43.3 47 40 44.8 40 41.3
+             C40 39.8 40.9 38.4 42.1 37.4 C43 36.6 43.9 36.1 45.1 35.8
+             C43.9 34.9 43.2 33.6 43.2 31.9 C43.2 29.5 45.1 27.6 47.5 27.6 Z"
+          fill="url(#cover-angler-fill)"/>
+    <!-- the lit back and a scale sheen, so it is not a flat silhouette -->
+    <ellipse class="cover-specular" cx="45.6" cy="30.4" rx="4.6" ry="2.4"
+             fill="url(#cover-specular)" transform="rotate(-18 45.6 30.4)"/>
+    <path d="M42.4 41.4 C44.4 40.6 47 40.6 49 41.1" fill="none" stroke="#ffffff"
+          stroke-width="0.7" stroke-linecap="round" opacity=".3"/>
+  </g>
+
+  <!-- rod, line and bobber: the line starts at the rod tip, as in the game -->
+  <path class="cover-rod" stroke="url(#cover-wood)" stroke-width="2.4" fill="none"
+        stroke-linecap="round" d="M54 40 L80 19"/>
+  <circle class="cover-lure" cx="81" cy="18" r="2.3" fill="url(#cover-wood)"/>
+  <path class="cover-line" stroke="#ffffff" stroke-width="1.1" fill="none" opacity=".9"
+        d="M82 20 Q96 36 114 60"/>
+  <g filter="url(#cover-glow)">
+    <circle class="cover-bobber" cx="117" cy="63" r="5.8" fill="url(#cover-bob)"/>
+    <ellipse cx="115.2" cy="60.8" rx="2" ry="1.5" fill="#ffffff" opacity=".85"/>
+  </g>
+  <ellipse class="cover-ripple" cx="117" cy="70.5" rx="10" ry="2.6" fill="none"
+           stroke="#ffffff" stroke-width="1.5" opacity=".65"/>
+
+  <!-- a glassy sheet of light lying on the water, in front of everything -->
+  <rect class="cover-surface" x="0" y="56" width="160" height="18" fill="url(#cover-glass)" opacity=".3"/>
 
   <text x="10" y="14" fill="#ffffff" font-family="Segoe UI, sans-serif" font-size="11" font-weight="600"
         style="paint-order:stroke;stroke:#01579b;stroke-width:3px">frutiger angler</text>
