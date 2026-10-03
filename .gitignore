@@ -1,3 +1,5 @@
 node_modules/
 .DS_Store
 *.log
+# Local scratch: agent plans and diagnostics, not part of the site.
+.hermes/
