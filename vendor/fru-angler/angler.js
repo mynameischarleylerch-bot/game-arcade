@@ -10,11 +10,11 @@ import {
   castQuality, castDistance, biteDelayFor, rollFish, rollMutation,
   fishWeight, canCatch, catchValue, startingLoadout, buyRod, recordCatch,
   startingInventory, ownsRod, addRodToInventory, equipRod, rodArt, RODS_BY_PRICE,
-  fishById,
-} from './fishing.js?v=2026-10-01-k';
+  fishById, fishSvg,
+} from './fishing.js?v=2026-10-01-l';
 import {
   reelConfig, stepReel as advance, reelOutcomeFor, isCaught, lineSnapped,
-} from './reel.js?v=2026-10-01-k';
+} from './reel.js?v=2026-10-01-l';
 
 /* ------------------------------------------------------------------ tuning */
 
@@ -36,6 +36,7 @@ const ui = {
   reelFill: el('reel-fill'),
   catch: el('catch'), catchName: el('catch-name'), catchMeta: el('catch-meta'),
   catchValue: el('catch-value'), catchAgain: el('catch-again'),
+  catchArt: el('catch-art'), catchWeight: el('catch-weight'), catchWorth: el('catch-worth'),
   shopPanel: el('shop-panel'), shopList: el('shop-list'), shopCoins: el('shop-coins'),
   shopOpen: el('shop-open'), shopClose: el('shop-close'),
   bag: el('inventory-panel'), bagRods: el('inventory-rods'), bagFish: el('inventory-fish'),
@@ -313,13 +314,20 @@ function paintRarity(rarity) {
   ui.rarity.setAttribute('aria-label', `Rarity ${level} of ${RARITY_ORDER.length}: ${rarity}`);
 }
 
-function showResult(name, meta, value, rarity) {
+function showResult(name, meta, value, rarity, art = null, stats = null) {
   ui.catchName.textContent = name;
   // Colour carries the rarity at a glance; the pips below give the exact tier.
   ui.catchName.style.color = rarity ? RARITY_COLOURS[rarity] : '#e07b2a';
   paintRarity(rarity);
   ui.catchMeta.textContent = meta;
   ui.catchValue.textContent = `¤ ${value}`;
+
+  // The drawing and the two headline numbers, shown only when there is a fish.
+  // A snapped line has no fish, so the art is cleared rather than left stale.
+  if (ui.catchArt) ui.catchArt.innerHTML = art ?? '';
+  if (ui.catchWeight) ui.catchWeight.textContent = stats?.weight ?? '—';
+  if (ui.catchWorth) ui.catchWorth.textContent = art ? `¤ ${value}` : '—';
+
   setPhase('result');
   ui.catchAgain.focus();
 }
@@ -349,7 +357,11 @@ function landFish() {
     kg > wasBest ? 'new personal best!' : null,
   ].filter(Boolean).join(' · ');
 
-  showResult(mutation.name ? `${mutation.name} ${fish.name}` : fish.name, meta, value, fish.rarity);
+  showResult(
+    mutation.name ? `${mutation.name} ${fish.name}` : fish.name,
+    meta, value, fish.rarity,
+    fishSvg(fish), { weight: `${kg} kg` },
+  );
   save();
   paintChrome();
 }

@@ -229,6 +229,44 @@
     border: 1px solid rgba(255,255,255,.9);
     box-shadow: 0 20px 44px rgba(1,87,155,.4), inset 0 1px 0 #fff;
   }
+  /* The catch card pops: it scales in from small with a little overshoot. */
+  .catch__card { animation: catch-pop 380ms cubic-bezier(.2,1.5,.4,1) both; }
+  @keyframes catch-pop {
+    0%   { transform: scale(.72); opacity: 0; }
+    60%  { transform: scale(1.04); opacity: 1; }
+    100% { transform: scale(1); }
+  }
+
+  .catch__kicker {
+    margin: 0 0 .3rem; font-size: .74rem; font-weight: 700;
+    letter-spacing: .14em; text-transform: uppercase; color: var(--ink-soft);
+  }
+
+  /* The fish drawing sits in a glossy tile. */
+  .catch__art {
+    width: 100%; max-width: 260px; margin: 0 auto .6rem;
+    border-radius: 16px; overflow: hidden;
+    border: 1px solid rgba(255,255,255,.9);
+    box-shadow: 0 10px 24px rgba(1,87,155,.24), inset 0 1px 0 #fff;
+    background: var(--shine);
+  }
+  .catch__art svg { display: block; width: 100%; height: auto; }
+
+  /* Weight and worth side by side, labelled rather than buried in one line. */
+  .catch__stats {
+    display: flex; justify-content: center; gap: 1.4rem;
+    margin: .7rem 0 .2rem;
+  }
+  .catch__stats div { display: grid; gap: .1rem; }
+  .catch__stats dt {
+    font-size: .68rem; font-weight: 700; letter-spacing: .1em;
+    text-transform: uppercase; color: var(--ink-soft);
+  }
+  .catch__stats dd {
+    margin: 0; font-size: 1.15rem; font-weight: 700; color: var(--deep);
+    font-variant-numeric: tabular-nums;
+  }
+
   .catch__name { font-size: 1.5rem; font-weight: 700; }
   .catch__name.species__name { font-size: 1rem; }
   /* Rarity is five blocks filled up to the fish's tier. */
@@ -411,10 +449,17 @@
       </div>
 
       <div class="catch" id="catch" hidden>
-        <div class="catch__card">
+        <div class="catch__card" role="dialog" aria-modal="true" aria-labelledby="catch-name">
+          <p class="catch__kicker">Caught!</p>
+          <!-- The fish itself, drawn from its hue and body shape. -->
+          <div class="catch__art" id="catch-art"></div>
           <div class="catch__name" id="catch-name">—</div>
           <div class="catch__rarity" id="catch-rarity" role="img" aria-label="Rarity"></div>
           <div class="catch__meta" id="catch-meta"></div>
+          <dl class="catch__stats">
+            <div><dt>Weight</dt><dd id="catch-weight">—</dd></div>
+            <div><dt>Worth</dt><dd id="catch-worth">—</dd></div>
+          </dl>
           <div class="catch__value" id="catch-value">—</div>
           <button class="btn btn--primary" id="catch-again" type="button">Cast again</button>
         </div>
@@ -459,6 +504,6 @@
     </div>
   </div>
 
-  <script type="module" src="./angler.js?v=2026-10-01-k"></script>
+  <script type="module" src="./angler.js?v=2026-10-01-l"></script>
 </body>
 </html>

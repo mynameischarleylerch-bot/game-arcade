@@ -527,3 +527,82 @@ test('an empty inventory panel still lists all six fish', async () => {
   assert.equal(ctx.doc.querySelectorAll('#inventory-fish .species').length, 6);
   assert.match(ctx.doc.getElementById('inventory-rods').textContent, /Bamboo/);
 });
+
+
+/* ------------------------------------------------------- the catch visual */
+
+/** Land a fish (the pinned Glidefin) and return the context. */
+async function landOne(ctx, run = 40) {
+  assert.equal(castAndWaitForBite(ctx), true, 'hooked');
+  for (let i = 0; i < 60 * 60; i += 1) {
+    const ui = reelUi(ctx);
+    if (ui.playerLeft + ui.playerWidth / 2 < ui.fish) key(ctx, 'keydown');
+    else key(ctx, 'keyup');
+    step(ctx);
+    if (!ctx.doc.getElementById('catch').hidden) break;
+  }
+  return ctx;
+}
+
+test('a landed fish pops up with a drawing, its name, weight and worth', async () => {
+  const ctx = await landOne(await boot(28, 0.1));   // pinned to a Glidefin
+
+  // A real SVG, in the card.
+  const art = ctx.doc.getElementById('catch-art');
+  const svg = art.querySelector('svg');
+  assert.ok(svg, 'the fish must be drawn, not just named');
+  assert.match(svg.getAttribute('viewBox'), /0 0 120 80/);
+  assert.ok(art.querySelector('.body'), 'the drawing needs a body');
+  assert.ok(art.querySelector('.tail'), 'and a tail');
+  assert.ok(art.querySelector('.eye'), 'and an eye');
+  assert.match(svg.getAttribute('aria-label'), /Glidefin/,
+    'the drawing must be labelled for screen readers');
+
+  // The three things the player wants to read.
+  assert.match(text(ctx, 'catch-name'), /Glidefin/);
+  assert.match(text(ctx, 'catch-weight'), /^[\d.]+ kg$/, 'weight with its unit');
+  assert.match(text(ctx, 'catch-worth'), /^¤ \d+$/, 'worth in coins');
+  assert.match(text(ctx, 'catch-value'), /^¤ \d+$/, 'the total stays too');
+});
+
+test('the weight and worth agree with each other', async () => {
+  const ctx = await landOne(await boot(29, 0.1));
+  const kg = parseFloat(text(ctx, 'catch-weight'));
+  const worth = Number(text(ctx, 'catch-worth').replace('¤', ''));
+  assert.ok(kg > 0, 'the weight must be a real number');
+  assert.ok(worth > 0, 'the worth must be a real number');
+  assert.equal(worth, Number(text(ctx, 'catch-value').replace('¤', '')),
+    'the labelled worth and the total must not disagree');
+});
+
+test('the pop-up announces itself to assistive tech', async () => {
+  const ctx = await landOne(await boot(30, 0.1));
+  const card = ctx.doc.querySelector('.catch__card');
+  assert.equal(card.getAttribute('role'), 'dialog');
+  assert.equal(card.getAttribute('aria-modal'), 'true');
+  assert.equal(card.getAttribute('aria-labelledby'), 'catch-name');
+});
+
+test('a snapped line shows no fish and does not leave a stale drawing', async () => {
+  const ctx = await boot(31, 0.1);
+  assert.equal(castAndWaitForBite(ctx), true);
+  run(ctx, 60 * 60);   // ignore the fish; the line snaps
+
+  assert.equal(text(ctx, 'catch-name'), 'Line snapped');
+  assert.equal(ctx.doc.getElementById('catch-art').innerHTML, '',
+    'there is no fish to draw, so the art must be cleared');
+  assert.equal(text(ctx, 'catch-weight'), '—');
+  assert.equal(text(ctx, 'catch-worth'), '—');
+});
+
+test('catching a second fish replaces the drawing, it does not stack', async () => {
+  const ctx = await landOne(await boot(32, 0.1));
+  const first = ctx.doc.getElementById('catch-art').innerHTML;
+
+  ctx.doc.getElementById('catch-again').click();
+  await landOne(ctx);
+
+  const after = ctx.doc.getElementById('catch-art');
+  assert.equal(after.querySelectorAll('svg').length, 1, 'exactly one fish, not two');
+  assert.equal(after.innerHTML, first, 'the same pinned fish draws identically');
+});

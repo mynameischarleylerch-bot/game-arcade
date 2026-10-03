@@ -266,6 +266,103 @@ export function equipRod(inventory, rodId) {
   return { rodId, ok: true };
 }
 
+/* ---------------------------------------------------------- fish visuals */
+
+/**
+ * Body shapes for the catch card. The `draw` field on every fish picks one, and the
+ * `hue` tints it. Coordinates are in a 120x80 box with the fish facing right.
+ *
+ * Kept here rather than in angler.js so the drawing is testable without a DOM, and
+ * so a fish's look lives with its data.
+ */
+export const FISH_SHAPES = {
+  /** Slim and quick: the small, fast fish. */
+  slim: {
+    body: 'M34 40 C44 26 66 24 80 34 C88 40 88 42 80 48 C66 58 44 56 34 42 Z',
+    tail: 'M34 40 L12 24 L18 40 L12 58 Z',
+    fin: 'M56 34 C60 26 66 24 70 28 C66 32 62 36 58 42 Z',
+    eye: { cx: 72, cy: 38, r: 3.4 },
+    stripe: 'M48 33 L52 49 M58 32 L62 50 M68 34 L72 46',
+  },
+  /** Deep-bodied and broad: the trout-like fish. */
+  deep: {
+    body: 'M32 40 C42 20 70 18 84 32 C92 40 92 44 84 50 C70 62 42 60 32 40 Z',
+    tail: 'M32 40 L8 20 L16 40 L8 62 Z',
+    fin: 'M56 26 C62 14 72 12 78 18 C72 22 66 28 60 38 Z',
+    eye: { cx: 76, cy: 36, r: 4 },
+    stripe: 'M46 28 L50 56 M58 25 L62 59 M70 28 L74 54',
+  },
+  /** Flat and wide, low in the water: the dab. */
+  flat: {
+    body: 'M30 42 C40 28 72 26 86 36 C94 42 94 46 86 52 C72 60 40 58 30 42 Z',
+    tail: 'M30 42 L8 32 L14 42 L8 54 Z',
+    fin: 'M58 32 C64 22 74 20 80 26 C74 30 68 34 62 40 Z',
+    eye: { cx: 78, cy: 40, r: 3.6 },
+    stripe: 'M44 34 C56 30 70 32 82 38 M44 50 C58 54 72 52 82 46',
+  },
+  /** Long and sinuous: the big legendary fish. */
+  long: {
+    body: 'M26 40 C38 22 74 18 90 30 C100 38 100 44 90 50 C74 62 38 58 26 40 Z',
+    tail: 'M26 40 L4 18 L13 40 L4 64 Z',
+    fin: 'M54 26 C62 12 74 10 82 16 C74 20 66 28 58 38 Z',
+    eye: { cx: 82, cy: 36, r: 4.2 },
+    stripe: 'M40 28 L44 54 M52 25 L56 57 M64 24 L68 56 M76 26 L80 52',
+  },
+};
+
+/**
+ * Render a fish as a standalone SVG string, tinted by its hue and built from its
+ * shape. Rarer fish get a warmer highlight so a Mythical reads as special at a
+ * glance, not just by the rarity pips.
+ *
+ * @param {object} fish  a FISH entry; anything unknown falls back to the first fish
+ * @returns {string} an SVG element, ready to drop into innerHTML
+ */
+export function fishSvg(fish) {
+  const spec = FISH.find((f) => f && f.id === (fish && fish.id)) ?? FISH[0];
+  const shape = FISH_SHAPES[spec.draw] ?? FISH_SHAPES[FISH[0].draw];
+  const h = spec.hue ?? FISH[0].hue;
+
+  const light = `hsl(${h} 88% 74%)`;
+  const mid = `hsl(${h} 68% 52%)`;
+  const deep = `hsl(${h} 60% 26%)`;
+  const { eye } = shape;
+
+  return `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 120 80" width="120" height="80"
+     role="img" aria-label="A ${spec.name}">
+  <defs>
+    <linearGradient id="fb" x1="0.15" y1="0" x2="0.75" y2="1">
+      <stop offset="0" stop-color="${light}"/>
+      <stop offset="0.5" stop-color="${mid}"/>
+      <stop offset="1" stop-color="${deep}"/>
+    </linearGradient>
+    <radialGradient id="fs" cx="0.3" cy="0.24" r="0.62">
+      <stop offset="0" stop-color="#ffffff" stop-opacity=".62"/>
+      <stop offset="1" stop-color="#ffffff" stop-opacity="0"/>
+    </radialGradient>
+  </defs>
+
+  <!-- the Aero pond behind the fish -->
+  <rect width="120" height="80" rx="14" fill="#e1f5fe"/>
+  <circle cx="98" cy="16" r="13" fill="#fff9c4" opacity=".7"/>
+  <ellipse cx="60" cy="72" rx="52" ry="7" fill="#b3e5fc" opacity=".8"/>
+
+  <!-- tail first, so the body overlaps it -->
+  <path class="tail" d="${shape.tail}" fill="${deep}" opacity=".85"/>
+  <path class="fin" d="${shape.fin}" fill="${mid}"/>
+  <path class="body" d="${shape.body}" fill="url(#fb)"/>
+  <g class="stripe" stroke="${deep}" stroke-width="1.6" opacity=".38"
+     stroke-linecap="round" fill="none">
+    <path d="${shape.stripe}"/>
+  </g>
+  <path class="belly" d="M40 52 C56 60 76 58 88 48 C76 58 56 62 40 54 Z"
+        fill="#ffffff" opacity=".3"/>
+  <circle class="eye" cx="${eye.cx}" cy="${eye.cy}" r="${eye.r}" fill="#ffffff"/>
+  <circle cx="${eye.cx + 0.8}" cy="${eye.cy}" r="${(eye.r * 0.5).toFixed(2)}" fill="#06334f"/>
+  <ellipse class="sheen" cx="52" cy="30" rx="16" ry="8" fill="url(#fs)"/>
+</svg>`;
+}
+
 /* ------------------------------------------------------------- bestiary */
 
 /** Record a catch if it is heavier than the one already held for that species. */

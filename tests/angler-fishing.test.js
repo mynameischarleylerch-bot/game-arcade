@@ -4,6 +4,7 @@ import {
   RODS, FISH, castQuality, castDistance, biteDelayFor, rollFish, rollMutation,
   fishWeight, catchValue, canCatch, buyRod, startingLoadout,
   startingInventory, ownsRod, addRodToInventory, equipRod, rodArt, RODS_BY_PRICE,
+  fishSvg, FISH_SHAPES,
 } from '../vendor/fru-angler/fishing.js';
 
 test('the starting wallet can afford exactly one upgrade from the cheapest rod', () => {
@@ -263,4 +264,96 @@ test('RODS_BY_PRICE lists every rod from cheapest to dearest', () => {
     assert.ok(RODS[RODS_BY_PRICE[i]].price > RODS[RODS_BY_PRICE[i - 1]].price);
   }
   assert.equal(RODS_BY_PRICE[0], 'bamboo');
+});
+
+
+/* ------------------------------------------------------------ fish visuals */
+
+/**
+ * Every fish carries a hue and a body shape. They were in the table from the start
+ * and never rendered, so a catch was just a line of text. The catch card now draws
+ * the fish, and these are the pure functions behind it.
+ */
+
+test('every fish declares a hue and a known body shape', () => {
+  for (const fish of FISH) {
+    assert.ok(Number.isInteger(fish.hue) && fish.hue >= 0 && fish.hue <= 360,
+      `${fish.id}: hue must be 0-360, got ${fish.hue}`);
+    assert.ok(Object.hasOwn(FISH_SHAPES, fish.draw),
+      `${fish.id}: unknown draw shape "${fish.draw}"`);
+  }
+});
+
+test('every fish draws a complete, self-contained SVG', () => {
+  for (const fish of FISH) {
+    const svg = fishSvg(fish);
+    assert.match(svg, /^<svg xmlns="http:\/\/www\.w3\.org\/2000\/svg"/, `${fish.id}: no root`);
+    assert.match(svg, /<\/svg>\s*$/, `${fish.id}: unclosed`);
+    assert.match(svg, /viewBox="0 0 120 80"/, `${fish.id}: wrong viewBox`);
+    assert.ok(!svg.includes('<script'), `${fish.id}: no script`);
+    assert.ok(!/<foreignObject/.test(svg), `${fish.id}: no foreign objects`);
+    // Every url(#id) must resolve inside this same file.
+    const ids = new Set([...svg.matchAll(/\bid="([^"]+)"/g)].map((m) => m[1]));
+    for (const ref of svg.matchAll(/url\(#([^)]+)\)/g)) {
+      assert.ok(ids.has(ref[1]), `${fish.id}: dangling reference #${ref[1]}`);
+    }
+  }
+});
+
+test('the fish is tinted with its own hue', () => {
+  for (const fish of FISH) {
+    const svg = fishSvg(fish);
+    const stops = [...svg.matchAll(/stop-color="hsl\((\d+)/g)].map((m) => Number(m[1]));
+    assert.ok(stops.length >= 2, `${fish.id}: needs a gradient ramp`);
+    // Every stop must sit near the fish's own hue. Hue is circular, so compare the
+    // shortest way round: 350 and 5 are 15 apart, not 345.
+    for (const hue of stops) {
+      const diff = Math.min(Math.abs(hue - fish.hue), 360 - Math.abs(hue - fish.hue));
+      assert.ok(diff <= 2, `${fish.id}: stop hue ${hue} should be near ${fish.hue}`);
+    }
+  }
+});
+
+test('each body shape draws differently', () => {
+  // Compare the geometry itself: four shapes must not share one outline.
+  const bodies = Object.values(FISH_SHAPES).map((s) => s.body);
+  assert.equal(new Set(bodies).size, bodies.length,
+    'every shape needs its own body outline');
+
+  const tails = Object.values(FISH_SHAPES).map((s) => s.tail);
+  assert.equal(new Set(tails).size, tails.length,
+    'every shape needs its own tail');
+
+  // And the two long fish must actually differ from each other on screen.
+  const eco = fishSvg(FISH.find((f) => f.id === 'eco-gar'));
+  const glacier = fishSvg(FISH.find((f) => f.id === 'glacier-char'));
+  assert.notEqual(eco, glacier, 'two fish sharing a shape must still differ by hue');
+});
+
+test('the fish has a visible body, an eye and a tail', () => {
+  // A silhouette with no features would read as a blob rather than a fish.
+  const svg = fishSvg(FISH[0]);
+  assert.match(svg, /class="body"/, 'needs a body');
+  assert.match(svg, /class="tail"/, 'needs a tail');
+  assert.match(svg, /class="eye"/, 'needs an eye');
+  assert.match(svg, /class="fin"/, 'needs a fin');
+  assert.match(svg, /class="stripe"/, 'needs a marking');
+});
+
+test('an unknown shape still produces a valid drawing', () => {
+  const svg = fishSvg({ ...FISH[0], draw: 'leviathan' });
+  assert.match(svg, /^<svg/, 'must not throw on an unknown shape');
+  assert.match(svg, /<\/svg>\s*$/);
+});
+
+test('a missing fish falls back to the first one rather than throwing', () => {
+  assert.doesNotThrow(() => fishSvg(null));
+  assert.doesNotThrow(() => fishSvg(undefined));
+  assert.match(fishSvg(null), /^<svg/);
+});
+
+test('the fish drawing carries the fish name for accessibility', () => {
+  const svg = fishSvg(FISH[2]);
+  assert.match(svg, /role="img"/);
+  assert.match(svg, /aria-label="[^"]*Metro Trout[^"]*"/, 'the name must be in the label');
 });
