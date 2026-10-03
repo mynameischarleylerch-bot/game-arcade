@@ -5,22 +5,15 @@
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Frutiger Angler</title>
 <style>
-  /* Glossy Frutiger Aero: aqua gradients, translucent glass, bloom and shine.
-
-     The scene follows a simple sketch — sky, a horizon rising to the right, a
-     wooden pier on the left with deck and legs, the angler standing on it with
-     the rod angled up and to the right — but everything is rendered in Aero glass
-     rather than as flat pixel art.
-
-     Every gameplay rule lives in fishing.js and reel.js; this file is the view. */
+  
   :root {
-    /* Ink */
+    
     --deep: #01579b;
     --deepest: #013a63;
     --ink-soft: #3d6b85;
     --on-accent: #ffffff;
 
-    /* Sky and light */
+    
     --sky-top: #b3e5fc;
     --sky-mid: #7fc4e8;
     --sky-floor: #4aa8d8;
@@ -28,35 +21,35 @@
     --sun-core: rgba(255, 255, 255, 0.95);
     --haze-tint: rgba(255, 255, 255, 0.75);
 
-    /* Wood */
+    
     --wood: #a9714a;
     --wood-deep: #7d4f2e;
 
-    /* Aero glass: the three-stop translucent panel fill */
+    
     --glass-top: rgba(255, 255, 255, 0.62);
     --glass-mid: rgba(255, 255, 255, 0.3);
     --glass-bot: rgba(255, 255, 255, 0.16);
     --glass: linear-gradient(180deg, var(--glass-top), var(--glass-mid) 55%, var(--glass-bot));
 
-    /* Specular highlights */
+    
     --sheen: linear-gradient(180deg, rgba(255, 255, 255, 0.9), rgba(255, 255, 255, 0.5));
     --sheen-faint: linear-gradient(180deg, rgba(255, 255, 255, 0.45), rgba(255, 255, 255, 0));
     --gloss-strength: 0.9;
 
-    /* Hairlines and radii */
+    
     --hairline: rgba(255, 255, 255, 0.85);
     --hairline-strong: rgba(255, 255, 255, 0.92);
     --radius: 12px;
-    --pill: 999px;        /* the pill every control shares */
+    --pill: 999px;        
     --radius-lg: 18px;
 
-    /* Shadows: each pairs a drop with the Aero top gloss */
+    
     --shadow-card: 0 6px 16px rgba(1, 87, 155, 0.22), inset 0 1px 0 var(--hairline-strong);
     --shadow-panel: 0 18px 40px rgba(1, 87, 155, 0.22), inset 0 1px 0 var(--hairline);
     --shadow-edge: inset 0 -1px 0 rgba(255, 255, 255, 0.5);
     --shadow-lift: 0 10px 22px rgba(1, 87, 155, 0.28), inset 0 1px 0 #fff;
 
-    /* Accents */
+    
     --shine: linear-gradient(180deg, #fff, rgba(255, 255, 255, 0.45));
     --shine-on: linear-gradient(180deg, #81d4fa, #0288d1);
     --lime: #a3e635;
@@ -81,7 +74,7 @@
     padding: .75rem;
   }
 
-  /* ------------------------------------------------------------- top bar */
+  
   .hud {
     display: flex; align-items: center; gap: .5rem .7rem; flex-wrap: wrap;
     padding: .4rem .9rem; border-radius: var(--pill);
@@ -90,9 +83,12 @@
     box-shadow: var(--shadow-card);
     backdrop-filter: blur(10px); -webkit-backdrop-filter: blur(10px);
   }
-  .hud b { font-variant-numeric: tabular-nums; }
-  .hud__dim { color: var(--ink-soft); }
-
+  .hud b{
+    font-variant-numeric: tabular-nums;
+  }
+  .hud__dim{
+    color: var(--ink-soft);
+  }
   kbd {
     font: inherit; font-size: .82em;
     padding: .05em .4em; border-radius: 5px;
@@ -101,11 +97,11 @@
     box-shadow: inset 0 -1px 0 rgba(1,87,155,.2);
   }
 
-  /* -------------------------------------------------------------- scene */
+  
   .lake {
     position: relative;
     border-radius: var(--radius-lg);
-    /* specular sweep across the water, then the sky-to-lake gradient beneath */
+    
     background:
       linear-gradient(105deg, rgba(255,255,255,0) 38%, rgba(255,255,255,.22) 50%, rgba(255,255,255,0) 62%),
       linear-gradient(180deg, var(--sky-top) 0%, var(--sky-mid) 42%, var(--sky-floor) 100%);
@@ -118,7 +114,7 @@
     user-select: none;
   }
 
-  /* Aero sun bloom, behind the scene. */
+  
   .lake::before {
     content: ""; position: absolute; right: 6%; top: 4%;
     width: 22%; aspect-ratio: 1; border-radius: 50%;
@@ -127,7 +123,7 @@
     pointer-events: none;
   }
 
-  /* Soft clouds plus a wide specular highlight drifting over the water. */
+  
   .lake::after {
     content: ""; position: absolute; left: -5%; right: -5%; top: 22%; height: 28%;
     pointer-events: none;
@@ -142,40 +138,47 @@
     to   { transform: translateX(3%); }
   }
 
-  /* The scenery sits in one SVG at percentage coordinates, so the composition
-     holds at any size. */
+  
   .scene {
     position: absolute; inset: 0;
     width: 100%; height: 100%;
     z-index: 1;
   }
 
-  /* Distant shore: a soft rise to the right, in water tones. */
-  .scene__shore { fill: url(#fa-shore); }
-  /* The lake itself, glossy and slightly darker toward the viewer. */
-  .scene__water { fill: url(#fa-water); }
-  .scene__glint { fill: url(#fa-glint); }
-
-  /* Pier and rod: varnished wood with a lit top edge. */
-  .scene__wood { fill: url(#fa-wood); }
-  /* The legs sat on the deck's colour with no rule of their own. */
-  .scene__wood--edge { fill: url(#fa-wood-edge); }
-  .scene__wood--edge { fill: var(--wood-deep); }
-  .scene__rod { stroke: var(--wood-deep); stroke-width: 1.6; fill: none; stroke-linecap: round; }
-
-  /* The angler reads as a dark silhouette against the sky, like the sketch. */
-  /* The blob reads best as a flat silhouette with a gloss on top, which is how
-     the Messenger figure looked at small sizes. */
-  .scene__figure { fill: url(#fa-figure); }
-  /* The specular over the angler, softened because the figure is dark. */
-  .scene__shine { fill: url(#fa-sheen); opacity: .8; }
-  .scene__lure { fill: url(#fa-wood); }
-
-  /* The fishing line runs from the rod tip to the bobber; angler.js moves the
-     far end whenever the bobber lands. */
+  
+  .scene__shore{
+    fill: url(#fa-shore);
+  }
+  .scene__water{
+    fill: url(#fa-water);
+  }
+  .scene__glint{
+    fill: url(#fa-glint);
+  }
+  .scene__wood{
+    fill: url(#fa-wood);
+  }
+  .scene__wood--edge{
+    fill: url(#fa-wood-edge);
+  }
+  .scene__wood--edge{
+    fill: var(--wood-deep);
+  }
+  .scene__rod{
+    stroke: var(--wood-deep); stroke-width: 1.6; fill: none; stroke-linecap: round;
+  }
+  .scene__figure{
+    fill: url(#fa-figure);
+  }
+  .scene__shine{
+    fill: url(#fa-sheen); opacity: .8;
+  }
+  .scene__lure{
+    fill: url(#fa-wood);
+  }
   #line { stroke: rgba(255,255,255,.85); stroke-width: 1; fill: none; }
 
-  /* ---------------------------------------------------------- the bobber */
+  
   .lake__bobber {
     position: absolute; width: 22px; height: 22px; border-radius: 50%;
     margin: -11px 0 0 -11px; z-index: 3;
@@ -183,7 +186,7 @@
     box-shadow: 0 4px 10px rgba(0,0,0,.3), inset 0 -2px 4px rgba(0,0,0,.15);
     transition: left var(--cast-ms, 600ms) var(--ease), top var(--cast-ms, 600ms) var(--ease);
   }
-  /* Once it is in the water it flips colour so it reads as a float, not a ball. */
+  
   .lake[data-phase="waiting"] .lake__bobber,
   .lake[data-phase="reeling"] .lake__bobber,
   .lake[data-phase="result"] .lake__bobber {
@@ -197,13 +200,15 @@
     border: 2px solid rgba(255,255,255,.85);
     z-index: 2; opacity: 0;
   }
-  .lake__splash.is-on { animation: splash 700ms ease-out; }
+  .lake__splash.is-on{
+    animation: splash 700ms ease-out;
+  }
   @keyframes splash {
     from { opacity: .9; transform: scale(.4); }
     to   { opacity: 0; transform: scale(2); }
   }
 
-  /* -------------------------------------------------------- cast meter */
+  
   .cast {
     position: absolute; left: 50%; bottom: 2rem; transform: translateX(-50%);
     width: min(70%, 22rem); height: 20px; border-radius: var(--pill); z-index: 5;
@@ -211,16 +216,17 @@
     border: 1px solid rgba(255,255,255,.5);
     box-shadow: inset 0 1px 3px rgba(0,0,0,.35);
   }
-  .cast[hidden] { display: none; }
-  /* The perfect band is lime, the Aero accent for "go": a lit box, not a swatch. */
+  .cast[hidden]{
+    display: none;
+  }
   .cast__band {
     position: absolute; top: 0; bottom: 0; left: 45%; width: 10%;
     background: linear-gradient(180deg, rgba(220, 252, 168, .95), var(--lime));
     box-shadow: inset 0 1px 0 rgba(255, 255, 255, .85), 0 0 10px rgba(163, 230, 53, .55);
   }
-  .cast__fill { position: absolute; inset: 0 auto 0 0; width: 0; border-radius: var(--pill); background: linear-gradient(90deg, #4fc3f7, #01579b); }
-
-  /* ------------------------------------------------------ SHAKE prompt */
+  .cast__fill{
+    position: absolute; inset: 0 auto 0 0; width: 0; border-radius: var(--pill); background: linear-gradient(90deg, #4fc3f7, #01579b);
+  }
   .shake {
     position: absolute; z-index: 8;
     padding: .45rem .9rem; border-radius: var(--pill);
@@ -233,7 +239,7 @@
   }
   @keyframes shake-pulse { from { transform: scale(1); } to { transform: scale(1.07); } }
 
-  /* -------------------------------------------------------- reel panel */
+  
   .reel {
     position: absolute; left: 50%; top: 50%; transform: translate(-50%, -50%);
     width: min(92%, 34rem); padding: 1rem; z-index: 7;
@@ -243,22 +249,24 @@
     box-shadow: var(--shadow-panel), var(--shadow-lift);
     backdrop-filter: blur(12px); -webkit-backdrop-filter: blur(12px);
   }
-  .reel[hidden] { display: none; }
-  /* The hook line: what the fish tells you when it takes the bait. */
+  .reel[hidden]{
+    display: none;
+  }
   .reel__line {
     margin: 0 0 .5rem; padding: .45rem .8rem;
     border-radius: var(--pill); text-align: center;
     font-size: .92rem; font-style: italic; font-weight: 600;
     color: var(--deep);
-    /* Translucent, so it floats over the lake like a caption rather than a box. */
+    
     background: linear-gradient(180deg, rgba(255,255,255,.82), rgba(255,255,255,.5));
     border: 1px solid var(--hairline);
     box-shadow: inset 0 1px 0 #fff, 0 2px 8px rgba(1,87,155,.2);
     text-shadow: 0 1px 0 rgba(255,255,255,.7);
   }
-  /* Empty until a fish is hooked, so it takes no space at the moment of the bite. */
-  .reel__line:empty { display: none; }
-
+  
+  .reel__line:empty{
+    display: none;
+  }
   .reel__track {
     position: relative; height: 54px; border-radius: 10px;
     background: linear-gradient(180deg, var(--deepest), #1d5b80);
@@ -266,7 +274,7 @@
     box-shadow: inset 0 2px 6px rgba(0,0,0,.4);
     overflow: hidden;
   }
-  /* The player's control bar, and the fish line it has to hold. */
+  
   .reel__player {
     position: absolute; top: 0; bottom: 0; left: 0; width: 24%;
     background: linear-gradient(180deg, #fff, rgba(255, 255, 255, 0.62));
@@ -283,19 +291,15 @@
     position: relative; height: 16px; margin-top: .6rem; border-radius: 8px;
     background: linear-gradient(180deg, var(--deepest), #1d5b80);
     border: 1px solid var(--hairline);
-    /* an inner lip, so the track reads as recessed rather than painted on */
+    
     box-shadow: inset 0 2px 5px rgba(0, 0, 0, .45), inset 0 -1px 0 rgba(255, 255, 255, .18);
     overflow: hidden;
   }
   .reel__fill { position: absolute; inset: 0 auto 0 0; width: 0; border-radius: 8px;
     background: linear-gradient(90deg, #a3e635, #2e9e5b); }
-  .reel__hint { margin: .5rem 0 0; font-size: .82rem; color: var(--ink-soft); text-align: center; }
-
-  /* -------------------------------------------------------- catch card */
-  /* The catch scrim is a vignette around the CARD, not a flat sheet over the
-     lake. It used to be rgba(...,.45) across the whole scene with a blur, which
-     put the dock -- and the seal's speech bubble -- behind it at precisely the
-     moment the seal has something to say. */
+  .reel__hint{
+    margin: .5rem 0 0; font-size: .82rem; color: var(--ink-soft); text-align: center;
+  }
   .catch, .shop {
     position: absolute; inset: 0; z-index: 9;
     display: grid; place-items: center;
@@ -304,15 +308,19 @@
     pointer-events: none;
   }
   .catch > *, .shop > * { pointer-events: auto; }
-  .catch[hidden], .shop[hidden] { display: none; }
+  .catch[hidden], .shop[hidden]{
+    display: none;
+  }
   .catch__card { position: relative; z-index: 2;
     padding: 1.4rem 1.8rem; border-radius: 18px; text-align: center;
     background: linear-gradient(180deg, rgba(255,255,255,.94), var(--glass-mid));
     border: 1px solid var(--hairline-strong);
     box-shadow: var(--shadow-panel), var(--shadow-lift);
   }
-  /* The catch card pops: it scales in from small with a little overshoot. */
-  .catch__card { animation: catch-pop 380ms cubic-bezier(.2,1.5,.4,1) both; }
+  
+  .catch__card{
+    animation: catch-pop 380ms cubic-bezier(.2,1.5,.4,1) both;
+  }
   @keyframes catch-pop {
     0%   { transform: scale(.72); opacity: 0; }
     60%  { transform: scale(1.04); opacity: 1; }
@@ -324,7 +332,7 @@
     letter-spacing: .14em; text-transform: uppercase; color: var(--ink-soft);
   }
 
-  /* The fish drawing sits in a glossy tile. */
+  
   .catch__art {
     width: 100%; max-width: 260px; margin: 0 auto .6rem;
     border-radius: var(--radius-lg); overflow: hidden;
@@ -332,14 +340,16 @@
     box-shadow: var(--shadow-lift), var(--shadow-edge);
     background: var(--shine);
   }
-  .catch__art svg { display: block; width: 100%; height: auto; }
-
-  /* Weight and worth side by side, labelled rather than buried in one line. */
+  .catch__art svg{
+    display: block; width: 100%; height: auto;
+  }
   .catch__stats {
     display: flex; justify-content: center; gap: 1.4rem;
     margin: .7rem 0 .2rem;
   }
-  .catch__stats div { display: grid; gap: .1rem; }
+  .catch__stats div{
+    display: grid; gap: .1rem;
+  }
   .catch__stats dt {
     font-size: .68rem; font-weight: 700; letter-spacing: .1em;
     text-transform: uppercase; color: var(--ink-soft);
@@ -349,16 +359,27 @@
     font-variant-numeric: tabular-nums;
   }
 
-  .catch__name { font-size: 1.5rem; font-weight: 700; }
-  .catch__name.species__name { font-size: 1rem; }
-  /* Rarity is five blocks filled up to the fish's tier. */
-  .catch__rarity { display: flex; gap: 4px; justify-content: center; margin-top: .4rem; }
-  .catch__pip { width: 12px; height: 12px; border-radius: 3px; background: rgba(1,87,155,.18); }
-  .catch__pip.is-on { background: var(--deep); box-shadow: 0 1px 3px rgba(1,87,155,.4); }
-  .catch__meta { color: var(--ink-soft); margin-top: .5rem; font-size: .85rem; }
-  .catch__value { font-size: 1.6rem; font-weight: 700; margin-top: .6rem; }
-
-  /* ------------------------------------------------------------- shop */
+  .catch__name{
+    font-size: 1.5rem; font-weight: 700;
+  }
+  .catch__name.species__name{
+    font-size: 1rem;
+  }
+  .catch__rarity{
+    display: flex; gap: 4px; justify-content: center; margin-top: .4rem;
+  }
+  .catch__pip{
+    width: 12px; height: 12px; border-radius: 3px; background: rgba(1,87,155,.18);
+  }
+  .catch__pip.is-on{
+    background: var(--deep); box-shadow: 0 1px 3px rgba(1,87,155,.4);
+  }
+  .catch__meta{
+    color: var(--ink-soft); margin-top: .5rem; font-size: .85rem;
+  }
+  .catch__value{
+    font-size: 1.6rem; font-weight: 700; margin-top: .6rem;
+  }
   .shop__panel {
     width: min(100%, 30rem); max-height: 86%; overflow: auto;
     padding: 1.1rem 1.2rem; border-radius: 18px; text-align: left;
@@ -366,10 +387,15 @@
     border: 1px solid var(--hairline-strong);
     box-shadow: var(--shadow-panel), var(--shadow-lift);
   }
-  .shop__title { font-size: 1.15rem; font-weight: 700; margin: 0 0 .2rem; }
-  .shop__wallet { color: var(--ink-soft); margin: 0 0 .8rem; }
-  .shop__list { display: grid; gap: .5rem; }
-
+  .shop__title{
+    font-size: 1.15rem; font-weight: 700; margin: 0 0 .2rem;
+  }
+  .shop__wallet{
+    color: var(--ink-soft); margin: 0 0 .8rem;
+  }
+  .shop__list{
+    display: grid; gap: .5rem;
+  }
   .rod {
     display: grid; gap: .2rem; text-align: left;
     padding: .6rem .7rem; border-radius: var(--radius);
@@ -379,14 +405,18 @@
     box-shadow: 0 2px 6px rgba(1, 87, 155, .14), inset 0 1px 0 #fff;
     transition: transform 160ms var(--ease), box-shadow 160ms var(--ease);
   }
-  /* Aero lift: the row rises and its shadow deepens. */
+  
   .rod:not(:disabled):hover { transform: translateY(-1px); box-shadow: var(--shadow-lift); }
-  .rod:disabled { cursor: not-allowed; opacity: .55; }
+  .rod:disabled{
+    cursor: not-allowed; opacity: .55;
+  }
   .rod--equipped {
     border-color: var(--deep);
     box-shadow: 0 0 0 2px rgba(1,87,155,.18) inset;
   }
-  .rod__row { display: flex; justify-content: space-between; gap: .6rem; font-weight: 600; }
+  .rod__row{
+    display: flex; justify-content: space-between; gap: .6rem; font-weight: 600;
+  }
   .btn--small { padding: .2rem .7rem; font-size: .82rem; font-weight: 600;
                 min-height: 2.1rem; box-sizing: border-box; }
   .hud__badge {
@@ -395,49 +425,63 @@
     font-variant-numeric: tabular-nums;
   }
 
-  /* One row per species in the inventory. Deliberately NOT `.catch`: that is the
-     full-screen catch overlay, and reusing it turned every row into an overlay
-     stacked over the panel. */
+  
   .species {
     display: flex; align-items: baseline; justify-content: space-between; gap: .6rem;
     padding: .45rem .6rem; border-radius: 10px;
     border: 1px solid rgba(1,87,155,.16);
     background: var(--shine);
   }
-  .species[data-caught="false"] { opacity: .55; }
-  .species__name { font-weight: 600; }
-  .species__weight { font-size: .82rem; color: var(--ink-soft); font-variant-numeric: tabular-nums; }
-  .species__none { font-size: .8rem; color: var(--ink-soft); font-style: italic; }
-
+  .species[data-caught="false"]{
+    opacity: .55;
+  }
+  .species__name{
+    font-weight: 600;
+  }
+  .species__weight{
+    font-size: .82rem; color: var(--ink-soft); font-variant-numeric: tabular-nums;
+  }
+  .species__none{
+    font-size: .8rem; color: var(--ink-soft); font-style: italic;
+  }
   .shop__section {
     margin: .7rem 0 .3rem; font-size: .72rem; font-weight: 700;
     letter-spacing: .09em; text-transform: uppercase; color: var(--ink-soft);
   }
-  .shop__section:first-child { margin-top: 0; }
-  .shop__owned-all { margin: .4rem 0 0; font-size: .85rem; color: var(--ink-soft); }
-
-  /* A colour chip so you can see which rod you have before equipping it. */
+  .shop__section:first-child{
+    margin-top: 0;
+  }
+  .shop__owned-all{
+    margin: .4rem 0 0; font-size: .85rem; color: var(--ink-soft);
+  }
   .rod__swatch {
     display: inline-block; width: 34px; height: 8px; border-radius: 4px;
     vertical-align: middle; box-shadow: inset 0 1px 0 rgba(255,255,255,.5);
   }
-  .rod__state { font-size: .78rem; font-weight: 700; }
-  .rod--equipped .rod__state { color: var(--leaf-deep); }
-
-  .rod__stats { font-size: .8rem; color: var(--ink-soft); }
-  .rod__blurb { font-size: .82rem; color: var(--ink-soft); font-style: italic; }
-
+  .rod__state{
+    font-size: .78rem; font-weight: 700;
+  }
+  .rod--equipped .rod__state{
+    color: var(--leaf-deep);
+  }
+  .rod__stats{
+    font-size: .8rem; color: var(--ink-soft);
+  }
+  .rod__blurb{
+    font-size: .82rem; color: var(--ink-soft); font-style: italic;
+  }
   .btn {
     padding: .45rem 1rem; border-radius: var(--pill); border: 1px solid rgba(255,255,255,.92);
     background: var(--shine);
     color: var(--deep); font: inherit; font-weight: 600; cursor: pointer;
     box-shadow: 0 4px 10px rgba(1,87,155,.2), inset 0 1px 0 #fff;
   }
-  .btn--primary { background: var(--shine-on); color: #fff; }
-  .btn:focus-visible, .rod:focus-visible, .shake:focus-visible { outline: 2px solid var(--deep); outline-offset: 2px; }
-
-  /* Fades in from transparent: this covers the whole lake, so a solid fill or a
-     border would draw a frame around the entire play area. */
+  .btn--primary{
+    background: var(--shine-on); color: #fff;
+  }
+  .btn:focus-visible, .rod:focus-visible, .shake:focus-visible{
+    outline: 2px solid var(--deep); outline-offset: 2px;
+  }
   .message {
     position: absolute; inset: 0; z-index: 6;
     display: grid; place-items: center; text-align: center;
@@ -446,10 +490,9 @@
     background: linear-gradient(180deg, rgba(1, 87, 155, 0), rgba(1, 58, 99, .62) 60%);
     box-shadow: inset 0 1px 0 rgba(255, 255, 255, .18);
   }
-  .message[hidden] { display: none; }
-
-  /* Decorative Aero bubbles drifting over the water. Presentational only, so the
-     markup is aria-hidden. They cost nothing and add most of the depth. */
+  .message[hidden]{
+    display: none;
+  }
   .lake__bubble {
     position: absolute; border-radius: 50%; pointer-events: none; z-index: 2;
     background: radial-gradient(circle at 32% 28%,
@@ -457,25 +500,35 @@
     box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.85), 0 0 10px rgba(255, 255, 255, 0.35);
     animation: bubble-rise linear infinite;
   }
-  .lake__bubble--1 { width: 22px; height: 22px; left: 34%; bottom: 8%;  animation-duration: 11s; }
-  .lake__bubble--2 { width: 14px; height: 14px; left: 52%; bottom: 4%;  animation-duration: 8s;  animation-delay: -3s; }
-  .lake__bubble--3 { width: 30px; height: 30px; left: 72%; bottom: 12%; animation-duration: 14s; animation-delay: -6s; }
-  .lake__bubble--4 { width: 10px; height: 10px; left: 84%; bottom: 6%;  animation-duration: 7s;  animation-delay: -2s; }
-  .lake__bubble--5 { width: 18px; height: 18px; left: 44%; bottom: 16%; animation-duration: 12s; animation-delay: -9s; }
-
+  .lake__bubble--1{
+    width: 22px; height: 22px; left: 34%; bottom: 8%; animation-duration: 11s;
+  }
+  .lake__bubble--2{
+    width: 14px; height: 14px; left: 52%; bottom: 4%; animation-duration: 8s; animation-delay: -3s;
+  }
+  .lake__bubble--3{
+    width: 30px; height: 30px; left: 72%; bottom: 12%; animation-duration: 14s; animation-delay: -6s;
+  }
+  .lake__bubble--4{
+    width: 10px; height: 10px; left: 84%; bottom: 6%; animation-duration: 7s; animation-delay: -2s;
+  }
+  .lake__bubble--5{
+    width: 18px; height: 18px; left: 44%; bottom: 16%; animation-duration: 12s; animation-delay: -9s;
+  }
   @keyframes bubble-rise {
     from { transform: translateY(0) scale(1); opacity: 0; }
     20%  { opacity: .85; }
     to   { transform: translateY(-140px) scale(1.25); opacity: 0; }
   }
 
-  /* The bite: a prompt that demands a click before the fight starts. */
+  
   .bite {
     position: absolute; inset: 0; z-index: 7;
     display: grid; place-items: center;
   }
-  .bite[hidden] { display: none; }
-
+  .bite[hidden]{
+    display: none;
+  }
   .bite__card {
     display: grid; gap: .5rem; justify-items: center; text-align: center;
     padding: 1.1rem 1.4rem; border-radius: var(--radius-lg);
@@ -484,7 +537,7 @@
     box-shadow: var(--shadow-panel), var(--shadow-lift);
     animation: bite-pop 220ms var(--ease);
   }
-  /* The lake shimmers behind the prompt so it reads as urgent. */
+  
   .bite__kicker {
     margin: 0; font-size: 1rem; font-weight: 700; color: var(--deep);
   }
@@ -497,22 +550,26 @@
     box-shadow: 0 6px 0 #5f9109, 0 10px 20px rgba(0,0,0,.35), inset 0 1px 0 rgba(255,255,255,.7);
     transition: transform 90ms ease, box-shadow 90ms ease;
   }
-  /* Pressed down like a physical button. */
+  
   .bite__set:active {
     transform: translateY(4px);
     box-shadow: 0 2px 0 #5f9109, 0 4px 10px rgba(0,0,0,.3), inset 0 1px 0 rgba(255,255,255,.7);
   }
-  .bite__set:focus-visible { outline: 3px solid var(--deep); outline-offset: 3px; }
-  .bite__hint { margin: 0; font-size: .78rem; color: var(--ink-soft); }
-
+  .bite__set:focus-visible{
+    outline: 3px solid var(--deep); outline-offset: 3px;
+  }
+  .bite__hint{
+    margin: 0; font-size: .78rem; color: var(--ink-soft);
+  }
   @keyframes bite-pop {
     from { transform: scale(.86); opacity: 0; }
     to   { transform: scale(1); opacity: 1; }
   }
 
-  /* The lake picker: one row per water, with its own light behind the name. */
-  .lake-list { display: grid; gap: .55rem; }
-
+  
+  .lake-list{
+    display: grid; gap: .55rem;
+  }
   .lake-row {
     display: grid; grid-template-columns: 46px 1fr auto; align-items: center;
     gap: .7rem; padding: .55rem .6rem; border-radius: 12px;
@@ -525,15 +582,18 @@
   .lake-row:not([aria-disabled="true"]):hover {
     transform: translateY(-1px); box-shadow: var(--shadow-lift);
   }
-  .lake-row:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
-
-  /* A locked lake is shown but not offered, and says why. */
-  .lake-row[aria-disabled="true"] { cursor: not-allowed; opacity: .72; filter: saturate(.55); }
-  .lake-row[aria-disabled="true"]:hover { transform: none; box-shadow: inset 0 1px 0 #fff, 0 2px 6px rgba(1, 87, 155, .12); }
-
-  /* The swatch is painted with the lake's own palette. */
-  /* Rod traits, shown in the shop so a gated lake explains itself. */
-  .rod__traits { display: flex; gap: .3rem; flex-wrap: wrap; }
+  .lake-row:focus-visible{
+    outline: 2px solid var(--accent); outline-offset: 2px;
+  }
+  .lake-row[aria-disabled="true"]{
+    cursor: not-allowed; opacity: .72; filter: saturate(.55);
+  }
+  .lake-row[aria-disabled="true"]:hover{
+    transform: none; box-shadow: inset 0 1px 0 #fff, 0 2px 6px rgba(1, 87, 155, .12);
+  }
+  .rod__traits{
+    display: flex; gap: .3rem; flex-wrap: wrap;
+  }
   .rod__trait {
     padding: .1rem .45rem; border-radius: var(--pill);
     background: linear-gradient(180deg, var(--glass-top), var(--glass-mid));
@@ -542,9 +602,9 @@
     text-transform: uppercase; font-style: normal; color: var(--deep);
     box-shadow: inset 0 1px 0 #fff;
   }
-  .rod__opens { font-size: .72rem; color: var(--ink-soft); }
-
-  /* A lake's trait, on its row in the picker. */
+  .rod__opens{
+    font-size: .72rem; color: var(--ink-soft);
+  }
   .lake-row__trait {
     justify-self: start;
     margin-top: .2rem;
@@ -554,7 +614,9 @@
     font-size: .64rem; font-weight: 700; letter-spacing: .07em;
     text-transform: uppercase; color: var(--deep);
   }
-  .lake-row__trait::before { content: '\25C6\00a0'; }
+  .lake-row__trait::before{
+    content: '\25C6\00a0';
+  }
   .lake-row[aria-disabled="true"] .lake-row__trait {
     background: rgba(1, 87, 155, .1);
     border-color: rgba(1, 87, 155, .2);
@@ -566,28 +628,36 @@
     border: 1px solid rgba(255, 255, 255, .9);
     box-shadow: inset 0 1px 0 rgba(255, 255, 255, .85), 0 1px 3px rgba(0, 0, 0, .2);
   }
-  .lake-row__label { display: grid; gap: .1rem; min-width: 0; }
-  .lake-row__name { font-weight: 700; }
+  .lake-row__label{
+    display: grid; gap: .1rem; min-width: 0;
+  }
+  .lake-row__name{
+    font-weight: 700;
+  }
   .lake-row__theme {
     font-size: .7rem; font-weight: 700; letter-spacing: .08em;
     text-transform: uppercase; opacity: .7;
   }
-  .lake-row__blurb { font-size: .76rem; color: var(--ink-soft); }
+  .lake-row__blurb{
+    font-size: .76rem; color: var(--ink-soft);
+  }
   .lake-row__state {
     font-size: .72rem; font-weight: 700; color: var(--ink-soft);
     white-space: nowrap; text-align: right;
   }
-  /* The lake you are standing in. */
+  
   .lake-row[aria-current="true"] {
     border-color: var(--accent-line, var(--accent));
     box-shadow: var(--shadow-lift), inset 0 1px 0 #fff;
   }
 
-  /* The fish index: one block per rarity tier. */
-  .index { display: grid; gap: 1rem; }
-
-  .index__tier { display: grid; gap: .45rem; }
-
+  
+  .index{
+    display: grid; gap: 1rem;
+  }
+  .index__tier{
+    display: grid; gap: .45rem;
+  }
   .index__head {
     display: flex; align-items: baseline; gap: .5rem;
     padding-bottom: .3rem; border-bottom: 1px solid rgba(1,87,155,.16);
@@ -596,7 +666,9 @@
     width: 12px; height: 12px; border-radius: 50%;
     box-shadow: inset 0 1px 0 rgba(255,255,255,.8), 0 1px 3px rgba(0,0,0,.3);
   }
-  .index__name { font-weight: 700; color: var(--deep); }
+  .index__name{
+    font-weight: 700; color: var(--deep);
+  }
   .index__chance {
     margin-left: auto; font-size: .78rem; font-weight: 700; color: var(--ink-soft);
   }
@@ -612,15 +684,23 @@
     background: var(--sky-floor);
     box-shadow: inset 0 1px 0 rgba(255,255,255,.7);
   }
-  .index__art svg { width: 100%; height: 100%; display: block; }
-  .index__label { display: grid; gap: .1rem; min-width: 0; }
-  .index__fishName { font-weight: 600; color: var(--deep); }
-  .index__detail { font-size: .74rem; color: var(--ink-soft); }
+  .index__art svg{
+    width: 100%; height: 100%; display: block;
+  }
+  .index__label{
+    display: grid; gap: .1rem; min-width: 0;
+  }
+  .index__fishName{
+    font-weight: 600; color: var(--deep);
+  }
+  .index__detail{
+    font-size: .74rem; color: var(--ink-soft);
+  }
   .index__odds {
     font-size: .74rem; font-weight: 700; color: var(--ink-soft);
     white-space: nowrap;
   }
-  /* An unlanded species is listed but dimmed, so the index doubles as a target. */
+  
   .index__fish--new .index__fishName::after {
     content: " · not landed";
     font-size: .68rem; font-weight: 400; opacity: .75;
@@ -628,36 +708,37 @@
 
   @media (prefers-reduced-motion: reduce) {
     *, *::before, *::after { animation: none !important; transition: none !important; }
-    .lake::after { animation: none; opacity: .7; }
-    .lake__bubble { animation: none; opacity: .5; }
-    .bite__card { animation: none; }
+    .lake::after{
+    animation: none; opacity: .7;
   }
-  /* ---- HUD grouping -------------------------------------------------
-   * Readouts that belong together sit in one group, so the bar reads as a few
-   * clusters rather than six loose fragments with the rod's own numbers marooned
-   * at the far end. */
-  .hud { flex-wrap: wrap; row-gap: .35rem; }
+    .lake__bubble{
+    animation: none; opacity: .5;
+  }
+    .bite__card{
+    animation: none;
+  }
+  }
+  
+  .hud{
+    flex-wrap: wrap; row-gap: .35rem;
+  }
   .hud__group {
     display: inline-flex; align-items: center; gap: .35rem;
     padding: .18rem .55rem; min-height: 2.1rem; box-sizing: border-box;
     border-radius: var(--pill);
-    /* Opaque enough to read AS a shape. At .28 the pill was lighter than the Aero
-       bar behind it and vanished, so the grouping was invisible. */
+    
     background: linear-gradient(180deg, rgba(255,255,255,.82), rgba(255,255,255,.62));
     border: 1px solid rgba(255, 255, 255, .95);
     box-shadow: inset 0 1px 0 #fff, 0 2px 6px rgba(1, 87, 155, .12);
   }
-  .hud__rod { flex-direction: column; align-items: flex-start; gap: 0; }
+  .hud__rod{
+    flex-direction: column; align-items: flex-start; gap: 0;
+  }
   .hud__rod #rod-stats { font-size: .72rem; line-height: 1.15; }
-  /* The nav buttons travel together as one cluster at the end of the bar. */
-  .hud__nav { display: inline-flex; align-items: center; gap: .35rem; margin-left: auto; }
-
-  /* ---- the seal's speech bubble -------------------------------------
-   * Drawn inside the scene so it sits on the dock with the pet, in the same
-   * Aero glass as every other panel. */
-  /* The bubble is HTML so long sentences wrap instead of being clipped off the
-     lake. It sits over the dock where the seal is, and one class drives its whole
-     appearance -- `hidden` on its own let it show up empty on some paths. */
+  
+  .hud__nav{
+    display: inline-flex; align-items: center; gap: .35rem; margin-left: auto;
+  }
   .bubble {
     position: absolute; left: 1.5%; top: 4%; z-index: 3;
     max-width: 32%; min-width: 7rem;
@@ -671,9 +752,12 @@
     transition: opacity .18s ease, transform .18s ease;
     pointer-events: none;
   }
-  .bubble[hidden] { display: none; }
-  .bubble.is-speaking { opacity: 1; transform: translateY(0) scale(1); }
-  /* The tail points down at the seal on the dock. */
+  .bubble[hidden]{
+    display: none;
+  }
+  .bubble.is-speaking{
+    opacity: 1; transform: translateY(0) scale(1);
+  }
   .bubble__tail {
     position: absolute; left: 1.7rem; bottom: -7px; width: 12px; height: 12px;
     background: rgba(255,255,255,.94);
@@ -682,9 +766,7 @@
     border-radius: 0 0 3px 0; transform: rotate(45deg);
   }
 
-  /* ---- notices -------------------------------------------------------
-   * A duplicate or a gift gets its own brief card rather than replacing the
-   * message line, so a sale cannot wipe the seal's opinion off the screen. */
+  
   .notices {
     position: absolute; right: 1rem; bottom: 1rem; z-index: 6;
     display: grid; gap: .35rem; justify-items: end; pointer-events: none;
@@ -702,11 +784,13 @@
     to   { transform: translateY(0);   opacity: 1; }
   }
   @media (prefers-reduced-motion: reduce) {
-    .notices .notice { animation: none; }
+    .notices .notice{
+    animation: none;
+  }
   }
 
-  /* The rank readout and the seal rows. Same glass recipe as everything else. */
-  /* Seal coins are a separate currency and must read as one at a glance. */
+  
+  
   .hud__seal-coins {
     font-weight: 700;
     color: #5b2d91;
@@ -722,8 +806,9 @@
     background: linear-gradient(180deg, rgba(255,255,255,.5), rgba(255,255,255,.22));
     border: 1px solid var(--hairline, rgba(255,255,255,.85));
   }
-  .finds__list { margin: 0; font-size: .85rem; color: var(--ink-soft, #0e6ea8); }
-
+  .finds__list{
+    margin: 0; font-size: .85rem; color: var(--ink-soft, #0e6ea8);
+  }
   .hud__rank {
     color: var(--accent-line, #0288d1); font-weight: 700;
     display: inline-flex; align-items: center; gap: .4rem;
@@ -733,28 +818,80 @@
     border: 1px solid var(--hairline, rgba(255,255,255,.85));
     background: rgba(255,255,255,.35); vertical-align: middle;
   }
-  .hud__bar::-webkit-progress-bar { background: rgba(255,255,255,.35); }
+  .hud__bar::-webkit-progress-bar{
+    background: rgba(255,255,255,.35);
+  }
   .hud__bar::-webkit-progress-value {
     background: linear-gradient(180deg, #a3e635, #4fc3f7);
     border-radius: var(--pill);
   }
+    
   .seal {
-    display: grid; gap: .35rem; padding: .6rem .7rem; border-radius: var(--pill);
-    background: linear-gradient(180deg, rgba(255,255,255,.5), rgba(255,255,255,.22));
-    border: 1px solid var(--hairline, rgba(255,255,255,.85));
-    box-shadow: inset 0 1px 0 rgba(255,255,255,.7);
+    display: grid; gap: .4rem; padding: .7rem .8rem .75rem;
+    border-radius: 14px;
+    background: linear-gradient(180deg, rgba(255,255,255,.94), rgba(255,255,255,.8));
+    border: 1px solid rgba(255,255,255,.9);
+    box-shadow: inset 0 1px 0 #fff, 0 3px 10px rgba(1, 87, 155, .1);
   }
-  .seal__head { display: flex; justify-content: space-between; align-items: baseline; gap: .5rem; }
-  .seal__name { font-weight: 800; color: var(--ink, #013a63); }
-  .seal__home { font-size: .8rem; color: var(--ink-soft, #0e6ea8); }
-  .seal__line, .seal__perks { margin: 0; font-size: .85rem; }
+  .seal--active {
+    border-color: rgba(46, 160, 67, .5);
+    box-shadow: inset 0 1px 0 #fff, 0 0 0 2px rgba(46, 160, 67, .22), 0 3px 10px rgba(1, 87, 155, .12);
+  }
+  .seal--locked .seal__price{
+    opacity: .8;
+  }
+  .seal__head {
+    display: flex; flex-wrap: wrap; align-items: center; gap: .45rem .55rem;
+  }
+  
+  .seal__portrait {
+    flex: 0 0 auto; width: 1.5rem; height: 1.5rem; border-radius: 50%;
+    background: radial-gradient(circle at 34% 30%,
+      hsl(var(--seal-hue, 200) 90% 88%), hsl(var(--seal-hue, 200) 62% 42%));
+    border: 1px solid hsl(var(--seal-hue, 200) 45% 60% / .7);
+    box-shadow: inset 0 1px 0 rgba(255,255,255,.85);
+  }
+  .seal__titles{
+    display: grid; gap: .05rem; min-width: 0; flex: 1 1 8rem;
+  }
+  .seal__name{
+    font-weight: 800; color: var(--ink, #013a63);
+  }
+  .seal__home{
+    font-size: .76rem; color: var(--ink-soft, #0e6ea8);
+  }
+  .seal__line{
+    margin: 0; font-size: .85rem; line-height: 1.35; color: var(--ink, #013a63);
+  }
+  .seal__perks{
+    margin: 0; display: flex; flex-wrap: wrap; gap: .3rem; font-size: .76rem;
+  }
+  .seal__perk {
+    padding: .1rem .5rem; border-radius: var(--pill);
+    background: rgba(255,255,255,.72); border: 1px solid rgba(1, 87, 155, .16);
+    color: #0e6ea8; font-weight: 700;
+  }
   .seal__lock {
-    font-size: .78rem; font-weight: 700; color: #8a5a00;
-    background: rgba(255, 231, 158, .7); border-radius: var(--pill); padding: .1rem .5rem;
+    margin-left: auto; padding: .1rem .5rem; border-radius: var(--pill);
+    font-size: .72rem; font-weight: 700;
+    color: #7a4e00; background: rgba(255, 224, 130, .8);
+    border: 1px solid rgba(160, 110, 0, .25);
+  }
+  
+  .seal__foot {
+    display: flex; flex-wrap: wrap; align-items: center; gap: .5rem;
+    margin-top: .15rem;
+  }
+  .seal__price {
+    margin-left: auto; font-size: .8rem; font-weight: 700;
+    color: #5b2d91; font-variant-numeric: tabular-nums;
+  }
+  .seal__equip{
     justify-self: start;
   }
-  .seal__equip { justify-self: start; }
-</style>
+  .seal__equip.is-active{
+    background: #2ea043; color: #fff; border-color: rgba(255,255,255,.6);
+  }</style>
 </head>
 <body>
   <div class="stage">
@@ -1075,6 +1212,6 @@
     </div>
   </div>
 
-  <script type="module" src="./angler.js?v=2026-10-03-j"></script>
+  <script type="module" src="./angler.js?v=2026-10-03-k"></script>
 </body>
 </html>

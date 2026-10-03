@@ -296,24 +296,45 @@ const CSS_RULES = [...PAGE
   .replace(/@media[^{]*\{(?:[^{}]*\{[^{}]*\}[^{}]*)*\}/g, '')   // drop @media blocks
   .matchAll(/([^{}]+)\{([^{}]*)\}/g)];
 
-test('no class is declared twice as a plain selector', () => {
-  const counts = new Map();
+test('no class declares a property twice with different values', () => {
+  // The old version counted plain-selector declarations and only failed when two
+  // happened to be formatted identically -- so a duplicate introduced by a
+  // reformat slipped straight through. It also counted DELIBERATE overrides (a
+  // base rule plus a later responsive one) as errors, which is wrong.
+  //
+  // The signal that matters: the same property set twice on one class with
+  // different values. That is a silent conflict -- the browser takes the last one
+  // and the first is a lie. An override that only re-states some properties, or
+  // restates them identically, is fine.
+  const strip = (t) => t.replace(/@media[^\{]*\{(?:[^{}]*\{[^{}]*\}[^{}]*)*\}/g, '');
+  const body = strip(PAGE.slice(PAGE.indexOf('<style>'), PAGE.indexOf('</style>')));
 
-  for (const [, selector] of CSS_RULES) {
-    // Only single-class selectors count. `.a` declares a class; `.a .b` and
-    // `.a:hover` are different, more specific selectors and are legitimate.
-    const trimmed = selector.trim();
-    if (/\s/.test(trimmed)) continue;                     // descendant or compound
-    const only = trimmed.match(/^\.([a-z][\w-]*)$/);
-    if (!only) continue;
-    counts.set(only[1], (counts.get(only[1]) ?? 0) + 1);
+  const seen = new Map();
+  const conflicts = [];
+  for (const [selector, block] of body.matchAll(/([^{}]+)\{([^{}]*)\}/g)) {
+    const sel = selector.trim();
+    if (!/^\.[a-z][\w-]*$/.test(sel)) continue;      // single class only
+    const name = sel.slice(1);
+    const props = new Map();
+    for (const decl of block.split(';')) {
+      const at = decl.indexOf(':');
+      if (at === -1) continue;
+      props.set(decl.slice(0, at).trim(), decl.slice(at + 1).trim());
+    }
+    const prior = seen.get(name);
+    if (prior) {
+      for (const [prop, value] of props) {
+        if (prior.has(prop) && prior.get(prop) !== value) {
+          conflicts.push(`.${name} sets ${prop} twice: ${prior.get(prop)} then ${value}`);
+        }
+      }
+    }
+    // A later rule fully replaces the earlier one for the properties it names.
+    const merged = Object.assign(prior ?? new Map(), props);
+    seen.set(name, merged);
   }
-
-  const dupes = [...counts.entries()]
-    .filter(([, n]) => n > 1)
-    .map(([name, n]) => `${name} x${n}`);
-  assert.deepEqual(dupes, [],
-    `classes declared as a plain selector more than once: ${dupes.join(', ')}`);
+  assert.deepEqual(conflicts, [],
+    `conflicting duplicate declarations: ${conflicts.join(' | ')}`);
 });
 
 test('no element inside the inventory panel uses an overlay class', () => {
@@ -606,14 +627,17 @@ test('every HUD readout is the same oval the buttons are', () => {
   }
 });
 
-test('the seal shop rows and the finds box are pills too', () => {
-  // These were on a 12px radius, which is the shape the screenshot showed as
-  // inconsistent against everything around it.
-  for (const sel of ['.seal', '.finds', '.seal__lock']) {
+test('the small seal parts are pills, but the row itself is a card', () => {
+  // This used to demand a 999px radius on .seal -- which is a stadium around a
+  // name, a blurb, perk chips and a button, and swallowed the corners. The pill
+  // belongs on the chips and the lock badge; the row is a card.
+  assert.doesNotMatch(rule('.seal'), /border-radius:\s*(999px|var\(--pill\))/,
+    'the row must stay a card, not an oval');
+  for (const sel of ['.finds', '.seal__lock', '.seal__perk', '.seal__portrait']) {
     const body = rule(sel);
     assert.ok(body, `${sel} must be styled`);
-    assert.match(body, /border-radius:\s*(999px|var\(--pill\))/,
-      `${sel} must be a pill, like the rest`);
+    assert.match(body, /border-radius:\s*(999px|var\(--pill\)|50%)/,
+      `${sel} is a small part and keeps the rounded shape`);
   }
 });
 
@@ -818,4 +842,68 @@ test('the bubble is anchored inside the lake, which clips its overflow', () => {
   assert.match(lake, /class="bubble"/, 'the speech bubble must be inside the lake');
   assert.match(rule('.bubble'), /z-index:\s*3/,
     'and above the scene, or the water paints over it');
+});
+
+test('a seal row is a card, not an oval', () => {
+  // .seal carried border-radius: var(--pill) -- which is 999px. On a card holding
+  // a name, a blurb, a perk line and a button, that balloons into a stadium and
+  // swallows the corners. The pill belongs on buttons and readouts.
+  const card = rule('.seal');
+  assert.ok(card, 'the seal row must be styled');
+  assert.doesNotMatch(card, /border-radius:\s*(999px|var\(--pill\))/,
+    'a multi-line card must not be a 999px oval');
+  assert.match(card, /border-radius:\s*(1?\d)px/,
+    'it needs a real corner radius');
+});
+
+test('the seal row fill is opaque enough to read the blurb against', () => {
+  // .seal was rgba(255,255,255,.5) over rgba(255,255,255,.22) -- barely there on
+  // a pale Aero panel, which is why the seal descriptions were hard to read.
+  const card = rule('.seal');
+  const fill = /background:\s*([^;]+);/.exec(card)?.[1] ?? '';
+  const alphas = [...fill.matchAll(/rgba\([^)]*,\s*([\d.]+)\s*\)/g)].map((m) => Number(m[1]));
+  assert.ok(alphas.length >= 2, `needs a gradient fill, got "${fill}"`);
+  assert.ok(Math.min(...alphas) >= 0.72,
+    `the card fill must be readable, faintest stop is ${Math.min(...alphas)}`);
+});
+
+test('a seal row lines up: art, text, price in a row that wraps', () => {
+  // The name and home lake were the only alignment the row had; the button was
+  // shoved onto its own line at full size. Prices run to five figures, so the
+  // button has to be allowed to sit beside the text and shrink.
+  assert.match(rule('.seal__head'), /flex-wrap:\s*wrap/,
+    'the header must wrap on a narrow panel');
+  assert.match(rule('.seal__foot'), /display:\s*flex/,
+    'price and button share a footer row');
+  assert.match(rule('.seal__equip'), /justify-self:\s*start/,
+    'and the button is aligned to the left edge, not stretched');
+});
+
+test('prices read as prices, not raw button labels', () => {
+  // The buy button said "19000 seal coins" in body-size text. It should be a
+  // compact price chip so five figures do not shout.
+  const src = readFileSync(new URL('../vendor/fru-angler/angler.js', import.meta.url), 'utf8');
+  const fn = src.slice(src.indexOf('function renderSealShop'));
+  const body = fn.slice(0, fn.indexOf('\n}\n'));
+  assert.match(body, /seal__foot/, 'the row needs a footer to hold the price');
+  assert.match(body, /className = 'seal__price'/,
+    'and the price needs its own element, not to be the button label');
+  assert.doesNotMatch(body, /button\.textContent = `\$\{seal\.price\} seal coins`/,
+    'the price must not be the whole button label');
+});
+
+test('the page is a whole document, not a truncated one', () => {
+  // Every other test here reads the stylesheet. A 0-byte or half-written
+  // index.html still parses as "no .seal rule", which some tests tolerate -- and
+  // the whole suite passed once while the markup was entirely gone.
+  assert.ok(PAGE.length > 20000, `index.html is only ${PAGE.length} bytes`);
+  for (const needle of ['</style>', '<body>', '</html>', 'class="stage"', 'id="lake"',
+                        'id="seal-shop-list"', 'id="coins"', 'id="seal-coins"']) {
+    assert.ok(PAGE.includes(needle), `index.html must still contain ${needle}`);
+  }
+  // And the module that boots the game must be intact -- it is one script, and it
+  // imports the rules module itself.
+  const scripts = [...PAGE.matchAll(/<script[^>]*src="([^"]+)"/g)].map((m) => m[1]);
+  assert.ok(scripts.some((src) => src.includes('angler.js')),
+    `the game must still load, found scripts: ${scripts.join(', ') || 'none'}`);
 });

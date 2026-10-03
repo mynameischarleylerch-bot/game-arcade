@@ -23,10 +23,10 @@ import {
  levelFrom, xpForCatch, xpForLevel, luckFor, luckFromLevel,
  rollLostItem, lostItemsFor, sellLostItems, lostItemById,
  buySeal, equipSeal, sealComment, sealDuplicates, sealIdleLine,
-} from './fishing.js?v=2026-10-03-j';
+} from './fishing.js?v=2026-10-03-k';
 import {
   reelConfig, stepReel as advance, reelOutcomeFor, isCaught, lineSnapped,
-} from './reel.js?v=2026-10-03-j';
+} from './reel.js?v=2026-10-03-k';
 
 /* ------------------------------------------------------------------ tuning */
 
@@ -979,20 +979,30 @@ function renderSealShop() {
     const home = AREAS.find((a) => a.id === seal.home);
 
     const row = document.createElement('div');
-    row.className = 'seal';
+    row.className = 'seal' + (active ? ' seal--active' : '') + (owned ? '' : ' seal--locked');
     row.innerHTML = `
       <div class="seal__head">
-        <b class="seal__name">${seal.name}</b>
-        <span class="seal__home">${home?.name ?? ''}</span>
+        <span class="seal__portrait" style="--seal-hue:${seal.hue}" aria-hidden="true"></span>
+        <span class="seal__titles">
+          <b class="seal__name">${seal.name}</b>
+          <span class="seal__home">${home?.name ?? ''}</span>
+        </span>
+        ${tooLow ? `<span class="seal__lock">rank ${seal.level}</span>` : ''}
       </div>
       <p class="seal__line">${seal.line}</p>
-      <p class="seal__perks">luck +${seal.luck.toFixed(1)} · duplicate ${(seal.dupeChance * 100).toFixed(0)}%</p>
-      ${tooLow ? `<span class="seal__lock">needs rank ${seal.level}</span>` : ''}`;
+      <p class="seal__perks">
+        <span class="seal__perk">luck +${seal.luck.toFixed(1)}</span>
+        <span class="seal__perk">duplicate ${(seal.dupeChance * 100).toFixed(0)}%</span>
+      </p>`;
+
+    const foot = document.createElement('div');
+    foot.className = 'seal__foot';
 
     const button = document.createElement('button');
-    button.className = 'btn seal__equip';
+    button.className = 'btn btn--small seal__equip';
     if (owned) {
-      button.textContent = active ? 'Equipped' : `Equip ${seal.name}`;
+      button.textContent = active ? 'Equipped' : 'Equip';
+      button.classList.toggle('is-active', active);
       button.addEventListener('click', () => {
         const result = equipSeal(state.ownedSeals, seal.id);
         if (!result.ok) return say(result.reason);
@@ -1002,7 +1012,7 @@ function renderSealShop() {
         say(`${seal.name} settles onto the dock beside you.`);
       });
     } else {
-      button.textContent = `${seal.price} seal coins`;
+      button.textContent = 'Buy';
       button.addEventListener('click', () => {
         const result = buySeal({ coins: state.sealCoins }, seal.id, rank.level);
         if (!result.ok) return say(result.reason);
@@ -1014,7 +1024,17 @@ function renderSealShop() {
         say(`${seal.name} comes home with you.`);
       });
     }
-    row.appendChild(button);
+    foot.appendChild(button);
+
+    // The price is its own chip rather than the whole button label -- five figures
+    // in body text shouted over the row, and the button said what the chip now says.
+    if (!owned) {
+      const price = document.createElement('span');
+      price.className = 'seal__price';
+      price.textContent = `${seal.price.toLocaleString('en-US')} seal coins`;
+      foot.appendChild(price);
+    }
+    row.appendChild(foot);
     ui.sealList.appendChild(row);
   }
 }
