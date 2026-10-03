@@ -11,7 +11,7 @@ import {
   skyFor, luckFromSky,
   fishWeight, canCatch, catchValue, startingLoadout, buyRod, recordCatch,
   startingInventory, ownsRod, addRodToInventory, equipRod, rodArt, RODS_BY_PRICE,
-  fishById, fishSvg,
+  fishById, fishSvg, fishSilhouette,
  fishIndex,
  hookLineFor,
  AREAS,
@@ -26,10 +26,10 @@ import {
  addToCreel, fishEntrySpec, creelWorth, creelEntryValue,
  sellFromCreel, feedToBond, bondLuck, bondCount,
  buySeal, equipSeal, sealComment, sealDuplicates, sealIdleLine,
-} from './fishing.js?v=2026-10-03-w';
+} from './fishing.js?v=2026-10-03-x';
 import {
   reelConfig, stepReel as advance, reelOutcomeFor, isCaught, lineSnapped,
-} from './reel.js?v=2026-10-03-w';
+} from './reel.js?v=2026-10-03-x';
 
 /* ------------------------------------------------------------------ tuning */
 
@@ -758,6 +758,17 @@ function releaseCast() {
 }
 
 /**
+ * Put the hooked fish's silhouette into the reel track.
+ *
+ * Shape only -- no name, no rarity, no colour. The player should learn what is on
+ * the line by fighting it, and the reel track is where that fight is read.
+ */
+function paintFishSilhouette(fish) {
+  if (!ui.reelFish || !fish) return;
+  ui.reelFish.innerHTML = fishSilhouette(fish);
+}
+
+/**
  * Something took the bait. Wait for the player to click SET HOOK before the reel
  * minigame starts — the fight used to begin on its own, with the player already
  * holding, which meant the hook was never really theirs to set.
@@ -779,6 +790,12 @@ function hook(fish) {
   // The fish gets a say the moment the hook goes in, so the fight starts with a
   // sense of what you have on the line rather than a bare bar.
   ui.reelLine.textContent = hookLineFor(fish);
+
+  // And now you can SEE what you hooked. This was a 4px yellow bar, so every fish
+  // in the game looked the same and the player had nothing to read. Drawn once
+  // here rather than in stepReel(): the shape does not change during the fight,
+  // and rebuilding 642 bytes of SVG every frame would be absurd.
+  paintFishSilhouette(fish);
   const cfg = reelConfig({
     fight: fish.fight,
     control: rod().control,

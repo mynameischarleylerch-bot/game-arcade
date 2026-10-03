@@ -512,15 +512,30 @@ test('the rod keeps its inline colour so equipping still repaints it', () => {
 });
 
 
-test('the reel bars read as glass, not plastic', () => {
+test('the reel bars read as glass, and the fish reads as a fish', () => {
   const player = PAGE.match(/\.reel__player\s*\{([^}]*)\}/)[1];
   assert.match(player, /gradient/, 'the player bar needs a gradient');
   assert.match(player, /inset 0 1px 0/, 'and the Aero top gloss');
+
+  // The fish element used to be a 4px yellow bar with a two-stage glow, and two
+  // tests pinned that. It is now the silhouette wrapper, so the contract is
+  // different: it must be sized to hold a fish and must NOT paint its own glow,
+  // which made the fish invisible against the bright track it sits on.
   const fish = PAGE.match(/\.reel__fish\s*\{([^}]*)\}/)[1];
-  assert.match(fish, /gradient/, 'the fish line needs a gradient');
-  // Two shadows: a tight glow and a wider bloom.
-  assert.ok((fish.match(/0 0 /g) || []).length >= 2, 'the fish line should glow and bloom');
+  // A regex like /width:\s*\d+px/ matched the old 4px bar too, so the test
+  // passed on the very value it was meant to forbid. Require room for a shape.
+  const width = Number((fish.match(/width:\s*(\d+)px/) || [])[1] ?? 0);
+  assert.ok(width >= 28, `it needs real width to hold a fish shape, got ${width}px`);
+  assert.doesNotMatch(fish, /background:\s*linear-gradient/,
+    'the wrapper must not paint the old bar gradient');
+  assert.doesNotMatch(fish, /0 0 \d+px/, 'nor the old glow');
+  assert.match(fish, /display:\s*flex/, 'and it must centre the silhouette');
+  // The silhouette itself has to be sized and flipped.
+  const sil = PAGE.match(/\.reel__silhouette\s*\{([^}]*)\}/)[1];
+  assert.match(sil, /width:\s*100%/, 'the silhouette fills its wrapper');
+  assert.match(sil, /scaleX\(-1\)/, 'and faces the player, since it is being hauled in');
 });
+
 
 test('the catch card and its art tile are glass', () => {
   const card = PAGE.match(/\.catch__card\s*\{([\s\S]*?)\n  \}/)[1];

@@ -355,10 +355,21 @@
     box-shadow: 0 0 14px rgba(255, 255, 255, 0.75), inset 0 1px 0 #fff;
   }
   .reel__fish {
-    position: absolute; top: 6px; bottom: 6px; left: 50%; width: 4px; margin-left: -2px;
-    background: linear-gradient(180deg, #fff59d, #f0a800);
-    border-radius: 2px;
-    box-shadow: 0 0 10px rgba(255, 213, 79, 0.9), 0 0 18px rgba(255, 213, 79, 0.5);
+    /* The fish on the line. This used to be a 4px yellow bar: every fish in the
+       game looked identical, so there was nothing to read. It now carries the
+       hooked fish's own silhouette, and stays the left-tracking wrapper so the
+       fish still moves exactly where the reel maths puts it. */
+    position: absolute; top: 2px; bottom: 2px; left: 50%; width: 34px;
+    margin-left: -17px; display: flex; align-items: center; justify-content: center;
+    /* No glow of its own: the old bar's yellow bloom made the fish impossible to
+       see against the bright track it has to be chased along. */
+    background: none; pointer-events: none;
+  }
+  /* A 104x80 box scaled into a 34px column: enough to read as a fish shape
+     without dominating the track. Flipped, because it is being hauled towards you. */
+  .reel__silhouette {
+    width: 100%; height: 100%; display: block; overflow: visible;
+    transform: scaleX(-1);
   }
 
   .reel__progress {
@@ -1448,6 +1459,6 @@
     </div>
   </div>
 
-  <script type="module" src="./angler.js?v=2026-10-03-w"></script>
+  <script type="module" src="./angler.js?v=2026-10-03-x"></script>
 </body>
 </html>

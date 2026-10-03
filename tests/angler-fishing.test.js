@@ -9,7 +9,8 @@ import {
   rodWorksIn, rodCheckIn,
  areaProgress, levelFrom, xpForCatch, luckFromLevel, luckFor, LOST_ITEMS, rollLostItem, lostItemsFor, SEALS, buySeal, equipSeal, sealComment, sealDuplicates, visitArea, xpForLevel, sellLostItems, lostItemById, MUTATIONS, mutationMultiplierFor, mutationById, sealLines, WEATHER, TIMES, skyFor, luckFromSky,
   addToCreel, fishEntrySpec, creelWorth, creelEntryValue,
-  sellFromCreel, feedToBond, bondLuck, bondCount,} from '../vendor/fru-angler/fishing.js';
+  sellFromCreel, feedToBond, bondLuck, bondCount,
+  fishSilhouette,} from '../vendor/fru-angler/fishing.js';
 
 test('the starting wallet can afford exactly one upgrade from the cheapest rod', () => {
   const loadout = startingLoadout();
@@ -2141,4 +2142,89 @@ test('bond actually reaches the cast, or feeding buys nothing', () => {
   // exactly 0.8. An equality check on a float sum fails for arithmetic, not logic.
   assert.ok(Math.abs((withSealFed - withSeal) - bondLuck(16)) < 1e-9,
     `bond must add on top of the seal: ${withSealFed - withSeal} vs ${bondLuck(16)}`);
+});
+
+test('a hooked fish shows a silhouette: its shape, not its name', () => {
+  // The reel showed a 4px yellow bar for every fish in the game, so the player
+  // was fighting an unidentifiable rectangle. A silhouette fixes that WITHOUT
+  // naming the catch: you should be able to see something long and sinuous and
+  // know to be careful, without the game telling you it is a Mythical.
+  const svg = fishSilhouette(FISH.find((f) => f.draw === 'long'));
+  assert.match(svg, /^<svg/, 'a silhouette must be an svg');
+  assert.ok(svg.length > 40, 'and not a stub');
+
+  // Compare EVERY pair of shapes. Comparing two at a time passed even with one
+  // shape's path pinned to another's, because the remaining shapes still differed
+  // from each other -- the guard could not see the shape it had just flattened.
+  const shapes = ['slim', 'deep', 'flat', 'long'];
+  for (const draw of shapes) {
+    const fish = FISH.find((f) => f.draw === draw);
+    assert.ok(fish, `no fish uses the ${draw} shape`);
+    const mine = fishSilhouette(fish);
+    for (const other of shapes) {
+      if (other === draw) continue;
+      const theirs = fishSilhouette(FISH.find((f) => f.draw === other));
+      assert.notEqual(mine, theirs, `${draw} and ${other} look identical on the reel`);
+    }
+  }
+
+  // Comparing whole SVGs was still not enough: pinning ONE path (the body) to
+  // another shape's left the tail and fin different, so every silhouette stayed
+  // unique and the guard passed on a flattened fish. Pin the shape's OWN geometry
+  // -- body, tail, fin and eye -- so any single part swapped out is caught.
+  for (const draw of shapes) {
+    const shape = FISH_SHAPES[draw];
+    const svg = fishSilhouette(FISH.find((f) => f.draw === draw));
+    for (const part of ['body', 'tail', 'fin']) {
+      assert.ok(svg.includes(shape[part]),
+        `the ${draw} silhouette must use its own ${part}`);
+    }
+    assert.ok(svg.includes(`cx="${shape.eye.cx}"`),
+      `the ${draw} silhouette must use its own eye`);
+  }
+
+  // It must not leak identity: no name, no rarity, no hue of the real fish.
+  for (const fish of FISH) {
+    const s = fishSilhouette(fish);
+    assert.doesNotMatch(s, new RegExp(fish.name), `${fish.id} leaked its name`);
+    assert.doesNotMatch(s, new RegExp(fish.rarity), `${fish.id} leaked its rarity`);
+  }
+});
+
+test('a silhouette is flat, dark, and cheap enough to draw every frame', () => {
+  // This renders DURING the reel, on every frame. It cannot be the full fishSvg():
+  // that is 6,680 bytes with five gradients, a filter and ten sparkles, redrawn
+  // 60 times a second. The silhouette is 642.
+  const svg = fishSilhouette(FISH[0]);
+  const full = fishSvg(FISH[0]);
+  assert.ok(svg.length * 3 < full.length,
+    `a silhouette must be far cheaper than the real fish: ${svg.length} vs ${full.length}`);
+
+  // No filters, and no rarity decoration -- those are the expensive parts and
+  // they would spoil the catch the silhouette exists to hint at. A single
+  // vertical gradient for the shaded top is fine and is what makes it read as a
+  // solid object rather than a flat cut-out.
+  assert.doesNotMatch(svg, /<filter/, 'no filters');
+  assert.doesNotMatch(svg, /sparkle|crown/i, 'nor the rarity decoration');
+  assert.ok((svg.match(/Gradient/g) || []).length <= 2,
+    'at most one gradient, for the shaded top');
+  assert.match(svg, /<path|<ellipse|<polygon/, 'but it must be real geometry');
+
+  // Namespaced per fish, for the same reason fishSvg's are: duplicate ids in the
+  // document made url(#...) resolve to whichever came first.
+  assert.match(svg, /id="fa-sil-[a-z-]+"/, 'ids must be namespaced');
+});
+
+
+test('every body shape survives a round trip through the silhouette', () => {
+  // A fish whose `draw` names a shape that does not exist used to fall back
+  // silently. It must still produce a silhouette rather than an empty box.
+  for (const fish of FISH) {
+    const s = fishSilhouette(fish);
+    assert.ok(s.includes('<svg'), `${fish.id} (${fish.draw}) produced no svg`);
+    assert.ok(s.length > 40, `${fish.id} (${fish.draw}) produced a stub`);
+  }
+  // And a nonsense draw must not throw.
+  const ghost = fishSilhouette({ id: 'ghost', draw: 'sausage', hue: 1, rarity: 'Mythical' });
+  assert.match(ghost, /^<svg/, 'an unknown shape must still draw something');
 });

@@ -13,7 +13,7 @@ import { readFileSync } from 'node:fs';
 import { JSDOM } from 'jsdom';
 import { FISH, RARITY_ORDER, fishIndex, hookLineFor, AREAS,
          RODS, RODS_BY_PRICE, SEALS, startingLoadout, TIMES, WEATHER, LOST_ITEMS,
-} from '../vendor/fru-angler/fishing.js?v=2026-10-03-w';
+} from '../vendor/fru-angler/fishing.js?v=2026-10-03-x';
 
 const PAGE = readFileSync(
   new URL('../vendor/fru-angler/index.html', import.meta.url),
@@ -2120,4 +2120,38 @@ test('with no seal equipped, Feed is disabled and says why', async () => {
   // Selling must still work, or a player with no seal has a dead bag.
   assert.equal(ctx.doc.querySelector('#creel-list .creel__sell').disabled, false,
     'sell must remain available');
+});
+
+test('the reel shows the hooked fish silhouette, drawn once per catch', async () => {
+  // The fish on the line was a 4px yellow bar. Silhouettes must be painted when
+  // the hook goes in -- not every frame, which would rebuild 642 bytes of SVG
+  // sixty times a second for a fish that never changes.
+  const src = readFileSync(new URL('../vendor/fru-angler/angler.js', import.meta.url), 'utf8');
+  assert.match(src, /fishSilhouette/, 'the reel must draw a silhouette');
+  // hookSet() is the bite prompt; hook() is where the fight begins, and the
+  // silhouette belongs there -- the reel is not visible until then.
+  const fn = src.slice(src.indexOf('function hook(fish)'));
+  const body = fn.slice(0, fn.indexOf('\n}\n'));
+  assert.match(body, /paintFishSilhouette/, 'it belongs where the fight starts');
+  // And NOT in the per-frame path.
+  const step = src.slice(src.indexOf('function stepReel'));
+  assert.doesNotMatch(step.slice(0, step.indexOf('\n}\n')), /fishSilhouette/,
+    'rebuilding the silhouette every frame would be absurd');
+});
+
+test('the silhouette element exists and is sized to fit', async () => {
+  assert.match(PAGE, /id="reel-fish"/, 'the reel fish element must exist');
+  assert.match(PAGE, /\.reel__silhouette/, 'and the silhouette needs sizing rules');
+  const ctx = await seedSave({
+    coins: 0, rodId: 'bamboo', owned: ['bamboo'], bestiary: {}, areaId: 'aero-lake',
+    xp: 0, ownedSeals: [], equippedSeal: null, lost: [], giftedRods: [], sealCoins: 0,
+  }, 980);
+
+  // Hook a fish and check something actually landed in the element.
+  assert.equal(castAndWaitForBite(ctx), true, 'hooked');
+  const el = ctx.doc.getElementById('reel-fish');
+  const svg = el.querySelector('svg');
+  assert.ok(svg, `the reel must contain a silhouette svg, got "${el.innerHTML.slice(0, 80)}"`);
+  assert.match(svg.getAttribute('viewBox') ?? '', /104 80/, 'and use the fish viewBox');
+  assert.ok(!svg.innerHTML.includes('Mythical'), 'and must not name the catch');
 });

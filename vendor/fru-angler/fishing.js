@@ -415,6 +415,49 @@ export const ROD_ART = Object.fromEntries(
   ]),
 );
 
+/**
+ * The hooked fish, as a silhouette.
+ *
+ * During the reel the fish was a 4px yellow bar: every fish in the game looked
+ * identical, so the player had no idea what they were fighting. A silhouette is
+ * the fix -- you can see it is long and sinuous and know to be careful.
+ *
+ * Deliberately NOT fishSvg(). Two reasons. It redraws every frame of the reel,
+ * and the full version carries five gradients, a filter and up to ten sparkles.
+ * And the silhouette is meant to show SHAPE ONLY: no name, no rarity, no hue of
+ * the real fish. You should learn what you hooked by fighting it.
+ */
+export function fishSilhouette(fish) {
+  const spec = FISH.find((f) => f && f.id === (fish && fish.id)) ?? FISH[0];
+  // An unknown `draw` falls back rather than throwing: a new fish with a typo in
+  // its shape should still be visible on the reel, not an empty box.
+  const shape = FISH_SHAPES[spec.draw] ?? FISH_SHAPES[FISH[0].draw];
+
+  // Namespaced per fish for the same reason fishSvg's are: bare ids duplicated in
+  // the document made url(#...) resolve to whichever came first.
+  const id = `fa-sil-${spec.id}`;
+
+  // One dark fill for the whole shape, lighter at the top. Flat, and dark against
+  // the bright reel track -- a silhouette has to read as a solid object.
+  return `<svg class="reel__silhouette" viewBox="0 0 104 80" `
+    + `role="img" aria-label="The shape of the fish on your line" `
+    + `preserveAspectRatio="xMidYMid meet">`
+    + `<defs><linearGradient id="${id}" x1="0" y1="0" x2="0" y2="1">`
+    + `<stop offset="0" stop-color="#123a52" stop-opacity=".95"/>`
+    + `<stop offset="1" stop-color="#061a29" stop-opacity=".98"/>`
+    + `</linearGradient></defs>`
+    + `<g fill="url(#${id})">`
+    // Tail behind the body, or the join shows.
+    + `<path d="${shape.tail}"/>`
+    + `<path d="${shape.body}"/>`
+    + `<path d="${shape.fin}"/>`
+    + `</g>`
+    // The eye: a pale hole, so the fish is facing you and not a blob.
+    + `<circle cx="${shape.eye.cx}" cy="${shape.eye.cy}" r="${shape.eye.r}" `
+    + `fill="#cfeaf6" fill-opacity=".85"/>`
+    + `</svg>`;
+}
+
 /** The scene art for a rod, falling back to the starting rod for anything unknown. */
 export function rodArt(rodId) {
   return ROD_ART[rodId] ?? ROD_ART.bamboo;
