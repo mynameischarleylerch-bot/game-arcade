@@ -746,6 +746,8 @@ export const AREAS = [
     blurb: 'Still, bright water under a very large sun.',
     locked: false,
     trait: null,
+    requiredRods: ['bamboo', 'willow', 'carbon', 'oak', 'titan',
+      'zephyr', 'quicksilver', 'horizon'],
     fish: ['glidefin', 'aero-minnow', 'sunscale', 'ripplefin', 'bubbleperch', 'glossdace',
       'prismminnow', 'haloherring', 'daylight', 'zenith'],
     palette: {
@@ -762,6 +764,7 @@ export const AREAS = [
     locked: true,
     trait: 'channel',
     traitNote: 'needs a rod that can hold one straight line through the channels',
+    requiredRods: ['channel'],
     fish: ['coralpike', 'duskdarter', 'metro-trout', 'doric-dab', 'orangebarbel', 'emberfin',
       'rivetray', 'signalfin', 'civiceel'],
     palette: {
@@ -778,6 +781,7 @@ export const AREAS = [
     locked: true,
     trait: 'flex',
     traitNote: 'needs a rod that can reach over the reeds',
+    requiredRods: ['canopy'],
     fish: ['reedcarp', 'lanternjack', 'mudsole', 'mirrorpike', 'eco-gar', 'coralpike',
       'canopycat', 'verdant'],
     palette: {
@@ -794,6 +798,7 @@ export const AREAS = [
     locked: true,
     trait: 'ice',
     traitNote: 'needs a rod that can bore through the ice',
+    requiredRods: ['glacier'],
     fish: ['snowsmelt', 'frostfin', 'rimepike', 'blueglass', 'glacier-char', 'mirrorpike',
       'aurorachar'],
     palette: {
@@ -810,6 +815,7 @@ export const AREAS = [
     locked: true,
     trait: 'reinforced',
     traitNote: 'needs a rod reinforced enough for the pressure',
+    requiredRods: ['abyss'],
     fish: ['deepglow', 'pressurefin', 'voidpike', 'blackmirror', 'lastlantern', 'glacier-char',
       'glowmote', 'eventhorizon'],
     palette: {
@@ -857,19 +863,39 @@ export function areasForRod(rodId) {
   return AREAS.filter((a) => rodWorksIn(rodId, a.id));
 }
 
+/**
+ * Is `area` open yet?
+ *
+ * The gate is the lake you are standing in, never the one being opened: every
+ * species of that lake must be landed, and every rod built for it must be owned.
+ *
+ * It used to demand every rod in the game, which made the last lake impossible to
+ * reach: Dark Aero Deep could not open until you already owned the Abyssal Rig
+ * that Dark Aero Deep hands you. Each lake now declares its own rods in
+ * `requiredRods`, so the gate is only ever as wide as the lake you are in.
+ */
 export function areaUnlocked(area, progress) {
   if (!area || area.locked === false) return true;
   const bestiary = progress?.bestiary ?? {};
   const owned = progress?.owned ?? [];
-  const allRods = Object.keys(RODS);
-  if (allRods.some((id) => !owned.includes(id))) return false;
-  // And every species of the lake BEFORE this one. This used to count the fish in
-  // the lake being opened, so a lake advertised its own contents before you had
-  // earned it, and the gate moved whenever the roster changed.
+  const gate = previousAreaOf(area);
+
+  // Every species of the lake you are standing in.
+  if (!gate.fish.every((id) => Number(bestiary[id]) > 0)) return false;
+
+  // And every rod built for it. A trait lake gates on its own trait, so the rods
+  // you must own are the ones that can actually fish there.
+  return gate.requiredRods.every((id) => owned.includes(id));
+}
+
+/**
+ * The lake whose progress gates `area` — the one before it, or the first lake
+ * itself when there is no earlier one. Factored out because areaUnlocked and
+ * areaProgress must agree on which lake is being measured.
+ */
+function previousAreaOf(area) {
   const index = AREAS.indexOf(area);
-  const previous = index > 0 ? AREAS[index - 1] : null;
-  const gate = previous ? previous.fish : area.fish;
-  return gate.every((id) => Number(bestiary[id]) > 0);
+  return index > 0 ? AREAS[index - 1] : (area ?? AREAS[0]);
 }
 
 /** How close a player is to opening the next lake, for the locked badge. */

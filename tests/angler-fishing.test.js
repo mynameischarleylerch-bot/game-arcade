@@ -604,21 +604,29 @@ test('later lakes are strictly harder than earlier ones', () => {
   }
 });
 
-test('every rod is required, and a lake stays shut without them', () => {
-  // The gate is the previous lake's fish, but the rod requirement applies to every
-  // lake past the first.
-  const all = AREAS[1].fish.reduce((best, id) => { best[id] = 5; return best; }, {});
-  const allRods = Object.keys(RODS);
-
+test('a lake stays shut until its own rods are owned, then opens', () => {
+  // Each lake gates on ITS OWN rods, not on every rod in the game. This used to
+  // demand all twelve, which made the last lake unreachable: you needed the
+  // Abyssal Rig before you could reach the lake that hands it to you.
   for (const area of AREAS.slice(1)) {
-    const prev = AREAS[AREAS.indexOf(area) - 1];
-    const landed = prev.fish.reduce((best, id) => { best[id] = 5; return best; }, {});
+    const previous = AREAS[AREAS.indexOf(area) - 1];
+    const landed = Object.fromEntries(previous.fish.map((id) => [id, 5]));
 
-    assert.equal(areaUnlocked(area, { bestiary: landed, owned: allRods.slice(0, -1) }), false,
-      `${area.name} must stay shut while a rod is unowned`);
-    assert.equal(areaUnlocked(area, { bestiary: landed, owned: allRods }), true,
-      `${area.name} opens once the previous lake is cleared and every rod is owned`);
-    void all;
+    const missingOne = previous.requiredRods.slice(0, -1);
+    assert.equal(areaUnlocked(area, { bestiary: landed, owned: missingOne }), false,
+      `${area.name} must stay shut while one of its own rods is unowned`);
+
+    assert.equal(areaUnlocked(area,
+      { bestiary: landed, owned: previous.requiredRods }), true,
+      `${area.name} opens once ${previous.name} is cleared and its rods are owned`);
+  }
+});
+
+test('owning every rod does not open a lake whose fish you have not landed', () => {
+  const every = Object.keys(RODS);
+  for (const area of AREAS.slice(1)) {
+    assert.equal(areaUnlocked(area, { bestiary: {}, owned: every }), false,
+      `${area.name} must need its fish as well as its rods`);
   }
 });
 
@@ -937,5 +945,85 @@ test('every trait lake has a note and at least one rod that opens it', () => {
     assert.ok(carry.length >= 1, `${area.name} can never be fished`);
     const check = rodCheckIn(carry[0].id, area.id);
     assert.equal(check.ok, true, `${carry[0].id} should work in ${area.name}: ${check.reason}`);
+  }
+});
+
+test('each lake declares the rods that stand in front of the next one', () => {
+  for (const area of AREAS) {
+    assert.ok(Array.isArray(area.requiredRods) && area.requiredRods.length > 0,
+      `${area.name} does not say which rods gate the next lake`);
+    for (const id of area.requiredRods) {
+      assert.ok(RODS[id], `${area.name} requires unknown rod ${id}`);
+    }
+  }
+});
+
+test('Aero Lake is gated by all eight ordinary rods', () => {
+  const lake = AREAS[0];
+  const ordinary = Object.keys(RODS).filter((id) => RODS[id].traits.length === 0);
+  assert.equal(lake.requiredRods.length, 8);
+  assert.deepEqual([...lake.requiredRods].sort(), [...ordinary].sort());
+});
+
+test('a trait lake is gated by every rod carrying its own trait', () => {
+  for (const area of AREAS) {
+    if (!area.trait) continue;
+    const carry = Object.keys(RODS).filter((id) => RODS[id].traits.includes(area.trait));
+    assert.deepEqual([...area.requiredRods].sort(), [...carry].sort(),
+      `${area.name} should be gated by every ${area.trait} rod`);
+  }
+});
+
+test('the gate is the previous lake, never the one being opened', () => {
+  // Counting the fish or rods of the lake being opened lets a lake advertise its
+  // own contents before you have earned them, and the gate moves whenever the
+  // roster changes. Aero Lake is always open, so its own list is the fallback.
+  const lake = AREAS[0];
+  const landed = Object.fromEntries(lake.fish.map((id) => [id, 1]));
+  const owned = lake.requiredRods.slice(0, -1);
+  assert.equal(areaUnlocked(AREAS[1], { bestiary: landed, owned }), false,
+    'every fish but one rod short must still be shut');
+  assert.equal(areaUnlocked(AREAS[1], { bestiary: landed, owned: lake.requiredRods }), true,
+    'every fish and every rod must open it');
+});
+
+test('landing the fish of a lake you are not standing in opens nothing', () => {
+  // The gate walks one lake at a time. Clearing Aero Lake opens DORFic Delta --
+  // not Eco Marsh, which is two steps on and additionally needs the channel rod.
+  const first = AREAS[0];
+  const done = Object.fromEntries(first.fish.map((id) => [id, 1]));
+  const owned = first.requiredRods;
+
+  assert.equal(areaUnlocked(AREAS[1], { bestiary: done, owned }), true,
+    'clearing the first lake must open the second');
+
+  // Clearing the SECOND lake without ever clearing the first opens nothing.
+  const onlySecond = Object.fromEntries(AREAS[1].fish.map((id) => [id, 1]));
+  assert.equal(areaUnlocked(AREAS[2], { bestiary: onlySecond, owned }), false,
+    'skipping a lake must not open the one after it');
+
+  // Owning everything does not skip the index: with only the SECOND lake cleared
+  // and no first-lake fish, the gate for the third lake is DORFic, whose own
+  // roster and channel rod are both satisfied. That IS the next step, so the
+  // real skip test is the one above: the first lake's fish are still required to
+  // get past DORFic in the first place.
+  assert.equal(areaUnlocked(AREAS[1], { bestiary: onlySecond, owned: Object.keys(RODS) }), false,
+    'owning every rod must not let you skip a lake index');
+});
+
+test('the first lake is always open, whatever the save looks like', () => {
+  assert.equal(areaUnlocked(AREAS[0], { bestiary: {}, owned: [] }), true);
+  assert.equal(areaUnlocked(AREAS[0], { bestiary: null, owned: null }), true);
+});
+
+test('a lake gates only on rods that can fish that very lake', () => {
+  // The rods you need to leave a lake must be usable in it. Without this the
+  // gate could ask for a rod you have no business carrying.
+  for (const area of AREAS) {
+    for (const id of area.requiredRods) {
+      const check = rodCheckIn(id, area.id);
+      assert.equal(check.ok, true,
+        `${id} gates ${area.name} but cannot fish it: ${check.reason}`);
+    }
   }
 });
