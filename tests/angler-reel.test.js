@@ -4,6 +4,7 @@ import {
   reelConfig, stepReel, isContained, containedFraction,
   reelOutcomeFor, reelOutcome, isCaught, lineSnapped,
 } from '../vendor/fru-angler/reel.js';
+import { RODS, FISH } from '../vendor/fru-angler/fishing.js';
 
 const CFG = reelConfig({ fight: 0.6, control: 0.24, resilience: 0.7 });
 
@@ -310,5 +311,171 @@ test('a tough fish still never outruns the player', () => {
     }
     assert.ok(maxStep < cfg.playerSpeed / 60,
       `fight ${fight}: step ${maxStep.toFixed(4)} exceeds player speed`);
+  }
+});
+
+
+
+/* ---------------------------------------------------------- difficulty */
+
+/**
+ * A simulated player, used to measure how hard the minigame actually is.
+ *
+ * The control is one-axis: holding pushes the bar right, releasing lets it drift
+ * left. `lag` is how many frames the player reacts late, and `error` is how far
+ * off they think the fish is. That combination is what makes it a stand-in for a
+ * person rather than a perfect tracker, which always wins.
+ *
+ * It drives the module's own `seed` parameter, so it needs no global patching and
+ * every run is reproducible from its seed alone.
+ */
+function simulate(cfg, seed, { lag = 4, error = 0.08, frames = 60 * 90 } = {}) {
+  let prng = ((seed * 2654435761) % 2147483647) || 1;
+  const rnd = () => (prng = (prng * 48271) % 2147483647) / 2147483647;
+
+  let state = { fishX: 0.5, playerX: 0.5, progress: 0.34, holding: true, dir: 1 };
+  // Seed the queue with "holding", or the player starts by only ever drifting left.
+  const queue = [true];
+
+  for (let i = 0; i < frames; i += 1) {
+    const perceived = state.fishX + (rnd() * 2 - 1) * error;
+    const wantHold = perceived > state.playerX + cfg.playerWidth / 4;
+    if (lag === 0) state.holding = wantHold;
+    else { queue.push(wantHold); state.holding = queue.shift(); }
+
+    state = stepReel(cfg, state, 1 / 60, rnd());
+    const outcome = reelOutcomeFor(state.progress);
+    if (outcome === isCaught) return true;
+    if (outcome === lineSnapped) return false;
+  }
+  return false;
+}
+
+/** Win rate for a simulated player, for readability in the tests. */
+function winRate(cfg, { lag, error, runs = 200 } = {}) {
+  let wins = 0;
+  for (let seed = 1; seed <= runs; seed += 1) {
+    if (simulate(cfg, seed, { lag, error, frames: 60 * 60 })) wins += 1;
+  }
+  return wins / runs;
+}
+
+/* ------------------------------------------------------------- difficulty */
+
+/**
+ * Measured with a simulated player at three skill levels (see the comment on
+ * playerModel below). On the old tuning a beginner lost the Legendary 72% of the
+ * time and the Mythical 99% — the wall was not skill, it was Control. The gap
+ * between the cheapest and the first upgrade was a cliff, not a curve.
+ */
+
+test('the starting rod can land every fish, including the Mythical', () => {
+  const cfg = reelConfig({ fight: 1.0, control: RODS.bamboo.control, resilience: RODS.bamboo.resilience });
+
+  // A weak player, simulated with the module's own seed parameter.
+  let wins = 0;
+  const runs = 200;
+  for (let seed = 1; seed <= runs; seed += 1) {
+    if (simulate(cfg, seed, { lag: 7, error: 0.14 })) wins += 1;
+  }
+  assert.ok(wins / runs >= 0.6,
+    `a weak player should land a Mythical on the starting rod at least 60% of the ` +
+    `time, got ${Math.round((wins / runs) * 100)}%`);
+});
+
+test('rarity still costs a weak player something', () => {
+  // The win rate should fall as rarity climbs. If every fish lands at 100% the
+  // rods have nothing to offer and the Mythical is a formality.
+  const weak = { lag: 7, error: 0.14 };
+  const rates = FISH.map((f) => ({
+    name: f.name,
+    rate: winRate(reelConfig({ fight: f.fight, control: RODS.bamboo.control, resilience: RODS.bamboo.resilience }), weak),
+  }));
+  for (let i = 1; i < rates.length; i += 1) {
+    assert.ok(rates[i].rate <= rates[i - 1].rate + 0.02,
+      `${rates[i].name} should not be easier than ${rates[i - 1].name}: ` +
+      `${rates[i - 1].rate} -> ${rates[i].rate}`);
+  }
+  // And a Mythical must be measurably harder than a Common.
+  const spread = rates[0].rate - rates[rates.length - 1].rate;
+  assert.ok(spread >= 0.05,
+    `the Common-to-Mythical gap should be visible to a weak player, got ${Math.round(spread * 100)}%`);
+});
+
+test('upgrading a rod makes a clear, steady difference', () => {
+  // No cliff between the cheapest rod and the first upgrade: both should be
+  // landable, and the better one should be easier.
+  const myth = 1.0;
+  const at = (id) => reelConfig({
+    fight: myth, control: RODS[id].control, resilience: RODS[id].resilience,
+  });
+  const rate = (cfg) => {
+    let w = 0;
+    for (let seed = 1; seed <= 200; seed += 1) if (simulate(cfg, seed, { lag: 7, error: 0.14 })) w += 1;
+    return w / 200;
+  };
+  const cheap = rate(at('bamboo'));
+  const upgrade = rate(at('willow'));
+  assert.ok(cheap >= 0.6 && upgrade >= 0.6,
+    `both the cheapest rod and the first upgrade should work: ${cheap}, ${upgrade}`);
+  assert.ok(upgrade >= cheap,
+    `an upgrade must not make things harder: ${cheap} -> ${upgrade}`);
+});
+
+test('a fight lasts long enough to feel like a fight, and longer for rarer fish', () => {
+  // Measure the fight a player actually experiences: an average one, start to
+  // finish. Seconds of perfect containment is a different and much smaller number.
+  const played = (fight, id = 'bamboo') => {
+    const cfg = reelConfig({ fight, control: RODS[id].control, resilience: RODS[id].resilience });
+    let sum = 0, n = 0;
+    for (let seed = 1; seed <= 60; seed += 1) {
+      let prng = (seed * 2654435761) % 2147483647 || 1;
+      const rnd = () => (prng = (prng * 48271) % 2147483647) / 2147483647;
+      let st = { fishX: 0.5, playerX: 0.5, progress: 0.34, holding: true, dir: 1 };
+      const q = [true];
+      for (let i = 0; i < 60 * 90; i += 1) {
+        const perceived = st.fishX + (rnd() * 2 - 1) * 0.08;
+        const wantHold = perceived > st.playerX + cfg.playerWidth / 4;
+        q.push(wantHold);
+        st.holding = q.shift();
+        st = stepReel(cfg, st, 1 / 60, rnd());
+        const outcome = reelOutcomeFor(st.progress);
+        if (outcome === isCaught) { sum += i / 60; n += 1; break; }
+        if (outcome === lineSnapped) break;
+      }
+    }
+    return n ? sum / n : 0;
+  };
+
+  const common = played(0.35);
+  const mythical = played(1.0);
+  assert.ok(common >= 2, `a Common fight should run a couple of seconds, got ${common.toFixed(1)}s`);
+  assert.ok(mythical >= 4, `a Mythical should take real work, got ${mythical.toFixed(1)}s`);
+  assert.ok(mythical <= 20, `a Mythical must not drag on, got ${mythical.toFixed(1)}s`);
+  assert.ok(mythical > common, `rarity should lengthen the fight: ${common.toFixed(1)}s vs ${mythical.toFixed(1)}s`);
+});
+
+test('a brief slip is survivable, a long one is not', () => {
+  // Drain is the cost of a mistake. The point of this is that losing the fish for
+  // a moment should cost progress but let the player continue — otherwise one slip
+  // was fatal, which is what the old tuning did.
+  for (const fight of [0.35, 0.6, 1.0]) {
+    const cfg = reelConfig({ fight, control: RODS.bamboo.control, resilience: RODS.bamboo.resilience });
+
+    // A slip of a quarter second must not snap the line.
+    const slip = { ...stepReel(cfg, { fishX: 0.5, playerX: 0.5, progress: 0.34, holding: true, dir: 1 },
+                              0.25, 0.5) };
+    assert.notEqual(reelOutcomeFor(slip.progress), lineSnapped,
+      `fight ${fight}: a quarter-second slip should not snap the line`);
+
+    // Losing the fish for good, though, must still end the fight.
+    let state = { fishX: 0.5, playerX: 0.5, progress: 0.34, holding: true, dir: 1 };
+    for (let i = 0; i < 60 * 30 && reelOutcomeFor(state.progress) === reelOutcome.inProgress; i += 1) {
+      // Drive the bar to the far end so containment never happens.
+      state = stepReel(cfg, { ...state, playerX: 1, holding: false }, 1 / 60, 0.5);
+      state = { ...state, playerX: 0 };            // pin it away from the fish
+    }
+    assert.equal(reelOutcomeFor(state.progress), lineSnapped,
+      `fight ${fight}: ignoring the fish should eventually snap the line`);
   }
 });

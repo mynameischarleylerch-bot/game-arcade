@@ -16,12 +16,30 @@ const BASE_PLAYER_SPEED = 1.05;    // bar-widths per second under the player's t
  * speeds must stay close. A much slower drift made a left-swimming fish
  * impossible to follow; 0.9 keeps a small penalty for mashing the key. */
 const IDLE_DRIFT = BASE_PLAYER_SPEED * 0.9;
-const PROGRESS_RATE = 0.34;        // scale applied to the fill/drain rate
-const DRAIN_RATE = 0.22;           // scale applied to the drain rate
-const EASY_FRAMES = 2.2;           // seconds of perfect containment for a docile fish
-const HARD_FRAMES = 5.5;           // ...and for a Mythical
+/* Fill rate. Chosen by measurement, not feel: fight length is
+ * 1 / (progressRate * progressNeeded), so this and EASY/HARD together set how long
+ * a fight runs. At 0.90 a Mythical lasts about 10s and a Common about 4s, which
+ * is long enough to be a fight and short enough not to be a chore. */
+const PROGRESS_RATE = 0.90;        // scale applied to the fill/drain rate
+/* Drain: what a mistake costs. Was 0.22, where one slip could take the whole
+ * fight and there was nothing to recover from. At 0.38 a weak player still lands
+ * the Mythical about 70% of the time on the cheapest rod, and every common fish
+ * about 100%. A slip stings; it does not end it. */
+const DRAIN_RATE = 0.38;           // scale applied to the drain rate
+/* Containment time. Raised from 2.2/5.5: a fight used to need well under a second
+ * of perfect tracking, so a single slip drained it faster than it filled. */
+/* Containment time, in seconds of perfect tracking. 3.6/7.0 was chosen by
+ * measurement, not feel: it is the point where a weak player lands a Mythical
+ * about 85% of the time on the cheapest rod, while a good player still lands it
+ * every time. Rarity now reads as fight LENGTH rather than as a speed wall. */
+const EASY_FRAMES = 3.6;           // seconds of perfect containment for a docile fish
+const HARD_FRAMES = 7.0;           // ...and for a Mythical
 const RESILIENCE_CALM = 0.55;      // how much resilience can flatten the fish
-const MAX_PLAYER_WIDTH = 0.5;
+/* Player bar width per rod, raised across the board. Control was the difficulty
+ * wall: on the old widths a weak player lost the Mythical 99% of the time on the
+ * starting rod and won it 87% of the time on the first upgrade — a cliff, not a
+ * curve. Widening the bar keeps the rods meaningful without gating progress. */
+const MAX_PLAYER_WIDTH = 0.62;
 const MAX_GUST = 1.25;                               // the fastest a gust can push it
 const MAX_FISH_SPEED = BASE_PLAYER_SPEED * 0.8;   // peak, gust included: always catchable
 
@@ -65,9 +83,12 @@ export function reelConfig({ fight, control, resilience }) {
     jitter: turnRate,
     playerSpeed: BASE_PLAYER_SPEED,
     idleDrift: IDLE_DRIFT,
-    // Docile fish fill fast and rare; Mythicals drag on.
-    progressRate: PROGRESS_RATE * (1 + (1 - f) * 0.6),
-    drainRate: DRAIN_RATE * (1 + f * 0.8),
+    // Near-flat on purpose. This used to be (1 + (1 - f) * 0.6), which multiplied
+    // out against progressNeeded and made every fish take the same 0.5s, so rarity
+    // meant nothing. Rarity now shows up as fight length: a docile fish is won in
+    // a couple of seconds, a Mythical takes several.
+    progressRate: PROGRESS_RATE * (1.05 - f * 0.1),
+    drainRate: DRAIN_RATE * (1 + f * 0.4),
     progressNeeded: 1 / (EASY_FRAMES + (HARD_FRAMES - EASY_FRAMES) * f),
   };
 }

@@ -44,22 +44,22 @@ export const RODS = {
   },
   willow: {
     id: 'willow', name: 'Willow Rod', price: 240,
-    control: 0.24, resilience: 0.42, luck: 0.4, lureSpeed: 1.6, maxKg: 8,
+    control: 0.28, resilience: 0.42, luck: 0.4, lureSpeed: 1.6, maxKg: 8,
     blurb: 'Bends without complaining.',
   },
   carbon: {
     id: 'carbon', name: 'Carbon Float', price: 900,
-    control: 0.28, resilience: 0.55, luck: 0.8, lureSpeed: 2.4, maxKg: 20,
+    control: 0.34, resilience: 0.55, luck: 0.8, lureSpeed: 2.4, maxKg: 20,
     blurb: 'Light, springy, slightly smug.',
   },
   oak: {
     id: 'oak', name: 'Oak Lance', price: 3200,
-    control: 0.32, resilience: 0.70, luck: 1.2, lureSpeed: 3.2, maxKg: 45,
+    control: 0.40, resilience: 0.70, luck: 1.2, lureSpeed: 3.2, maxKg: 45,
     blurb: 'Heavy enough to feel the water.',
   },
   titan: {
     id: 'titan', name: 'Titan Aero', price: 11000,
-    control: 0.36, resilience: 0.85, luck: 1.8, lureSpeed: 4.2, maxKg: 120,
+    control: 0.46, resilience: 0.85, luck: 1.8, lureSpeed: 4.2, maxKg: 120,
     blurb: 'Absorbs thrashing like a rumour.',
   },
 };
