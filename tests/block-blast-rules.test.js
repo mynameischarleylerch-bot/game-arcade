@@ -12,6 +12,7 @@ import assert from 'node:assert/strict';
 import { PIECES, PIECE_KEYS, weightedPick } from '../vendor/block-blast/pieces.js';
 import {
   SIZE, emptyBoard, inBounds, canPlace, place, cellAt, widthOf, heightOf,
+  fullLines, clearLines, scorePlacement, scoreLines, applyMove,
 } from '../vendor/block-blast/blast.js';
 
 test('every block is a list of distinct in-range cells', () => {
@@ -117,4 +118,82 @@ test('inBounds and the block extents agree', () => {
   assert.equal(inBounds(emptyBoard(), [[0, 0], [1, 1]], 6, 6), true);
   assert.equal(widthOf([[0, 0], [2, 1]]), 3);
   assert.equal(heightOf([[0, 0], [2, 1]]), 2);
+});
+
+/** A board with every cell of the given rows filled. */
+function boardWithRows(rows) {
+  const b = emptyBoard();
+  for (const y of rows) for (let x = 0; x < SIZE; x += 1) b[y][x] = 1;
+  return b;
+}
+
+test('a full row is detected, a nearly full row is not', () => {
+  const { rows } = fullLines(boardWithRows([0, 3]));
+  assert.deepEqual(rows, [0, 3]);
+
+  const nearly = boardWithRows([2]);
+  nearly[2][4] = 0;
+  assert.deepEqual(fullLines(nearly).rows, [], 'one gap means the row is not full');
+});
+
+test('a full column is detected too', () => {
+  const b = emptyBoard();
+  for (let y = 0; y < SIZE; y += 1) b[y][5] = 1;
+  const { rows, cols } = fullLines(b);
+  assert.deepEqual(rows, []);
+  assert.deepEqual(cols, [5]);
+});
+
+test('a cell where a row and column cross is cleared once, not twice', () => {
+  const b = emptyBoard();
+  for (let x = 0; x < SIZE; x += 1) b[4][x] = 1;
+  for (let y = 0; y < SIZE; y += 1) b[y][6] = 1;
+  b[0][0] = 1;   // filled, and in neither the full row nor the full column
+  const after = clearLines(b, fullLines(b));
+  assert.equal(cellAt(after, 6, 4), 0, 'the intersection must be emptied');
+  assert.equal(cellAt(after, 7, 0), 0, 'and the cleared lines are gone');
+  assert.equal(cellAt(after, 0, 0), 1, 'a filled cell outside both lines survives');
+  assert.equal(cellAt(after, 5, 5), 0, 'an untouched cell is still empty');
+});
+
+test('clearing nothing leaves the board alone', () => {
+  const b = boardWithRows([]);
+  assert.deepEqual(clearLines(b, { rows: [], cols: [] }), b);
+});
+
+test('placement scores one point per cell', () => {
+  assert.equal(scorePlacement(1), 1);
+  assert.equal(scorePlacement(9), 9, 'the 3x3 is nine cells, so nine points');
+  assert.equal(scorePlacement(0), 0);
+});
+
+test('a line clear scores per block, multiplied by the combo', () => {
+  assert.equal(scoreLines(1, 0), 10 * SIZE);
+  assert.equal(scoreLines(2, 0), 20 * SIZE, 'two lines double it');
+  assert.equal(scoreLines(1, 1), 10 * SIZE * 2, 'combo 1 doubles');
+  assert.equal(scoreLines(1, 3), 10 * SIZE * 4, 'combo 3 quadruples');
+});
+
+test('the combo rises on a clear and resets when a round clears nothing', () => {
+  let state = { score: 0, combo: 0 };
+
+  state = applyMove(state, boardWithRows([0]), 4);
+  assert.equal(state.combo, 1, 'clearing a line raises the combo');
+  assert.ok(state.score > 0);
+
+  // A round that clears nothing: back to zero. That reset is what makes it a
+  // combo rather than a permanent multiplier.
+  state = applyMove(state, emptyBoard(), 4);
+  assert.equal(state.combo, 0, 'a round with no clear resets the combo');
+});
+
+test('applyMove is total: it returns the score gained, the combo and the cleared lines', () => {
+  // Scored at the new combo (1), so the first clear is already doubled. That is
+  // what applyMove documents: a clear raises your multiplier as it pays out.
+  const result = applyMove({ score: 100, combo: 0 }, boardWithRows([7]), 4);
+  assert.equal(result.score, 100 + 4 + 10 * SIZE * 2);
+  assert.equal(result.combo, 1);
+  assert.equal(result.cleared.rows.length + result.cleared.cols.length, 1);
+  // And the board it hands back has that line gone.
+  assert.deepEqual(result.board[7], Array(SIZE).fill(0));
 });

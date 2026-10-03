@@ -54,3 +54,67 @@ export function place(board, cells, ox, oy, hue) {
   for (const [dx, dy] of cells) next[oy + dy][ox + dx] = hue;
   return next;
 }
+
+/* ----------------------------------------------------------------- clears */
+
+/** Every complete row and column in the board. */
+export function fullLines(board) {
+  const rows = [];
+  const cols = [];
+  for (let y = 0; y < SIZE; y += 1) {
+    if (board[y].every((cell) => cell !== 0)) rows.push(y);
+  }
+  for (let x = 0; x < SIZE; x += 1) {
+    let full = true;
+    for (let y = 0; y < SIZE; y += 1) {
+      if (board[y][x] === 0) { full = false; break; }
+    }
+    if (full) cols.push(x);
+  }
+  return { rows, cols };
+}
+
+/** Empty out the given rows and columns. The intersection is emptied once. */
+export function clearLines(board, { rows, cols }) {
+  if (rows.length === 0 && cols.length === 0) return board;
+  const next = board.map((row) => [...row]);
+  for (const y of rows) for (let x = 0; x < SIZE; x += 1) next[y][x] = 0;
+  for (const x of cols) for (let y = 0; y < SIZE; y += 1) next[y][x] = 0;
+  return next;
+}
+
+/* ---------------------------------------------------------------- scoring */
+
+/** Placing a block earns one point per cell it covers. */
+export function scorePlacement(cellCount) {
+  return cellCount;
+}
+
+/** Points per block in a line clear, before the combo multiplier. */
+export const POINTS_PER_LINE_CELL = 10;
+
+export function scoreLines(lineCount, combo) {
+  return lineCount * SIZE * POINTS_PER_LINE_CELL * (1 + combo);
+}
+
+/**
+ * Resolve one placement: score it, clear anything it completed, move the combo.
+ *
+ * The combo rises by one when the placement cleared a line and resets to zero when
+ * it did not. That reset is what makes it a combo rather than a permanent bonus.
+ *
+ * The new combo is used to score the clear, so clearing raises your multiplier
+ * from the first clear rather than after it.
+ */
+export function applyMove(state, boardAfterPlacement, cellCount) {
+  const cleared = fullLines(boardAfterPlacement);
+  const lineCount = cleared.rows.length + cleared.cols.length;
+  const combo = lineCount > 0 ? state.combo + 1 : 0;
+  const gained = scorePlacement(cellCount) + scoreLines(lineCount, combo);
+  return {
+    score: state.score + gained,
+    combo,
+    board: clearLines(boardAfterPlacement, cleared),
+    cleared,
+  };
+}
