@@ -1,5 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
+import { readFile } from 'node:fs/promises';
 import { validateConfig, findBySlug, filterByTag, featuredGames, allTags } from '../src/config.js';
 
 const validGame = (over = {}) => ({
@@ -77,4 +78,14 @@ test('tolerates a missing or empty games array', () => {
   assert.deepEqual(findBySlug({}, 'x'), null);
   assert.deepEqual(allTags({}), []);
   assert.deepEqual(validateConfig({ version: 1, games: [] }).errors, []);
+});
+
+test('the README does not send people to a path that no longer exists', async () => {
+  const readme = await readFile(new URL('../README.md', import.meta.url), 'utf8');
+  // The repo is now a GitHub *user site*, served from the bare host. The old
+  // "https://<user>.github.io/game-arcade/" form is a 404.
+  assert.equal(/github\.io\/game-arcade\//.test(readme), false,
+    'README still points at the old /game-arcade/ path');
+  assert.match(readme, /mynameischarleylerch-bot\.github\.io\//,
+    'README should state the real address');
 });

@@ -50,12 +50,18 @@ system: `fetch()` of `games.config.json` is blocked on `file://`.
 ## Deploy
 
 Push to GitHub, then **Settings → Pages → Source: GitHub Actions**. The included
-workflow publishes the repo root to `https://<user>.github.io/game-arcade/`.
+workflow publishes the repo root to `https://mynameischarleylerch-bot.github.io/`.
+
+The repository is named after the account, which is what makes it a GitHub *user
+site*: GitHub serves a repo called `<account>.github.io` from the bare host, with no
+path. Every asset path here is `./`-relative, so the site works at any path — which
+is why moving it was a repository rename and nothing else.
 
 ## Rules that keep this working
 
-- Every asset path is `./`-relative. This site is served from a subpath, so a
-  leading `/` 404s in production while working fine locally.
+- Every asset path is `./`-relative, never `/`-rooted. A leading `/` works when you
+  open the file locally and 404s in production, and it would break the site the
+  moment it moved to a different path. `tests/cache-stamps.test.js` enforces this.
 - Games live in `vendor/<slug>/` and are same-origin, so the player iframe has no
   cross-origin restrictions and input works.
 - The player shell handles only `Esc`, in both the page and the game iframe —
