@@ -13,10 +13,10 @@ import {
   fishById, fishSvg,
  fishIndex,
  fishEntry,
-} from './fishing.js?v=2026-10-01-o';
+} from './fishing.js?v=2026-10-01-p';
 import {
   reelConfig, stepReel as advance, reelOutcomeFor, isCaught, lineSnapped,
-} from './reel.js?v=2026-10-01-o';
+} from './reel.js?v=2026-10-01-p';
 
 /* ------------------------------------------------------------------ tuning */
 
