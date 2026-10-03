@@ -688,6 +688,278 @@ export function fishSvg(fish) {
 </svg>`;
 }
 
+/* ------------------------------------------------------------- the wallets */
+
+/**
+ * The luck a cast actually rolls with: the rod's own, plus the rank's, plus an
+ * equipped seal's.
+ *
+ * Every part defaults to zero rather than throwing, because a save written
+ * before any of this existed has none of it.
+ */
+export function luckFor({ rod, level = 1, seal = null } = {}) {
+  const rodLuck = Number.isFinite(rod?.luck) ? rod.luck : 0;
+  return rodLuck + luckFromLevel(level) + (Number.isFinite(seal?.luck) ? seal.luck : 0);
+}
+
+/* --------------------------------------------------------- lost Frutiger items */
+
+/**
+ * Things people drop in the water and never get back.
+ *
+ * The second economy. It funds seals without competing with rod prices, so a
+ * good cast still feels worth something on a bad day. `water` is the lake id, so
+ * each lake turns up its own flavour of lost object, and `chance` is per cast.
+ *
+ * Deliberately capped below the cheapest rod and below the dearest: junk has to
+ * out-earn your first upgrade to matter, but it must never buy a Cloudlance.
+ */
+export const LOST_ITEMS = [
+  { id: 'gumball', name: 'Gumball Globe', water: 'aero-lake', value: 140, chance: 0.16, hue: 350,
+    blurb: 'Half the balls are still in it. You are not going to check.' },
+  { id: 'sunhat', name: 'Sun Hat, One Size', water: 'aero-lake', value: 180, chance: 0.12, hue: 45,
+    blurb: 'Someone wants this back. That is not going to be you.' },
+  { id: 'bubblewand', name: 'Bubble Wand', water: 'aero-lake', value: 260, chance: 0.10, hue: 195,
+    blurb: 'Still good. Still makes the exact same noise.' },
+  { id: 'cassette', name: 'Chrome Cassette', water: 'doric-delta', value: 420, chance: 0.14, hue: 28,
+    blurb: 'Side A is scratched. Side B is worse.' },
+  { id: 'skatebit', name: 'Roller Skate, Single', water: 'doric-delta', value: 640, chance: 0.10, hue: 18,
+    blurb: 'One boot. No idea where the other went.' },
+  { id: 'doric', name: 'DORFic Compass', water: 'doric-delta', value: 900, chance: 0.08, hue: 32,
+    blurb: 'Points confidently at straight lines. Not at water.' },
+  { id: 'seedpod', name: 'Seed Pod', water: 'eco-marsh', value: 340, chance: 0.15, hue: 120,
+    blurb: 'It may already be growing. That is the exciting part.' },
+  { id: 'frogglass', name: 'Frog-Shaped Glass', water: 'eco-marsh', value: 520, chance: 0.13, hue: 110,
+    blurb: 'Green. Slightly warm. Definitely had a frog on it.' },
+  { id: 'boot', name: 'Wader Boot', water: 'eco-marsh', value: 780, chance: 0.10, hue: 90,
+    blurb: 'Full of very cold very green water.' },
+  { id: 'snowlens', name: 'Snow Goggles', water: 'glacier-fjord', value: 880, chance: 0.12, hue: 190,
+    blurb: 'For looking at snow. You are looking at water.' },
+  { id: 'icekey', name: 'Frost Key', water: 'glacier-fjord', value: 1250, chance: 0.09, hue: 200,
+    blurb: 'Too cold to hold. You are holding it.' },
+  { id: 'globe', name: 'Glass Globe', water: 'glacier-fjord', value: 1500, chance: 0.09, hue: 205,
+    blurb: 'Inside: a small snowstorm. Do not shake.' },
+  { id: 'glowlamp', name: 'Deepglow Lamp', water: 'dark-aero-deep', value: 1750, chance: 0.10, hue: 185,
+    blurb: 'On its own, in the dark, for a very long time.' },
+  { id: 'divewatch', name: 'Pressure Watch', water: 'dark-aero-deep', value: 2100, chance: 0.11, hue: 215,
+    blurb: 'Still ticking. Should not be, down here.' },
+  { id: 'blackbox', name: 'Black Chrome Box', water: 'dark-aero-deep', value: 2600, chance: 0.08, hue: 230,
+    blurb: 'No maker mark. No seams. Very heavy.' },
+];
+
+/**
+ * What a single cast hauls up, or null.
+ *
+ * `roll` is 0..1 from the caller — no Math.random in here. `rarityScale` is 1
+ * for an ordinary catch and more for a rarer one: a Mythical means you were
+ * fishing well, and the junk comes up with it.
+ */
+export function rollLostItem(roll, { rarityScale = 1, lakeId = null } = {}) {
+  if (!Number.isFinite(roll) || roll < 0 || roll >= 1) return null;
+  const scale = Number.isFinite(rarityScale) ? Math.max(0, rarityScale) : 1;
+  if (scale <= 0) return null;
+
+  // An item's `chance` is its SHARE of the lake's junk pool, so the pool total IS
+  // the lake's junk rate — a pool of 0.51 means roughly half your casts turn
+  // something up. Rates are taken over the whole table when no lake is named, so
+  // the function is a pure function of (roll, scale) and callers may pass either.
+  const pool = lakeId ? lostItemsFor(lakeId) : LOST_ITEMS;
+  if (pool.length === 0) return null;
+  const shares = pool.map((item) => item.chance * scale);
+  const total = shares.reduce((sum, v) => sum + v, 0);
+  if (total <= 0) return null;
+
+  // Capped so a huge rarityScale can never make junk certain; scaling should
+  // shift WHICH item comes up far more than WHETHER something does.
+  const anyChance = Math.min(0.85, total);
+  if (roll >= anyChance) return null;
+
+  let cursor = (roll / anyChance) * total;
+  for (let k = 0; k < pool.length; k += 1) {
+    cursor -= shares[k];
+    if (cursor <= 0) return pool[k];
+  }
+  return pool[pool.length - 1];
+}
+
+/** The junk a given lake can turn up, cheapest first. */
+export function lostItemsFor(areaId) {
+  return LOST_ITEMS.filter((i) => i.water === areaId).sort((a, b) => a.value - b.value);
+}
+
+/* ---------------------------------------------------------------- pet seals */
+
+/**
+ * The companions. One from each lake: they add luck, they occasionally hand you
+ * a second copy of what you just caught, and they have opinions.
+ *
+ * `level` is the rank you must reach before the shop will sell it, so the seals
+ * arrive alongside progress rather than being bought the moment you can afford
+ * them. `price` is paid in the junk economy, not rod money.
+ */
+export const SEALS = [
+  {
+    id: 'bubbles', name: 'Bubbles', home: 'aero-lake',
+    luck: 0.8, dupeChance: 0.06, level: 1, price: 900, hue: 195,
+    line: 'Watches your line like it is a very slow television.',
+    comments: {
+      favourite: 'That is my favourite, and you found it. Do not tell the others.',
+      beat: 'You could fish something better than that. I have seen what is down there.',
+      rare: 'Oh. You found one of those. That is a very good sign.',
+    },
+  },
+  {
+    id: 'tangerine', name: 'Tangerine', home: 'doric-delta',
+    luck: 1.0, dupeChance: 0.07, level: 4, price: 2600, hue: 24,
+    line: 'Lies on the warmest plank and judges your casting.',
+    comments: {
+      favourite: 'That is the one. You found the exact one.',
+      beat: 'That is beneath you, honestly.',
+      rare: 'Straight lines, and you still found that.',
+    },
+  },
+  {
+    id: 'moss', name: 'Moss', home: 'eco-marsh',
+    luck: 1.1, dupeChance: 0.08, level: 8, price: 5400, hue: 110,
+    line: 'Mostly water and entirely opinion.',
+    comments: {
+      favourite: 'You found it in the good water. I knew you would.',
+      beat: 'The reeds have better. You could try the reeds.',
+      rare: 'Quiet now. That is how you know it is rare.',
+    },
+  },
+  {
+    id: 'frost', name: 'Frost', home: 'glacier-fjord',
+    luck: 1.2, dupeChance: 0.09, level: 13, price: 9800, hue: 198,
+    line: 'Keeps one eye open, which is more than the ice does.',
+    comments: {
+      favourite: 'Colder than me. You will not find colder.',
+      beat: 'The ice has better, if you dare.',
+      rare: 'You bored through the ice and found that. Well done.',
+    },
+  },
+  {
+    id: 'abyss', name: 'Abyss', home: 'dark-aero-deep',
+    luck: 1.4, dupeChance: 0.11, level: 19, price: 19000, hue: 232,
+    line: 'Sits where the light gives up and says nothing for a while.',
+    comments: {
+      favourite: 'You pulled it up from the same dark I sleep in.',
+      beat: 'Down here, that was kind of you.',
+      rare: 'You should be afraid. You are not, so take it.',
+    },
+  },
+];
+
+/**
+ * What the seal says about a catch.
+ *
+ * Always returns a string when there is a seal: a pet that says nothing when you
+ * land something good is worse than no pet at all.
+ */
+export function sealComment(seal, fish, { bestiary = {} } = {}) {
+  if (!seal?.comments) return '';
+  const tier = Math.max(0, RARITY_ORDER.indexOf(fish?.rarity));
+  const alreadyKnown = Number(bestiary?.[fish?.id]) > 0;
+  // A repeat of something you already hold is the "you could do better" beat.
+  if (alreadyKnown && tier < 3) return seal.comments.beat;
+  if (tier >= 4) return seal.comments.rare;
+  if (tier >= 3) return seal.comments.favourite;
+  return seal.comments.beat;
+}
+
+/**
+ * Buy a seal. Never mutates the wallet: on failure the caller gets the same coins
+ * back plus a reason a player can read.
+ */
+export function buySeal(wallet, sealId, level = 1) {
+  const seal = SEALS.find((s) => s.id === sealId);
+  if (!seal) return { ...wallet, ok: false, reason: 'Unknown seal.' };
+  if (seal.level > level) {
+    return { ...wallet, ok: false, reason: `${seal.name} needs rank ${seal.level}.` };
+  }
+  if (!Number.isFinite(wallet?.coins) || wallet.coins < seal.price) {
+    return { ...wallet, ok: false, reason: `Not enough coins for ${seal.name}.` };
+  }
+  return { ok: true, sealId, coins: wallet.coins - seal.price };
+}
+
+/**
+ * Equip one of the seals you own.
+ *
+ * Only one seal is ever active, and re-equipping an owned seal is free — the
+ * same rule rods follow, and for the same reason: buying access, not holding it.
+ */
+export function equipSeal(owned, sealId) {
+  if (!Array.isArray(owned) || !owned.includes(sealId)) {
+    return { ok: false, reason: 'You do not own that seal.' };
+  }
+  return { ok: true, sealId, paid: 0 };
+}
+
+/**
+ * Whether this catch hands you a second copy.
+ *
+ * `roll` is injected, never Math.random. At most one duplicate per catch,
+ * whatever the roll: the seal nudges one loose, it does not empty the lake.
+ */
+export function sealDuplicates(seal, roll) {
+  if (!seal || !Number.isFinite(roll)) return false;
+  return roll >= 0 && roll < seal.dupeChance;
+}
+
+/* ------------------------------------------------------------------ levels */
+
+/**
+ * How much rank a catch is worth.
+ *
+ * Rarer tiers and heavier fish are worth more. `fish` may be missing (an old
+ * save naming a species that no longer exists) and that must still pay
+ * something, not throw.
+ */
+export function xpForCatch(fish, kg = 0) {
+  const tier = Math.max(0, RARITY_ORDER.indexOf(fish?.rarity));
+  const weight = Number.isFinite(kg) ? Math.max(0, kg) : 0;
+  return Math.round(14 * (tier + 1) * (1 + weight / 25));
+}
+
+/** Total xp needed to have reached `level`. Rises steeply, so early ranks fly by. */
+export function xpForLevel(level) {
+  const n = Math.max(0, Math.floor(Number(level) || 0) - 1);
+  return Math.round(48 * Math.pow(n, 1.5));
+}
+
+const RANK_TITLES = [
+  'Deckhand', 'Bubblemaster', 'Surface Skimmer', 'Current Rider',
+  'Channel Fisher', 'Deep Listener', 'Glasswater Sage', 'Sunscale Warden',
+];
+
+/**
+ * The angler's rank from total xp.
+ *
+ * Pure and total: an old save has no xp at all, and that is rank 1 rather than a
+ * crash or NaN.
+ */
+export function levelFrom({ xp = 0 } = {}) {
+  const total = Number.isFinite(xp) && xp > 0 ? xp : 0;
+  let level = 1;
+  while (level < 99 && total >= xpForLevel(level + 1)) level += 1;
+  const title = RANK_TITLES[Math.min(RANK_TITLES.length - 1, Math.floor((level - 1) / 2))];
+  return { level, title, xp: total, next: xpForLevel(level + 1) };
+}
+
+/**
+ * The luck a rank adds, on top of the rod's own.
+ *
+ * Capped at 2.0 on purpose. Ranks are supposed to take the edge off a bad
+ * streak, not become the reason you can land a Mythical — that is still what rod
+ * choice and the lake you have opened are for.
+ */
+export function luckFromLevel(level) {
+  const n = Number(level);
+  if (!Number.isFinite(n) || n <= 1) return 0;
+  return Math.min(2.0, Math.round((n - 1) * 0.08 * 100) / 100);
+}
+
 /* ------------------------------------------------------------- bestiary */
 
 /** Record a catch if it is heavier than the one already held for that species. */
@@ -901,16 +1173,22 @@ function previousAreaOf(area) {
 /** How close a player is to opening the next lake, for the locked badge. */
 export function areaProgress(area, progress) {
   const bestiary = progress?.bestiary ?? {};
-  const index = AREAS.indexOf(area);
-  const previous = index > 0 ? AREAS[index - 1] : null;
-  const gate = previous ? previous.fish : (area?.fish ?? []);
-  const landed = gate.filter((id) => Number(bestiary[id]) > 0).length;
-  return {
-    landed,
-    total: gate.length,
-    rods: (progress?.owned ?? []).filter((id) => RODS[id]).length,
-    rodTotal: Object.keys(RODS).length,
-  };
+  const owned = progress?.owned ?? [];
+  // Same lake areaUnlocked measures, and the same rods it requires — otherwise
+  // the badge and the gate disagree, which is worse than no badge at all.
+  const gate = previousAreaOf(area);
+
+  const landed = gate.fish.filter((id) => Number(bestiary[id]) > 0).length;
+  const have = gate.requiredRods.filter((id) => owned.includes(id)).length;
+
+  const missingRods = gate.requiredRods.length - have;
+  const missingFish = gate.fish.length - landed;
+  const reason = !missingRods && !missingFish ? '' : [
+    missingRods ? `${missingRods} more rod${missingRods === 1 ? '' : 's'}` : null,
+    missingFish ? `${missingFish} more fish` : null,
+  ].filter(Boolean).join(', ');
+
+  return { landed, total: gate.fish.length, rods: have, rodTotal: gate.requiredRods.length, reason };
 }
 
 export function fishIndex() {

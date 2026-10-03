@@ -857,8 +857,8 @@ test('a fresh save starts in Aero Lake and can move once a lake unlocks', async 
   assert.match(rows[1].textContent, /DORFic Delta/, 'and they are named');
   assert.ok(rows[1].textContent.includes(`0/${AREAS[0].fish.length} fished`),
     `a locked lake counts the lake before it: "${rows[1].textContent}"`);
-  assert.ok(rows[1].textContent.includes(`1/${RODS_BY_PRICE.length} rods`),
-    `and says how many rods are missing: "${rows[1].textContent}"`);
+  assert.ok(rows[1].textContent.includes(`1/${AREAS[0].requiredRods.length} rods`),
+    `and counts the rods the previous lake requires: "${rows[1].textContent}"`);
 
   // Opening it shows the same rows.
   button.dispatchEvent(new ctx.win.MouseEvent('click', { bubbles: true }));

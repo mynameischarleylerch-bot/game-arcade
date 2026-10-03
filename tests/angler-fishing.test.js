@@ -6,7 +6,7 @@ import {
   startingInventory, ownsRod, addRodToInventory, equipRod, rodArt, RODS_BY_PRICE,
   fishSvg, FISH_SHAPES, hookLineFor, AREAS, areaUnlocked,
   rodWorksIn, rodCheckIn,
-} from '../vendor/fru-angler/fishing.js';
+ areaProgress, levelFrom, xpForCatch, luckFromLevel, luckFor, LOST_ITEMS, rollLostItem, lostItemsFor, SEALS, buySeal, equipSeal, sealComment, sealDuplicates,} from '../vendor/fru-angler/fishing.js';
 
 test('the starting wallet can afford exactly one upgrade from the cheapest rod', () => {
   const loadout = startingLoadout();
@@ -1025,5 +1025,263 @@ test('a lake gates only on rods that can fish that very lake', () => {
       assert.equal(check.ok, true,
         `${id} gates ${area.name} but cannot fish it: ${check.reason}`);
     }
+  }
+});
+
+test('the progress badge measures the lake you are standing in', () => {
+  const lake = AREAS[0];
+  const empty = areaProgress(lake, { bestiary: {}, owned: [] });
+  assert.equal(empty.total, lake.fish.length, 'counts this lake fish');
+  assert.equal(empty.landed, 0);
+  assert.equal(empty.rodTotal, lake.requiredRods.length, 'counts this lake rods');
+  assert.equal(empty.rods, 0);
+  assert.match(empty.reason, /rod/i, 'the badge must say what is outstanding');
+
+  const half = areaProgress(lake, {
+    bestiary: Object.fromEntries(lake.fish.slice(0, 3).map((id) => [id, 1])),
+    owned: lake.requiredRods.slice(0, 4),
+  });
+  assert.equal(half.landed, 3);
+  assert.equal(half.rods, 4);
+  assert.match(half.reason, /4 more rod/);
+  assert.match(half.reason, /more fish/);
+});
+
+test('a finished lake reports no outstanding work', () => {
+  const lake = AREAS[0];
+  const done = areaProgress(lake, {
+    bestiary: Object.fromEntries(lake.fish.map((id) => [id, 1])),
+    owned: lake.requiredRods,
+  });
+  assert.equal(done.landed, done.total);
+  assert.equal(done.rods, done.rodTotal);
+  assert.equal(done.reason, '', 'a cleared gate must not nag');
+});
+
+test('the badge counts only the rods this lake cares about', () => {
+  const lake = AREAS[0];
+  const withExtras = areaProgress(lake, {
+    bestiary: {},
+    owned: [...lake.requiredRods, 'abyss', 'glacier'],
+  });
+  assert.equal(withExtras.rods, lake.requiredRods.length,
+    'owning every rod in the game must not inflate the count');
+});
+
+test('levels rise with catches and never fall', () => {
+  const first = levelFrom({ xp: 0 });
+  assert.equal(first.level, 1, 'a new angler starts at 1');
+  assert.ok(first.title && first.title.length > 0, 'every rank needs a title');
+
+  const xp = xpForCatch(FISH.find((f) => f.rarity === 'Common'), 1);
+  const later = levelFrom({ xp: xp * 5 });
+  assert.ok(later.level > first.level, 'catching must raise the rank');
+
+  // Pure: the same xp always gives the same rank.
+  assert.deepEqual(levelFrom({ xp: 987 }), levelFrom({ xp: 987 }));
+  // Monotonic: more xp never means a lower rank.
+  for (const v of [0, 50, 500, 5000, 50_000, 5_000_000]) {
+    assert.ok(levelFrom({ xp: v }).level >= first.level, `rank fell at xp ${v}`);
+  }
+});
+
+test('a missing or corrupt xp is level 1, not a crash', () => {
+  for (const bad of [undefined, null, -5, NaN, Infinity, 'lots', {}]) {
+    const r = levelFrom({ xp: bad });
+    assert.equal(r.level, 1, `xp ${String(bad)} should read as level 1`);
+    assert.ok(r.title.length > 0);
+  }
+  assert.equal(levelFrom().level, 1, 'no argument at all still works');
+});
+
+test('a rarer or heavier catch is worth more rank', () => {
+  const common = xpForCatch(FISH.find((f) => f.rarity === 'Common'), 1);
+  const mythical = xpForCatch(FISH.find((f) => f.rarity === 'Mythical'), 1);
+  assert.ok(mythical > common, 'a Mythical must outrank a Common');
+
+  const light = xpForCatch(FISH.find((f) => f.rarity === 'Common'), 0.5);
+  const heavy = xpForCatch(FISH.find((f) => f.rarity === 'Common'), 20);
+  assert.ok(heavy > light, 'a heavier fish must be worth more');
+});
+
+test('rank luck is a small bonus that cannot replace rod choice', () => {
+  assert.equal(luckFromLevel(1), 0, 'level 1 adds nothing');
+  const top = luckFromLevel(99);
+  assert.ok(top > 0, 'high ranks must help a little');
+  assert.ok(top <= 2.0, `rank luck must stay modest, got ${top}`);
+  // Monotonic and never negative.
+  for (let l = 1; l < 120; l += 1) {
+    assert.ok(luckFromLevel(l) >= luckFromLevel(l - 1), `luck dipped at level ${l}`);
+    assert.ok(luckFromLevel(l) >= 0, `negative luck at level ${l}`);
+  }
+  assert.equal(luckFromLevel(0), 0, 'a nonsense level adds nothing');
+});
+
+test('total luck is rod plus rank plus seal', () => {
+  const rod = { luck: 2.0 };
+  assert.equal(luckFor({ rod, level: 1 }), 2.0, 'no rank, no seal');
+  assert.ok(luckFor({ rod, level: 10 }) > 2.0, 'rank must add');
+  const seal = { luck: 1.1 };
+  assert.ok(luckFor({ rod, level: 10, seal }) > luckFor({ rod, level: 10 }),
+    'the seal must add on top');
+  assert.equal(luckFor({}), 0, 'nothing at all is zero, not NaN');
+  assert.equal(luckFor({ rod: null, seal: null }), 0);
+});
+
+test('lost items are a real table, each with a price and a lake', () => {
+  assert.ok(LOST_ITEMS.length >= 12, `expected a decent junk table, found ${LOST_ITEMS.length}`);
+  const ids = LOST_ITEMS.map((i) => i.id);
+  assert.equal(new Set(ids).size, ids.length, 'two lost items share an id');
+  for (const item of LOST_ITEMS) {
+    assert.ok(item.name?.length, `${item.id} has no name`);
+    assert.ok(Number.isFinite(item.value) && item.value > 0, `${item.id} must be worth something`);
+    assert.ok(item.blurb?.length >= 12, `${item.id} needs a blurb`);
+    assert.ok(AREAS.some((a) => a.id === item.water), `${item.id} comes from nowhere`);
+  }
+});
+
+test('every lake can turn up lost items, and no lake is drowned in them', () => {
+  for (const area of AREAS) {
+    const junk = lostItemsFor(area.id);
+    assert.ok(junk.length > 0, `${area.name} yields nothing`);
+    const rate = junk.reduce((sum, i) => sum + i.chance, 0);
+    assert.ok(rate >= 0.15 && rate <= 0.45,
+      `${area.name} junk rate is ${(rate * 100).toFixed(0)}%, outside 15-45%`);
+  }
+});
+
+test('a cast recovers nothing or exactly one known item', () => {
+  assert.equal(rollLostItem(-1), null, 'a negative roll recovers nothing');
+  assert.equal(rollLostItem(1), null, 'a roll of 1 must not fall off the end');
+  assert.equal(rollLostItem(NaN), null, 'a broken roll recovers nothing');
+
+  let seen = 0;
+  for (let n = 0; n < 500; n += 1) {
+    const item = rollLostItem(n / 500, { lakeId: AREAS[0].id });
+    if (item) { seen += 1; assert.ok(LOST_ITEMS.includes(item), `${item.id} is not in the table`); }
+  }
+  assert.ok(seen > 0, '500 casts recovered nothing at all');
+  assert.ok(seen < 500, 'every single cast recovered something');
+});
+
+test('a rarer fish brings up more junk', () => {
+  const lake = AREAS[0].id;
+  const rate = (scale) => {
+    let n = 0;
+    for (let i = 0; i < 2000; i += 1) {
+      if (rollLostItem(i / 2000, { rarityScale: scale, lakeId: lake })) n += 1;
+    }
+    return n / 2000;
+  };
+  assert.ok(rate(2) > rate(1), `a luckier haul must bring more junk (${rate(1)} -> ${rate(2)})`);
+  assert.equal(rate(0), 0, 'no junk at all when the scale is zero');
+});
+
+test('lost items are the second economy and are cheaper than rods', () => {
+  const dearestRod = Math.max(...Object.values(RODS).map((r) => r.price));
+  for (const item of LOST_ITEMS) {
+    assert.ok(item.value < dearestRod,
+      `${item.id} at ${item.value} is as expensive as a rod (${dearestRod})`);
+  }
+  const dearestJunk = Math.max(...LOST_ITEMS.map((i) => i.value));
+  const cheapestRod = Math.min(...Object.values(RODS).map((r) => r.price));
+  assert.ok(dearestJunk > cheapestRod,
+    'junk must out-earn the first rod, or it is not a second economy');
+});
+
+test('there is one seal per lake, each with its own perks and voice', () => {
+  assert.ok(SEALS.length >= AREAS.length, `expected a seal per lake, found ${SEALS.length}`);
+  const ids = SEALS.map((s) => s.id);
+  assert.equal(new Set(ids).size, ids.length, 'two seals share an id');
+  for (const seal of SEALS) {
+    assert.ok(AREAS.some((a) => a.id === seal.home), `${seal.id} has no home lake`);
+    assert.ok(seal.luck > 0 && seal.luck < 3, `${seal.id} luck ${seal.luck} is out of band`);
+    assert.ok(seal.dupeChance > 0 && seal.dupeChance < 0.25, `${seal.id} duplicates too often`);
+    assert.ok(Number.isInteger(seal.level) && seal.level >= 1, `${seal.id} needs a rank gate`);
+    assert.ok(seal.price > 0, `${seal.id} must cost something`);
+    for (const key of ['favourite', 'beat', 'rare']) {
+      assert.ok(seal.comments[key]?.length >= 8, `${seal.id} needs a ${key} line`);
+      assert.match(seal.comments[key], /\b(you|your)\b/i,
+        `${seal.id}'s ${key} line must speak to the player`);
+    }
+    assert.ok(seal.line?.length >= 15, `${seal.id} needs a description`);
+  }
+  const homes = SEALS.map((s) => s.home);
+  assert.equal(new Set(homes).size, SEALS.length, 'two seals share a home lake');
+});
+
+test('a seal you cannot afford or has not levelled is refused, with a reason', () => {
+  const cheap = SEALS[0];
+  const broke = buySeal({ coins: 0 }, cheap.id, 99);
+  assert.equal(broke.ok, false);
+  assert.match(broke.reason, /coin/i, 'being broke must be explained');
+  assert.equal(broke.coins, 0, 'a refused purchase must not move the wallet');
+
+  const toolow = buySeal({ coins: 999_999 }, SEALS[SEALS.length - 1].id, 1);
+  assert.equal(toolow.ok, false);
+  assert.match(toolow.reason, /rank/i, 'being under-levelled must be explained');
+  assert.equal(toolow.coins, 999_999, 'a refused purchase must not charge');
+
+  assert.equal(buySeal({ coins: 999_999 }, 'nonesuch', 99).ok, false, 'unknown seal');
+});
+
+test('a seal can be bought exactly when you can afford and qualify', () => {
+  const seal = SEALS[SEALS.length - 1];
+  const bought = buySeal({ coins: seal.price }, seal.id, seal.level);
+  assert.equal(bought.ok, true);
+  assert.equal(bought.sealId, seal.id);
+  assert.equal(bought.coins, 0, 'the price must come off the wallet');
+});
+
+test('only one seal is equipped at a time, and swapping is free', () => {
+  const owned = SEALS.map((s) => s.id);
+  assert.equal(equipSeal(owned, SEALS[0].id).sealId, SEALS[0].id);
+  const swapped = equipSeal(owned, SEALS[2].id);
+  assert.equal(swapped.sealId, SEALS[2].id, 'equipping replaces rather than stacking');
+  assert.equal(swapped.paid, 0, 're-equipping an owned seal is free');
+  assert.equal(equipSeal([SEALS[0].id], SEALS[1].id).ok, false, 'cannot equip one you do not own');
+  assert.equal(equipSeal(null, SEALS[0].id).ok, false);
+  assert.equal(equipSeal([], 'nonesuch').ok, false);
+});
+
+test('a seal comments on every catch and knows when you could do better', () => {
+  for (const seal of SEALS) {
+    for (const rarity of ['Common', 'Mythical']) {
+      const fish = FISH.find((f) => f.rarity === rarity);
+      const line = sealComment(seal, fish, { bestiary: {} });
+      assert.ok(line && line.length >= 8, `${seal.id} says nothing about a ${rarity}`);
+      assert.equal(typeof line, 'string');
+    }
+    // No seal, no line -- but it must not throw.
+    assert.equal(sealComment(null, FISH[0], {}), '');
+  }
+});
+
+test('the seal that speaks is the one equipped', () => {
+  const fish = FISH.find((f) => f.rarity === 'Mythical');
+  const first = sealComment(SEALS[0], fish, { bestiary: {} });
+  const second = sealComment(SEALS[1], fish, { bestiary: {} });
+  assert.notEqual(first, second, 'each seal must have its own opinion');
+});
+
+test('duplicates are occasional and never certain', () => {
+  for (const seal of SEALS) {
+    let hits = 0;
+    for (let n = 0; n < 1000; n += 1) if (sealDuplicates(seal, n / 1000)) hits += 1;
+    const rate = hits / 1000;
+    assert.ok(Math.abs(rate - seal.dupeChance) < 0.01,
+      `${seal.id} duplicates ${(rate * 100).toFixed(1)}% but claims ${(seal.dupeChance * 100).toFixed(1)}%`);
+    assert.ok(rate > 0 && rate < 0.25, `${seal.id} duplicate rate ${rate} is out of band`);
+  }
+  assert.equal(sealDuplicates(null, 0.01), false, 'no seal means no duplicate');
+  assert.equal(sealDuplicates(SEALS[0], NaN), false);
+});
+
+test('seals are the sink for junk, and cost more than a lake of it earns', () => {
+  for (const seal of SEALS) {
+    const junk = LOST_ITEMS.filter((i) => i.water === seal.home);
+    const bestCast = junk.reduce((s, i) => s + i.value, 0);
+    assert.ok(seal.price > bestCast,
+      `${seal.name} costs ${seal.price} but one cast can net ${bestCast} — too cheap`);
   }
 });
