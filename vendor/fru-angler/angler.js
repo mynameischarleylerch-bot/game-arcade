@@ -19,6 +19,10 @@ import {
  rodWorksIn,
  rodCheckIn,
  fishEntry,
+ SEALS, LOST_ITEMS,
+ levelFrom, xpForCatch, xpForLevel, luckFor, luckFromLevel,
+ rollLostItem, lostItemsFor,
+ buySeal, equipSeal, sealComment, sealDuplicates,
 } from './fishing.js?v=2026-10-02-a';
 import {
   reelConfig, stepReel as advance, reelOutcomeFor, isCaught, lineSnapped,
@@ -64,6 +68,11 @@ const ui = {
   coins: el('coins'), rod: el('rod'), rodStats: el('rod-stats'), bestiary: el('bestiary'),
   message: el('message'),
   line: el('line'),
+  level: el('level'), levelTitle: el('level-title'), levelBar: el('level-progress'),
+  pet: el('fa-pet'),
+  sealPanel: el('seal-shop-panel'), sealList: el('seal-shop-list'),
+  sealCoins: el('seal-shop-coins'),
+  sealOpen: el('seal-shop-open'), sealClose: el('seal-shop-close'),
   rodShaft: el('rod-shaft'), rodTipDot: el('rod-tip'),
   rarity: el('catch-rarity'),
 };
@@ -85,6 +94,10 @@ const state = {
   hookAt: 0,            // when the bite window closes
   bitten: null,         // the fish on the line, waiting to be hooked
   areaId: AREAS[0].id,  // the water you are standing in
+  xp: 0,               // rank progress; levelFrom() turns this into a level
+  ownedSeals: [],      // every seal bought, cheapest first
+  equippedSeal: null,  // the ONE of them sitting on the dock with you
+  lost: [],            // lost items recovered, newest last
 };
 
 const rod = () => RODS[state.rodId];
@@ -110,6 +123,23 @@ function load() {
     if (RODS[saved.rodId] && ownsRod(state.owned, saved.rodId)) state.rodId = saved.rodId;
     else if (!ownsRod(state.owned, state.rodId)) state.rodId = state.owned[0];
     if (saved.bestiary && typeof saved.bestiary === 'object') state.bestiary = saved.bestiary;
+
+    // Rank. Absent in every save written before ranks existed; that is rank 1.
+    if (Number.isFinite(saved.xp) && saved.xp >= 0) state.xp = saved.xp;
+
+    // Seals. Filtered against the real table so a save naming a seal that no
+    // longer exists cannot put a ghost on the dock.
+    state.ownedSeals = Array.isArray(saved.ownedSeals)
+      ? saved.ownedSeals.filter((id) => SEALS.some((seal) => seal.id === id))
+      : [];
+    // Only honour an equipped seal we actually own, or the HUD would lie.
+    state.equippedSeal = state.ownedSeals.includes(saved.equippedSeal)
+      ? saved.equippedSeal
+      : null;
+
+    state.lost = Array.isArray(saved.lost)
+      ? saved.lost.filter((id) => LOST_ITEMS.some((item) => item.id === id))
+      : [];
     // A saved lake is only honoured if it is genuinely open. A save naming a lake
     // the player has not earned must not drop them into the Mythical water.
     if (typeof saved.areaId === 'string') {
@@ -125,7 +155,13 @@ function save() {
   try {
     localStorage.setItem(SAVE_KEY, JSON.stringify({
       coins: state.coins, rodId: state.rodId, owned: state.owned, bestiary: state.bestiary,
-    areaId: state.areaId,
+      areaId: state.areaId,
+      // Rank and companions. A save predating these simply has none of them, and
+      // load() repairs each field rather than dropping the whole save.
+      xp: state.xp,
+      ownedSeals: state.ownedSeals,
+      equippedSeal: state.equippedSeal,
+      lost: state.lost,
     }));
   } catch {
     // Storage blocked: the session still plays, it just will not persist.
@@ -148,6 +184,17 @@ function paintRod() {
   placeBobber(parseFloat(ui.bobber.style.left) || 60, parseFloat(ui.bobber.style.top) || 70);
 }
 
+/** The seal on the dock, tinted per seal and hidden when there is none. */
+function paintPet() {
+  if (!ui.pet) return;
+  const seal = SEALS.find((item) => item.id === state.equippedSeal) ?? null;
+  ui.pet.toggleAttribute('hidden', !seal);
+  if (!seal) return;
+  const stops = ui.pet.querySelectorAll('stop');
+  if (stops[1]) stops[1].setAttribute('stop-color', `hsl(${seal.hue} 82% 74%)`);
+  if (stops[2]) stops[2].setAttribute('stop-color', `hsl(${seal.hue} 62% 30%)`);
+}
+
 function paintChrome() {
   const current = rod();
   ui.coins.textContent = state.coins;
@@ -157,6 +204,22 @@ function paintChrome() {
     `luck ${current.luck.toFixed(1)} · up to ${current.maxKg} kg`;
   const found = Object.keys(state.bestiary).length;
   ui.bestiary.textContent = `${found}/${FISH.length} species landed`;
+
+  // Rank. Deliberately not a fish count: it moves on every catch, junk included.
+  const rank = levelFrom({ xp: state.xp });
+  if (ui.level) ui.level.textContent = String(rank.level);
+  if (ui.levelTitle) ui.levelTitle.textContent = rank.title;
+  // The bar shows progress toward the NEXT rank, so a single small catch moves
+  // something even when the level number does not.
+  if (ui.levelBar) {
+    const floor = xpForLevel(rank.level);
+    const span = Math.max(1, rank.next - floor);
+    ui.levelBar.value = Math.min(span, Math.max(0, rank.xp - floor));
+    ui.levelBar.max = span;
+    ui.levelBar.dataset.xp = String(rank.xp);
+    ui.levelBar.dataset.level = String(rank.level);
+  }
+  paintPet();
 
   // The button says how many rods you carry, so the inventory is findable at a glance.
   if (ui.bagCount) {
@@ -427,6 +490,33 @@ function landFish() {
     meta, value, fish.rarity,
     fishSvg(fish), { weight: `${kg} kg` },
   );
+
+  // Rank, then junk, then the seal. Order matters only for the message: the seal
+  // speaks last, because its line is the one worth remembering.
+  state.xp += xpForCatch(fish, kg);
+
+  // Junk comes up with the catch, and the rarer the fish the luckier the haul.
+  const tier = Math.max(0, RARITY_ORDER.indexOf(fish.rarity));
+  const found = rollLostItem(Math.random(), {
+    rarityScale: 1 + tier * 0.22,
+    lakeId: state.areaId,
+  });
+  if (found) {
+    state.coins += found.value;
+    state.lost = [...state.lost, found.id];
+    say(`You pulled up a ${found.name}. +¤${found.value}`);
+  }
+
+  // A duplicate is a second copy at the same hook, not a second entry in the
+  // index — the index is what gates the next lake, and that must stay honest.
+  const seal = SEALS.find((item) => item.id === state.equippedSeal) ?? null;
+  const comment = sealComment(seal, fish, { bestiary: state.bestiary });
+  if (sealDuplicates(seal, Math.random())) {
+    say(`${seal.name} nudges a second one loose. Two ${fish.name}, one hook.`);
+  } else if (comment) {
+    say(comment);
+  }
+
   save();
   paintChrome();
 }
@@ -683,6 +773,71 @@ const TOTAL_WEIGHT = FISH.reduce((sum, f) => sum + f.weight, 0);
  * rollFish() uses, and cannot drift out of step with the real odds. Species the
  * player has not landed are dimmed, so the index doubles as a list of targets.
  */
+/**
+ * The seal shop. Prices are in the junk economy, so this deliberately shows a
+ * different wallet figure from the rod shop next to it.
+ */
+function renderSealShop() {
+  if (!ui.sealList) return;
+  const rank = levelFrom({ xp: state.xp });
+  ui.sealCoins.textContent = state.coins;
+  ui.sealList.textContent = '';
+
+  for (const seal of SEALS) {
+    const owned = state.ownedSeals.includes(seal.id);
+    const active = state.equippedSeal === seal.id;
+    const tooLow = rank.level < seal.level;
+    const home = AREAS.find((a) => a.id === seal.home);
+
+    const row = document.createElement('div');
+    row.className = 'seal';
+    row.innerHTML = `
+      <div class="seal__head">
+        <b class="seal__name">${seal.name}</b>
+        <span class="seal__home">${home?.name ?? ''}</span>
+      </div>
+      <p class="seal__line">${seal.line}</p>
+      <p class="seal__perks">luck +${seal.luck.toFixed(1)} · duplicate ${(seal.dupeChance * 100).toFixed(0)}%</p>
+      ${tooLow ? `<span class="seal__lock">needs rank ${seal.level}</span>` : ''}`;
+
+    const button = document.createElement('button');
+    button.className = 'btn seal__equip';
+    if (owned) {
+      button.textContent = active ? 'Equipped' : `Equip ${seal.name}`;
+      button.addEventListener('click', () => {
+        const result = equipSeal(state.ownedSeals, seal.id);
+        if (!result.ok) return say(result.reason);
+        state.equippedSeal = result.sealId;
+        save(); renderSealShop(); paintChrome();
+        say(`${seal.name} settles onto the dock beside you.`);
+      });
+    } else {
+      button.textContent = `¤${seal.price}`;
+      button.addEventListener('click', () => {
+        const result = buySeal({ coins: state.coins }, seal.id, rank.level);
+        if (!result.ok) return say(result.reason);
+        state.coins = result.coins;
+        state.ownedSeals = [...state.ownedSeals, seal.id];
+        state.equippedSeal = seal.id;
+        save(); renderSealShop(); paintChrome();
+        say(`${seal.name} comes home with you.`);
+      });
+    }
+    row.appendChild(button);
+    ui.sealList.appendChild(row);
+  }
+}
+
+function openSealShop() {
+  if (!ui.sealPanel) return;
+  renderSealShop();
+  ui.sealPanel.hidden = false;
+}
+
+function closeSealShop() {
+  if (ui.sealPanel) ui.sealPanel.hidden = true;
+}
+
 function renderIndex() {
   ui.indexList.textContent = '';
 
@@ -848,6 +1003,8 @@ ui.hookSet?.addEventListener('click', () => {
 });
 ui.catchAgain.addEventListener('click', () => { setPhase('idle'); say(IDLE_HINT); });
 ui.shopOpen.addEventListener('click', openShop);
+ui.sealOpen?.addEventListener('click', openSealShop);
+ui.sealClose?.addEventListener('click', closeSealShop);
 ui.shopClose.addEventListener('click', closeShop);
 ui.bagOpen?.addEventListener('click', openBag);
 ui.indexOpen?.addEventListener('click', openIndex);
@@ -886,7 +1043,14 @@ function frame(now) {
   }
 
   if (state.phase === 'waiting' && now >= state.biteAt) {
-    hookSet(rollFish(Math.random(), rod(), state.areaId));
+    // Luck is rod + rank + equipped seal, so all three have a visible pull.
+  const sealNow = SEALS.find((item) => item.id === state.equippedSeal) ?? null;
+  const luck = luckFor({
+    rod: rod(),
+    level: levelFrom({ xp: state.xp }).level,
+    seal: sealNow,
+  });
+  hookSet(rollFish(Math.random(), rod(), state.areaId, luck));
   }
 
   // Miss the window and the fish is gone. Otherwise "click to hook" is optional.
@@ -916,6 +1080,10 @@ setPhase('idle');
 // Paint the starting lake before the first frame, so the scene is never
 // showing the default palette for a frame.
 paintArea(AREAS.find((a) => a.id === state.areaId) ?? AREAS[0]);
+// Paint the HUD too. Without this the rank, the rod name and the wallet sat on
+// their markup defaults until the first catch, so a returning player's rank and
+// rod were simply wrong on the screen they opened the game to.
+paintChrome();
 // Fill the picker now as well as on open, so its rows exist and their locked
 // state is readable without having to open it.
 renderLakes();

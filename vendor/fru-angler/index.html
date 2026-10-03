@@ -625,12 +625,44 @@
     .lake__bubble { animation: none; opacity: .5; }
     .bite__card { animation: none; }
   }
+  /* The rank readout and the seal rows. Same glass recipe as everything else. */
+  .hud__rank {
+    color: var(--accent-line, #0288d1); font-weight: 700;
+    display: inline-flex; align-items: center; gap: .4rem;
+  }
+  .hud__bar {
+    width: 64px; height: 6px; border-radius: 999px; overflow: hidden;
+    border: 1px solid var(--hairline, rgba(255,255,255,.85));
+    background: rgba(255,255,255,.35); vertical-align: middle;
+  }
+  .hud__bar::-webkit-progress-bar { background: rgba(255,255,255,.35); }
+  .hud__bar::-webkit-progress-value {
+    background: linear-gradient(180deg, #a3e635, #4fc3f7);
+    border-radius: 999px;
+  }
+  .seal {
+    display: grid; gap: .35rem; padding: .6rem .7rem; border-radius: var(--radius, 12px);
+    background: linear-gradient(180deg, rgba(255,255,255,.5), rgba(255,255,255,.22));
+    border: 1px solid var(--hairline, rgba(255,255,255,.85));
+    box-shadow: inset 0 1px 0 rgba(255,255,255,.7);
+  }
+  .seal__head { display: flex; justify-content: space-between; align-items: baseline; gap: .5rem; }
+  .seal__name { font-weight: 800; color: var(--ink, #013a63); }
+  .seal__home { font-size: .8rem; color: var(--ink-soft, #0e6ea8); }
+  .seal__line, .seal__perks { margin: 0; font-size: .85rem; }
+  .seal__lock {
+    font-size: .78rem; font-weight: 700; color: #8a5a00;
+    background: rgba(255, 231, 158, .7); border-radius: 999px; padding: .1rem .5rem;
+    justify-self: start;
+  }
+  .seal__equip { justify-self: start; }
 </style>
 </head>
 <body>
   <div class="stage">
     <div class="hud">
       <span>¤ <b id="coins">0</b></span>
+      <span class="hud__rank">rank <b id="level">1</b> <span id="level-title">Deckhand</span><progress class="hud__bar" id="level-progress" value="0" max="48" aria-label="Rank progress"></progress></span>
       <span>Rod <b id="rod">—</b></span>
       <button id="inventory-open" class="btn btn--small" type="button" aria-haspopup="dialog">
         Inventory <b id="inventory-count" class="hud__badge">1 rod</b>
@@ -688,6 +720,12 @@
             <stop offset="0" stop-color="#ffffff" stop-opacity=".55"/>
             <stop offset="1" stop-color="#ffffff" stop-opacity="0"/>
           </radialGradient>
+          <!-- the pet seal: a lit Aero blob, tinted per seal by paintPet() -->
+          <linearGradient id="fa-pet-fill" x1="0.2" y1="0" x2="0.8" y2="1">
+            <stop offset="0" stop-color="#ffffff"/>
+            <stop offset="0.4" stop-color="#8fd8f5"/>
+            <stop offset="1" stop-color="#2b7fa8"/>
+          </linearGradient>
         </defs>
 
         <!-- far shore: a soft rise to the right -->
@@ -726,6 +764,15 @@
 
         <!-- The fishing line runs from the measured rod tip to the bobber. It sits
              outside the fitted group so it is not counter-warped. -->
+        <!-- The pet seal, on the deck to the angler's left. Outside #angler-fit so
+             the counter-scale that keeps the angler round does not warp it. -->
+        <g id="fa-pet" hidden aria-hidden="true">
+          <ellipse cx="14" cy="57.4" rx="5.4" ry="2.4" fill="#0a4a70" opacity=".2"/>
+          <ellipse cx="14" cy="55.6" rx="4.6" ry="3.4" fill="url(#fa-pet-fill)"/>
+          <ellipse cx="12.6" cy="54.4" rx="1.5" ry="1.1" fill="#ffffff" opacity=".8"/>
+          <circle cx="15.8" cy="55.2" r="0.55" fill="#06334f"/>
+        </g>
+
         <path id="line" d="M60 33 Q61 42 63 52"/>
       </svg>
 
@@ -840,11 +887,22 @@
         </div>
       </div>
 
+      <div class="shop" id="seal-shop-panel" hidden>
+        <div class="shop__panel" role="dialog" aria-modal="true" aria-labelledby="seal-shop-title">
+          <h2 class="shop__title" id="seal-shop-title">Seals</h2>
+          <p class="shop__wallet">You have <b id="seal-shop-coins">¤0</b></p>
+          <p class="shop__wallet">One seal can sit with you at a time.</p>
+          <div class="shop__list" id="seal-shop-list"></div>
+          <p style="margin:.9rem 0 0"><button class="btn" id="seal-shop-close" type="button">Close</button></p>
+        </div>
+      </div>
+
       <p class="message" id="message" hidden></p>
     </div>
 
     <div class="hud" style="justify-content:space-between">
       <button class="btn" id="shop-open" type="button">Rods &amp; shop</button>
+      <button class="btn" id="seal-shop-open" type="button">Seals</button>
       <span id="bestiary" class="hud__dim"></span>
       <span class="hud__dim">Hold <kbd>Space</kbd> to cast</span>
     </div>

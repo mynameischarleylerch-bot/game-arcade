@@ -12,7 +12,7 @@ import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
 import { JSDOM } from 'jsdom';
 import { FISH, RARITY_ORDER, fishIndex, hookLineFor, AREAS,
-         RODS, RODS_BY_PRICE } from '../vendor/fru-angler/fishing.js';
+         RODS, RODS_BY_PRICE, SEALS } from '../vendor/fru-angler/fishing.js';
 
 const PAGE = readFileSync(
   new URL('../vendor/fru-angler/index.html', import.meta.url),
@@ -76,9 +76,10 @@ async function boot(run = 1, randomValue = 0.1, seed = null) {
  * the instance it did not mean to. Seeding first gives exactly one.
  */
 async function seedSave(save, run = 900) {
-  const probe = await boot(run, 0.1);
-  probe.win.localStorage.setItem('fru-angler-save', JSON.stringify(save));
-  return probe;
+  // The save must be in place BEFORE the module is imported: load() runs at
+  // import time. Writing it after boot() meant every seeded save was ignored and
+  // the test saw a fresh game instead.
+  return boot(run, 0.1, save);
 }
 
 /** Advance one animation frame. */
@@ -979,4 +980,118 @@ test('the shop shows the trait a rod carries and the lake it opens', () => {
   assert.match(page, /\.rod__opens\b/, 'and the lake they open needs one');
   assert.match(source, /rod__trait/, 'the shop row must render the trait');
   assert.match(source, /opens \$\{AREAS\.filter/, 'and say which lake it opens');
+});
+
+/* ------------------------------------------------- ranks, junk and seals */
+
+test('the HUD shows a rank, a title and the seal sitting with you', async () => {
+  const ctx = await boot(60);
+  assert.equal(ctx.doc.getElementById('level').textContent, '1', 'a new angler is rank 1');
+  assert.match(ctx.doc.getElementById('level-title').textContent, /\w/, 'and has a title');
+  // No seal yet, so nothing on the dock.
+  assert.equal(ctx.doc.getElementById('fa-pet').hasAttribute('hidden'), true,
+    'the dock is empty until a seal is bought');
+});
+
+test('landing a fish moves the rank on', async () => {
+  const ctx = await boot(61);
+  const bar = () => ctx.doc.getElementById('level-progress');
+  const xpBefore = Number(bar().dataset.xp ?? 0);
+  const levelBefore = Number(ctx.doc.getElementById('level').textContent);
+  await landOne(ctx, 61);
+
+  // A single small catch is worth roughly 15 xp and rank 2 needs 48, so the
+  // level number itself may not move yet. The progress toward it must.
+  assert.ok(Number(bar().dataset.xp ?? 0) > xpBefore,
+    `a catch must add xp (${xpBefore} -> ${bar().dataset.xp})`);
+  assert.ok(Number(bar().value) > 0, 'and the bar must have filled');
+  assert.ok(Number(bar().value) <= Number(bar().max), 'but not past the next rank');
+  assert.ok(Number(ctx.doc.getElementById('level').textContent) >= levelBefore,
+    'the rank must never fall');
+});
+
+test('an old save with no rank, seals or gifts still loads', async () => {
+  const ctx = await seedSave({
+    coins: 5000, rodId: 'Deeproot', owned: ['bamboo', 'willow', 'carbon', 'oak'],
+    bestiary: { glidefin: 1.2 }, areaId: 'aero-lake',
+  }, 62);
+  assert.equal(ctx.doc.getElementById('level').textContent, '1', 'an old save is rank 1');
+  assert.ok(ctx.doc.getElementById('level-title').textContent.length > 0);
+  assert.equal(ctx.doc.getElementById('coins').textContent, '5000', 'coins survive');
+  assert.equal(ctx.doc.getElementById('fa-pet').hasAttribute('hidden'), true);
+});
+
+test('a save naming a seal you do not own does not put one on the dock', async () => {
+  const ctx = await seedSave({
+    coins: 0, rodId: 'bamboo', owned: ['bamboo'], bestiary: {}, areaId: 'aero-lake',
+    equippedSeal: 'abyss', ownedSeals: [], xp: 0, giftedRods: [],
+  }, 63);
+  assert.equal(ctx.doc.getElementById('fa-pet').hasAttribute('hidden'), true,
+    'a save cannot equip a seal it never granted');
+});
+
+test('the seal shop lists every seal and says why one is locked', async () => {
+  const ctx = await boot(64);
+  ctx.doc.getElementById('seal-shop-open').dispatchEvent(
+    new ctx.win.MouseEvent('click', { bubbles: true }));
+  const rows = [...ctx.doc.querySelectorAll('#seal-shop-list .seal')];
+  assert.equal(rows.length, SEALS.length, 'every seal must be listed');
+  assert.ok(rows.some((r) => r.querySelector('.seal__lock')),
+    'a seal above your rank must say so');
+});
+
+test('buying a seal with junk you can afford puts it on the dock', async () => {
+  const cheap = SEALS[0];
+  const ctx = await seedSave({
+    coins: cheap.price, rodId: 'bamboo', owned: ['bamboo'], bestiary: {},
+    areaId: 'aero-lake', xp: 0, ownedSeals: [], equippedSeal: null, giftedRods: [],
+  }, 65);
+  ctx.doc.getElementById('seal-shop-open').dispatchEvent(
+    new ctx.win.MouseEvent('click', { bubbles: true }));
+  const row = [...ctx.doc.querySelectorAll('#seal-shop-list .seal')]
+    .find((r) => r.textContent.includes(cheap.name));
+  row.querySelector('.seal__equip').dispatchEvent(
+    new ctx.win.MouseEvent('click', { bubbles: true }));
+
+  assert.equal(ctx.doc.getElementById('fa-pet').hasAttribute('hidden'), false,
+    `${cheap.name} should now be sitting on the dock`);
+  assert.equal(ctx.doc.getElementById('coins').textContent, '0', 'and you paid for it');
+});
+
+test('only one seal can be with you at a time', async () => {
+  const owned = SEALS.map((s) => s.id);
+  const ctx = await seedSave({
+    coins: 999999, rodId: 'bamboo', owned: ['bamboo'], bestiary: {}, areaId: 'aero-lake',
+    xp: 50000, ownedSeals: owned, equippedSeal: SEALS[0].id, giftedRods: [],
+  }, 66);
+  ctx.doc.getElementById('seal-shop-open').dispatchEvent(
+    new ctx.win.MouseEvent('click', { bubbles: true }));
+  const active = () => [...ctx.doc.querySelectorAll('#seal-shop-list .seal')]
+    .filter((r) => r.querySelector('.seal__equip')?.textContent.includes('Equipped'));
+  assert.equal(active().length, 1, 'exactly one row is the equipped seal');
+
+  const other = [...ctx.doc.querySelectorAll('#seal-shop-list .seal')]
+    .find((r) => r.textContent.includes(SEALS[1].name));
+  other.querySelector('.seal__equip').dispatchEvent(
+    new ctx.win.MouseEvent('click', { bubbles: true }));
+  assert.equal(active().length, 1, 'swapping must replace, not stack');
+});
+
+test('your seal has an opinion about what you land', async () => {
+  const ctx = await seedSave({
+    coins: 0, rodId: 'bamboo', owned: ['bamboo'], bestiary: {}, areaId: 'aero-lake',
+    xp: 0, ownedSeals: [SEALS[0].id], equippedSeal: SEALS[0].id, giftedRods: [],
+  }, 67);
+  await landOne(ctx, 67);
+  const said = ctx.doc.getElementById('message').textContent;
+  assert.ok(said.length > 8, `the seal should have said something, said "${said}"`);
+});
+
+test('the dock pet is styled in Aero glass, not a flat blob', async () => {
+  const ctx = await seedSave({
+    coins: 0, rodId: 'bamboo', owned: ['bamboo'], bestiary: {}, areaId: 'aero-lake',
+    xp: 0, ownedSeals: [SEALS[0].id], equippedSeal: SEALS[0].id, giftedRods: [],
+  }, 68);
+  const pet = ctx.doc.getElementById('fa-pet');
+  assert.match(pet.innerHTML, /url\(#fa-pet/, 'the pet must be filled with its gradient');
 });
