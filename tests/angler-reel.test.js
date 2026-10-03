@@ -133,16 +133,16 @@ test('a zero-resistance rod is handled without dividing by zero', () => {
 });
 
 
-test('no fish can outrun the player, so every fish is winnable', () => {
-  // The fish's worst-case step is fishSpeed * (1 + jitter). If that ever reaches
-  // playerSpeed the fish is mathematically unwinnable, however good the player is.
+test('no fish can outrun the player, gust included, so every fish is winnable', () => {
+  // The fish's top speed is fishSpeed * MAX_GUST. If that ever reaches playerSpeed
+  // the fish is mathematically unwinnable, however good the player is — which is
+  // what the old one-way drift and the old jitter multiplier both risked.
   for (const fight of [0, 0.35, 0.6, 0.88, 1]) {
     for (const resilience of [0, 0.3, 0.85]) {
       const cfg = reelConfig({ fight, control: 0.2, resilience });
-      const worstCase = cfg.fishSpeed * (1 + cfg.jitter);
-      assert.ok(worstCase < cfg.playerSpeed,
-        `fight ${fight} / resilience ${resilience}: fish peaks at ${worstCase.toFixed(3)} ` +
-        `but the player only reaches ${cfg.playerSpeed}`);
+      assert.ok(cfg.fishSpeed * 1.25 < cfg.playerSpeed,
+        `fight ${fight} / resilience ${resilience}: fish peaks at ` +
+        `${(cfg.fishSpeed * 1.25).toFixed(3)} but the player only reaches ${cfg.playerSpeed}`);
     }
   }
 });
@@ -185,4 +185,130 @@ test('a left-swimming fish can be followed with the available controls', () => {
     assert.ok(state.playerX >= 0 && state.playerX <= 1);
   }
   assert.ok(state.progress > 0.34, 'progress held while following the fish left');
+});
+
+
+/* ------------------------------------------------ direction and craziness */
+
+/**
+ * The fish used to drift right with only its speed wobbling, so it never really
+ * went left. Movement must be genuinely bidirectional, and the wilder a fish
+ * moves the rarer it is — that is the whole difficulty curve of the minigame.
+ */
+const track = (cfg, FRAMES = 2400, startX = 0.5) => {
+  let state = { fishX: startX, playerX: 0.5, progress: 0.34, holding: false, dir: 1 };
+  const dirs = new Set();
+  let left = 0, right = 0;
+  for (let i = 0; i < FRAMES; i += 1) {
+    const next = stepReel(cfg, state, 1 / 60, (i * 7919 % 1000) / 1000);
+    dirs.add(next.dir);
+    if (next.fishX > state.fishX) right += 1;
+    else if (next.fishX < state.fishX) left += 1;
+    state = next;
+  }
+  return { dirs, left, right, state };
+};
+
+test('the fish moves left as well as right', () => {
+  for (const fight of [0.35, 0.6, 0.88, 1.0]) {
+    const { left, right } = track(reelConfig({ fight, control: 0.3, resilience: 0.5 }));
+    assert.ok(left > 60, `fight ${fight}: moved left on only ${left} of 2400 frames`);
+    assert.ok(right > 60, `fight ${fight}: moved right on only ${right} of 2400 frames`);
+  }
+});
+
+test('a rarer fish changes direction more often than a common one', () => {
+  const countTurns = (fight) => {
+    let state = { fishX: 0.5, playerX: 0.5, progress: 0.34, holding: false, dir: 1 };
+    let turns = 0, last = state.dir;
+    for (let i = 0; i < 3000; i += 1) {
+      const next = stepReel(reelConfig({ fight, control: 0.3, resilience: 0.5 }),
+        state, 1 / 60, (i * 7919 % 1000) / 1000);
+      if (next.dir !== last) turns += 1;
+      last = next.dir;
+      state = next;
+    }
+    return turns;
+  };
+  const common = countTurns(0.35);
+  const rare = countTurns(1.0);
+  assert.ok(rare > common * 1.4,
+    `mythical (${rare} turns) should thrash far more than common (${common})`);
+});
+
+test('a common fish still settles into long runs rather than buzzing constantly', () => {
+  // A Mythical buzzing every frame is unreadable and unplayable; the point is a
+  // spread of behaviour, not maximum chaos at both ends.
+  const avgRun = (fight) => {
+    let state = { fishX: 0.5, playerX: 0.5, progress: 0.34, holding: false, dir: 1 };
+    let run = 0, last = 1, runs = [];
+    for (let i = 0; i < 3000; i += 1) {
+      const next = stepReel(reelConfig({ fight, control: 0.3, resilience: 0.5 }),
+        state, 1 / 60, (i * 7919 % 1000) / 1000);
+      if (next.dir !== last) { runs.push(run); run = 0; last = next.dir; }
+      run += 1;
+      state = next;
+    }
+    return runs.reduce((a, b) => a + b, 0) / Math.max(1, runs.length);
+  };
+  assert.ok(avgRun(0.35) > 6, `a common fish should hold a heading for a while, got ${avgRun(0.35).toFixed(1)} frames`);
+});
+
+test('resilience calms the movement, not just the speed', () => {
+  const turns = (resilience) => {
+    let state = { fishX: 0.5, playerX: 0.5, progress: 0.34, holding: false, dir: 1 };
+    let n = 0, last = 1;
+    for (let i = 0; i < 3000; i += 1) {
+      const next = stepReel(reelConfig({ fight: 1, control: 0.3, resilience }),
+        state, 1 / 60, (i * 7919 % 1000) / 1000);
+      if (next.dir !== last) n += 1;
+      last = next.dir;
+      state = next;
+    }
+    return n;
+  };
+  assert.ok(turns(0.85) < turns(0), 'a tougher rod should steady the fish');
+});
+
+test('movement direction is reproducible for a given seed', () => {
+  const runOnce = () => {
+    let state = { fishX: 0.5, playerX: 0.5, progress: 0.34, holding: false, dir: 1 };
+    const path = [];
+    for (let i = 0; i < 200; i += 1) {
+      const next = stepReel(reelConfig({ fight: 1, control: 0.3, resilience: 0.3 }),
+        state, 1 / 60, (i * 7919 % 1000) / 1000);
+      path.push(next.fishX.toFixed(6));
+      state = next;
+    }
+    return path.join(',');
+  };
+  assert.equal(runOnce(), runOnce(), 'the same seed must give the same path');
+});
+
+test('the fish never leaves the bar, whatever it does', () => {
+  for (const fight of [0.35, 0.88, 1.0]) {
+    const cfg = reelConfig({ fight, control: 0.3, resilience: 0 });
+    let state = { fishX: 0.5, playerX: 0.5, progress: 0.34, holding: false, dir: 1 };
+    for (let i = 0; i < 4000; i += 1) {
+      state = stepReel(cfg, state, 1 / 60, (i * 7919 % 1000) / 1000);
+      assert.ok(state.fishX >= 0 && state.fishX <= 1,
+        `fight ${fight}: fishX ${state.fishX} escaped at frame ${i}`);
+    }
+  }
+});
+
+test('a tough fish still never outruns the player', () => {
+  // Direction changes must not let the fish exceed the player's top speed, or a
+  // Mythical becomes unwinnable no matter how good the player is.
+  for (const fight of [0.35, 0.6, 0.88, 1.0]) {
+    const cfg = reelConfig({ fight, control: 0.2, resilience: 0 });
+    const state = { fishX: 0.5, playerX: 0.5, progress: 0.34, holding: true, dir: 1 };
+    let maxStep = 0;
+    for (const seed of [0, 0.13, 0.5, 0.87, 0.999]) {
+      const next = stepReel(cfg, state, 1 / 60, seed);
+      maxStep = Math.max(maxStep, Math.abs(next.fishX - state.fishX));
+    }
+    assert.ok(maxStep < cfg.playerSpeed / 60,
+      `fight ${fight}: step ${maxStep.toFixed(4)} exceeds player speed`);
+  }
 });

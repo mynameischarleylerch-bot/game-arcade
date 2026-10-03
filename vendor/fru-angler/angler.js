@@ -9,10 +9,10 @@ import {
   RODS, FISH, RARITY_ORDER, RARITY_COLOURS,
   castQuality, castDistance, biteDelayFor, rollFish, rollMutation,
   fishWeight, canCatch, catchValue, startingLoadout, buyRod, recordCatch,
-} from './fishing.js?v=2026-10-01-f';
+} from './fishing.js?v=2026-10-01-g';
 import {
   reelConfig, stepReel as advance, reelOutcomeFor, isCaught, lineSnapped,
-} from './reel.js?v=2026-10-01-f';
+} from './reel.js?v=2026-10-01-g';
 
 /* ------------------------------------------------------------------ tuning */
 
@@ -200,7 +200,9 @@ function hook(fish) {
     control: rod().control,
     resilience: rod().resilience,
   });
-  state.reel = { cfg, fishX: 0.5, playerX: 0.5, progress: 0.34 };
+  // dir is the fish's heading: +/-1. It must persist across frames or the
+  // fish would re-roll its direction every time and never travel anywhere.
+  state.reel = { cfg, fishX: 0.5, playerX: 0.5, progress: 0.34, dir: Math.random() < 0.5 ? -1 : 1 };
   setPhase('reeling');
   say('');
 }
@@ -210,12 +212,17 @@ function hook(fish) {
 function stepReel() {
   const r = state.reel;
   const next = advance(r.cfg, {
-    fishX: r.fishX, playerX: r.playerX, progress: r.progress, holding: state.holding,
+    fishX: r.fishX,
+    playerX: r.playerX,
+    progress: r.progress,
+    holding: state.holding,
+    dir: r.dir,
   }, REEL_DT);
 
   r.fishX = next.fishX;
   r.playerX = next.playerX;
   r.progress = next.progress;
+  r.dir = next.dir;      // carry the heading forward
 
   ui.reelPlayer.style.width = `${r.cfg.playerWidth * 100}%`;
   ui.reelPlayer.style.left = `${r.playerX * 100 - (r.cfg.playerWidth / 2) * 100}%`;

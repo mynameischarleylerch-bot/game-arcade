@@ -22,7 +22,8 @@ const EASY_FRAMES = 2.2;           // seconds of perfect containment for a docil
 const HARD_FRAMES = 5.5;           // ...and for a Mythical
 const RESILIENCE_CALM = 0.55;      // how much resilience can flatten the fish
 const MAX_PLAYER_WIDTH = 0.5;
-const MAX_FISH_SPEED = BASE_PLAYER_SPEED * 0.8;   // the angler can always catch up
+const MAX_GUST = 1.25;                               // the fastest a gust can push it
+const MAX_FISH_SPEED = BASE_PLAYER_SPEED * 0.8;   // peak, gust included: always catchable
 
 export const reelOutcome = {
   inProgress: 'in-progress',
@@ -44,18 +45,24 @@ export function reelConfig({ fight, control, resilience }) {
   const calm = 1 - r * RESILIENCE_CALM;
   const rawSpeed = BASE_FISH_SPEED * (0.35 + f * 0.65) * calm;
 
-  // Fairness: the fish's fastest possible step is fishSpeed * (1 + jitter), and it
-  // must stay under the player's top speed or a hard fish becomes mathematically
-  // unwinnable rather than merely hard. Cap the mean, then the wander.
-  const fishSpeed = Math.min(rawSpeed, MAX_FISH_SPEED);
-  const rawJitter = (0.5 + f * 1.1) * (1 - r * 0.6);
-  const jitter = Math.max(0, Math.min(rawJitter, MAX_FISH_SPEED / fishSpeed - 1));
+  // Fairness: the fish must stay under the player's top speed or a hard fish
+  // becomes mathematically unwinnable rather than merely hard. Magnitude is
+  // capped; craziness comes from changing heading, not from moving faster.
+  // Capped against the gusted peak: fishSpeed * MAX_GUST must stay under the
+  // player's top speed, so a hard fish can never be literally uncatchable.
+  const fishSpeed = Math.min(rawSpeed, MAX_FISH_SPEED / MAX_GUST);
+
+  // Heading changes per second. This, not speed, is what makes a fish feel wild:
+  // a Common drifts one way for a beat, a Mythical thrashes across the bar.
+  // Squared so the top tiers are clearly crazier than the middle ones.
+  const turnRate = (0.22 + f * f * 4.6) * (1 - r * 0.6);
 
   return {
     fight: f,
     playerWidth: c,
     fishSpeed,
-    jitter,
+    turnRate,
+    jitter: turnRate,
     playerSpeed: BASE_PLAYER_SPEED,
     idleDrift: IDLE_DRIFT,
     // Docile fish fill fast and rare; Mythicals drag on.
@@ -82,19 +89,25 @@ export function containedFraction(cfg, fishX, playerX) {
 /**
  * Advance one frame.
  * @param {object} cfg   from reelConfig()
- * @param {object} state { fishX, playerX, progress, holding } — all 0..1
+ * @param {object} state { fishX, playerX, progress, holding, dir } — 0..1, dir is +/-1
  * @param {number} dt    seconds since the last frame
- * @param {number} seed  0..1, controls the fish's wander so the caller owns randomness
- * @returns {{fishX:number, playerX:number, progress:number, contained:boolean}}
+ * @param {number} seed  0..1, decides whether the fish turns on this frame
+ * @returns {{fishX:number, playerX:number, progress:number, contained:boolean, dir:number}}
  */
 export function stepReel(cfg, state, dt, seed = Math.random()) {
-  // The fish wanders: a jittered drift makes it twitch rather than slide.
-  const wander = (Math.min(Math.max(seed, 0), 1) * 2 - 1) * cfg.jitter;
-  let fishX = state.fishX + (cfg.fishSpeed + wander * cfg.fishSpeed) * dt;
+  // The fish has a heading, and reverses it now and then. It used to drift right
+  // with only its speed wobbling, which made it read as one-way traffic; a
+  // heading that actually flips is what makes it feel like it is fighting you.
+  let dir = state.dir ?? 1;
+  if (seed < cfg.turnRate * dt) dir = -dir;
 
-  // Bounce rather than clamp — clamping would stick the fish to a wall.
-  if (fishX < 0) fishX = -fishX;
-  if (fishX > 1) fishX = 2 - fishX;
+  // Speed breathes within its own cap so a turn does not look mechanical.
+  const gust = 0.75 + (1 - seed) * (MAX_GUST - 0.75);
+  let fishX = state.fishX + dir * cfg.fishSpeed * gust * dt;
+
+  // Hitting an end reverses the heading, so the fish always comes back.
+  if (fishX < 0) { fishX = -fishX; dir = 1; }
+  if (fishX > 1) { fishX = 2 - fishX; dir = -1; }
 
   let playerX = state.holding
     ? state.playerX + cfg.playerSpeed * dt
@@ -112,6 +125,7 @@ export function stepReel(cfg, state, dt, seed = Math.random()) {
     playerX,
     progress: Math.min(1, Math.max(0, progress)),
     contained,
+    dir,
   };
 }
 
