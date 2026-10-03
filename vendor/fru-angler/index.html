@@ -252,11 +252,17 @@
     overflow: hidden;
   }
   /* The player's control bar, and the fish line it has to hold. */
-  .reel__player { position: absolute; top: 0; bottom: 0; left: 0; width: 24%;
-    background: linear-gradient(180deg, #fff, rgba(255,255,255,.7));
-    box-shadow: 0 0 12px rgba(255,255,255,.7); }
-  .reel__fish { position: absolute; top: 6px; bottom: 6px; left: 50%; width: 4px; margin-left: -2px;
-    background: #ffd54f; border-radius: 2px; box-shadow: 0 0 10px rgba(255,213,79,.9); }
+  .reel__player {
+    position: absolute; top: 0; bottom: 0; left: 0; width: 24%;
+    background: linear-gradient(180deg, #fff, rgba(255, 255, 255, 0.62));
+    box-shadow: 0 0 14px rgba(255, 255, 255, 0.75), inset 0 1px 0 #fff;
+  }
+  .reel__fish {
+    position: absolute; top: 6px; bottom: 6px; left: 50%; width: 4px; margin-left: -2px;
+    background: linear-gradient(180deg, #fff59d, #f0a800);
+    border-radius: 2px;
+    box-shadow: 0 0 10px rgba(255, 213, 79, 0.9), 0 0 18px rgba(255, 213, 79, 0.5);
+  }
 
   .reel__progress {
     position: relative; height: 16px; margin-top: .6rem; border-radius: 8px;
@@ -300,9 +306,9 @@
   /* The fish drawing sits in a glossy tile. */
   .catch__art {
     width: 100%; max-width: 260px; margin: 0 auto .6rem;
-    border-radius: 16px; overflow: hidden;
-    border: 1px solid rgba(255,255,255,.9);
-    box-shadow: 0 10px 24px rgba(1,87,155,.24), inset 0 1px 0 #fff;
+    border-radius: var(--radius-lg); overflow: hidden;
+    border: 1px solid var(--hairline-strong);
+    box-shadow: var(--shadow-lift), var(--shadow-edge);
     background: var(--shine);
   }
   .catch__art svg { display: block; width: 100%; height: auto; }

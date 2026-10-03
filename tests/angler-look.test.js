@@ -448,3 +448,32 @@ test('the rod keeps its inline colour so equipping still repaints it', () => {
   assert.match(scene, /id="rod-tip"[^>]*cx="/);
   assert.match(scene, /id="rod-tip"[^>]*cy="/);
 });
+
+
+test('the reel bars read as glass, not plastic', () => {
+  const player = PAGE.match(/\.reel__player\s*\{([^}]*)\}/)[1];
+  assert.match(player, /gradient/, 'the player bar needs a gradient');
+  assert.match(player, /inset 0 1px 0/, 'and the Aero top gloss');
+  const fish = PAGE.match(/\.reel__fish\s*\{([^}]*)\}/)[1];
+  assert.match(fish, /gradient/, 'the fish line needs a gradient');
+  // Two shadows: a tight glow and a wider bloom.
+  assert.ok((fish.match(/0 0 /g) || []).length >= 2, 'the fish line should glow and bloom');
+});
+
+test('the catch card and its art tile are glass', () => {
+  const card = PAGE.match(/\.catch__card\s*\{([\s\S]*?)\n  \}/)[1];
+  assert.match(card, /gradient/, 'the card needs glass');
+  assert.match(card, /var\(--shadow-/, 'and it should lift');
+  const art = PAGE.match(/\.catch__art\s*\{([\s\S]*?)\n  \}/)[1];
+  assert.match(art, /var\(--hairline/, 'the tile edge should be a hairline');
+  assert.match(art, /var\(--shadow-/, 'the tile should lift off the card');
+});
+
+test('the fish drawing itself keeps its gloss layers', () => {
+  const src = readFileSync(new URL('../vendor/fru-angler/fishing.js', import.meta.url), 'utf8');
+  const block = src.slice(src.indexOf('export function fishSvg'));
+  assert.match(block, /<linearGradient/, 'the body needs a gradient');
+  assert.match(block, /<radialGradient/, 'and a specular');
+  assert.match(block, /class="belly"/, 'and a belly highlight');
+  assert.match(block, /class="sheen"/, 'and a gloss overlay');
+});
