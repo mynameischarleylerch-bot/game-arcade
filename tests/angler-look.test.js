@@ -15,6 +15,19 @@ import { readFileSync, readdirSync } from 'node:fs';
 const GAME = new URL('../vendor/fru-angler/', import.meta.url);
 const PAGE = readFileSync(new URL('index.html', GAME), 'utf8');
 
+/**
+ * The body of one CSS rule, or null if the sheet has no such rule.
+ *
+ * Spans newlines. The ad-hoc patterns used elsewhere in this file cannot, so a
+ * rule written over several lines reads as "no rule at all" and every assertion
+ * about it passes for the wrong reason.
+ */
+function rule(selector) {
+  const escaped = selector.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+  const m = PAGE.match(new RegExp(`(?:^|\\n)\\s*${escaped}\\s*\\{([\\s\\S]*?)\\n\\s*\\}`));
+  return m ? m[1] : null;
+}
+
 test('the game view is Aero: gradients, glass and shine are all present', () => {
   assert.match(PAGE, /linear-gradient/, 'Aero needs gradients');
   assert.match(PAGE, /backdrop-filter:\s*blur/, 'Aero panels are translucent glass');
@@ -570,8 +583,62 @@ test('the HUD groups its readouts, it does not sprawl', () => {
   // of the bar with a huge gap between it and the rod's name.
   assert.match(PAGE, /class="hud__group hud__rod"/,
     'the rod readout needs its own group');
-  assert.match(PAGE, /hud__spacer/, 'and the bar needs a spacer to push buttons over');
+  assert.match(PAGE, /class="hud__nav"/, 'and the nav buttons travel as one cluster');
   const hud = PAGE.slice(PAGE.indexOf('class="hud"'), PAGE.indexOf('class="lake"'));
   assert.ok(hud.indexOf('id="rod-stats"') > hud.indexOf('id="rod"'),
     'the stats must come after the rod name, not before it');
+});
+
+test('every HUD readout is the same oval the buttons are', () => {
+  // The bar's oval is a pill, and the readouts have to match it. Anything on a
+  // 12px radius reads as a different shape sitting in the same row, which is what
+  // "organize this" was really about.
+  const pill = /border-radius:\s*(999px|var\(--pill\))/;
+  const bar = rule('.hud');
+  assert.match(bar, pill, 'the bar itself is a pill');
+
+  // The groups I added are pills, and they must use the SAME radius, not a
+  // lookalike. 999px is the site's pill; a hard-coded 12px or 50% is not it.
+  for (const sel of ['.hud__group', '.hud__badge', '.hud__bar']) {
+    const body = rule(sel);
+    assert.ok(body, `${sel} must be styled`);
+    assert.match(body, pill, `${sel} must use the pill radius`);
+  }
+});
+
+test('the seal shop rows and the finds box are pills too', () => {
+  // These were on a 12px radius, which is the shape the screenshot showed as
+  // inconsistent against everything around it.
+  for (const sel of ['.seal', '.finds', '.seal__lock']) {
+    const body = rule(sel);
+    assert.ok(body, `${sel} must be styled`);
+    assert.match(body, /border-radius:\s*(999px|var\(--pill\))/,
+      `${sel} must be a pill, like the rest`);
+  }
+});
+
+test('the pill radius is one shared token, not repeated per rule', () => {
+  // DRY: a single --pill token means the next panel cannot drift out of step.
+  const root = rule(':root');
+  assert.ok(root, ':root must exist');
+  assert.match(root, /--pill:\s*999px/, 'a --pill token must be defined');
+  for (const sel of ['.hud', '.btn', '.hud__group']) {
+    const body = rule(sel);
+    assert.match(body, /var\(--pill\)/, `${sel} must use the shared token`);
+  }
+});
+
+test('the HUD readouts all sit in a pill, none left as bare text', () => {
+  // Each readout the player reads -- coins, seal coins, rank, rod -- must be
+  // inside a group, or it floats loose against the bar.
+  const hud = PAGE.slice(PAGE.indexOf('class="hud"'), PAGE.indexOf('class="lake"'));
+  const groups = (hud.match(/class="hud__group/g) || []).length;
+  assert.ok(groups >= 3, `expected the readouts grouped, found ${groups} groups`);
+  for (const id of ['id="coins"', 'id="seal-coins"', 'id="level"', 'id="rod"']) {
+    assert.ok(hud.includes(id), `${id} must still be in the bar`);
+  }
+  // The stray spacer that used to sit between them is gone: it produced the gap
+  // in the screenshot, and the nav cluster now pushes itself right instead.
+  assert.doesNotMatch(hud, /hud__spacer/, 'the HUD must not depend on a bare spacer');
+  assert.match(hud, /class="hud__nav"/, 'the nav cluster must be in the bar');
 });

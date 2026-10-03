@@ -47,6 +47,7 @@
     --hairline: rgba(255, 255, 255, 0.85);
     --hairline-strong: rgba(255, 255, 255, 0.92);
     --radius: 12px;
+    --pill: 999px;        /* the pill every control shares */
     --radius-lg: 18px;
 
     /* Shadows: each pairs a drop with the Aero top gloss */
@@ -83,14 +84,13 @@
   /* ------------------------------------------------------------- top bar */
   .hud {
     display: flex; align-items: center; gap: .5rem .7rem; flex-wrap: wrap;
-    padding: .4rem .9rem; border-radius: 999px;
+    padding: .4rem .9rem; border-radius: var(--pill);
     background: var(--glass);
     border: 1px solid var(--hairline-strong);
     box-shadow: var(--shadow-card);
     backdrop-filter: blur(10px); -webkit-backdrop-filter: blur(10px);
   }
   .hud b { font-variant-numeric: tabular-nums; }
-  .hud__spacer { flex: 1 1 auto; }
   .hud__dim { color: var(--ink-soft); }
 
   kbd {
@@ -206,7 +206,7 @@
   /* -------------------------------------------------------- cast meter */
   .cast {
     position: absolute; left: 50%; bottom: 2rem; transform: translateX(-50%);
-    width: min(70%, 22rem); height: 20px; border-radius: 999px; z-index: 5;
+    width: min(70%, 22rem); height: 20px; border-radius: var(--pill); z-index: 5;
     background: linear-gradient(180deg, var(--deepest), #1d5b80);
     border: 1px solid rgba(255,255,255,.5);
     box-shadow: inset 0 1px 3px rgba(0,0,0,.35);
@@ -218,12 +218,12 @@
     background: linear-gradient(180deg, rgba(220, 252, 168, .95), var(--lime));
     box-shadow: inset 0 1px 0 rgba(255, 255, 255, .85), 0 0 10px rgba(163, 230, 53, .55);
   }
-  .cast__fill { position: absolute; inset: 0 auto 0 0; width: 0; border-radius: 999px; background: linear-gradient(90deg, #4fc3f7, #01579b); }
+  .cast__fill { position: absolute; inset: 0 auto 0 0; width: 0; border-radius: var(--pill); background: linear-gradient(90deg, #4fc3f7, #01579b); }
 
   /* ------------------------------------------------------ SHAKE prompt */
   .shake {
     position: absolute; z-index: 8;
-    padding: .45rem .9rem; border-radius: 999px;
+    padding: .45rem .9rem; border-radius: var(--pill);
     background: var(--shine);
     border: 2px solid var(--deep);
     color: var(--deep); font: inherit; font-weight: 700; letter-spacing: .06em;
@@ -247,7 +247,7 @@
   /* The hook line: what the fish tells you when it takes the bait. */
   .reel__line {
     margin: 0 0 .5rem; padding: .45rem .8rem;
-    border-radius: 999px; text-align: center;
+    border-radius: var(--pill); text-align: center;
     font-size: .92rem; font-style: italic; font-weight: 600;
     color: var(--deep);
     /* Translucent, so it floats over the lake like a caption rather than a box. */
@@ -381,10 +381,11 @@
     box-shadow: 0 0 0 2px rgba(1,87,155,.18) inset;
   }
   .rod__row { display: flex; justify-content: space-between; gap: .6rem; font-weight: 600; }
-  .btn--small { padding: .2rem .7rem; font-size: .82rem; font-weight: 600; }
+  .btn--small { padding: .2rem .7rem; font-size: .82rem; font-weight: 600;
+                min-height: 2.1rem; box-sizing: border-box; }
   .hud__badge {
     display: inline-block; margin-left: .3rem; padding: 0 .4em;
-    border-radius: 999px; background: rgba(1,87,155,.12); color: var(--deep);
+    border-radius: var(--pill); background: rgba(1,87,155,.12); color: var(--deep);
     font-variant-numeric: tabular-nums;
   }
 
@@ -421,7 +422,7 @@
   .rod__blurb { font-size: .82rem; color: var(--ink-soft); font-style: italic; }
 
   .btn {
-    padding: .45rem 1rem; border-radius: 999px; border: 1px solid rgba(255,255,255,.92);
+    padding: .45rem 1rem; border-radius: var(--pill); border: 1px solid rgba(255,255,255,.92);
     background: var(--shine);
     color: var(--deep); font: inherit; font-weight: 600; cursor: pointer;
     box-shadow: 0 4px 10px rgba(1,87,155,.2), inset 0 1px 0 #fff;
@@ -482,7 +483,7 @@
     margin: 0; font-size: 1rem; font-weight: 700; color: var(--deep);
   }
   .bite__set {
-    padding: .7rem 1.6rem; border-radius: 999px;
+    padding: .7rem 1.6rem; border-radius: var(--pill);
     border: 1px solid var(--hairline-strong);
     background: linear-gradient(180deg, var(--lime), #7fbf12);
     color: #123000; font: inherit; font-size: 1.05rem; font-weight: 800;
@@ -528,7 +529,7 @@
   /* Rod traits, shown in the shop so a gated lake explains itself. */
   .rod__traits { display: flex; gap: .3rem; flex-wrap: wrap; }
   .rod__trait {
-    padding: .1rem .45rem; border-radius: 999px;
+    padding: .1rem .45rem; border-radius: var(--pill);
     background: linear-gradient(180deg, var(--glass-top), var(--glass-mid));
     border: 1px solid var(--hairline-strong);
     font-size: .68rem; font-weight: 700; letter-spacing: .06em;
@@ -541,7 +542,7 @@
   .lake-row__trait {
     justify-self: start;
     margin-top: .2rem;
-    padding: .08rem .4rem; border-radius: 999px;
+    padding: .08rem .4rem; border-radius: var(--pill);
     background: linear-gradient(180deg, var(--glass-top), var(--glass-mid));
     border: 1px solid var(--hairline);
     font-size: .64rem; font-weight: 700; letter-spacing: .07em;
@@ -632,12 +633,14 @@
   .hud { flex-wrap: wrap; row-gap: .35rem; }
   .hud__group {
     display: inline-flex; align-items: center; gap: .35rem;
-    padding: .12rem .45rem; border-radius: 999px;
+    padding: .12rem .45rem; border-radius: var(--pill);
     background: rgba(255, 255, 255, .28);
     border: 1px solid rgba(255, 255, 255, .5);
   }
   .hud__rod { flex-direction: column; align-items: flex-start; gap: 0; }
   .hud__rod #rod-stats { font-size: .72rem; line-height: 1.15; }
+  /* The nav buttons travel together as one cluster at the end of the bar. */
+  .hud__nav { display: inline-flex; align-items: center; gap: .35rem; margin-left: auto; }
 
   /* ---- the seal's speech bubble -------------------------------------
    * Drawn inside the scene so it sits on the dock with the pet, in the same
@@ -660,7 +663,7 @@
     display: grid; gap: .35rem; justify-items: end; pointer-events: none;
   }
   .notice {
-    padding: .4rem .7rem; border-radius: 999px; font-weight: 700;
+    padding: .4rem .7rem; border-radius: var(--pill); font-weight: 700;
     font-size: .85rem; color: #10380f;
     background: linear-gradient(180deg, rgba(255,255,255,.95), rgba(206,241,199,.9));
     border: 1px solid rgba(255,255,255,.9);
@@ -681,7 +684,7 @@
   .finds {
     display: grid; gap: .4rem; justify-items: start;
     padding: .5rem .6rem; margin: .5rem 0;
-    border-radius: var(--radius, 12px);
+    border-radius: var(--pill);
     background: linear-gradient(180deg, rgba(255,255,255,.5), rgba(255,255,255,.22));
     border: 1px solid var(--hairline, rgba(255,255,255,.85));
   }
@@ -692,17 +695,17 @@
     display: inline-flex; align-items: center; gap: .4rem;
   }
   .hud__bar {
-    width: 64px; height: 6px; border-radius: 999px; overflow: hidden;
+    width: 64px; height: 6px; border-radius: var(--pill); overflow: hidden;
     border: 1px solid var(--hairline, rgba(255,255,255,.85));
     background: rgba(255,255,255,.35); vertical-align: middle;
   }
   .hud__bar::-webkit-progress-bar { background: rgba(255,255,255,.35); }
   .hud__bar::-webkit-progress-value {
     background: linear-gradient(180deg, #a3e635, #4fc3f7);
-    border-radius: 999px;
+    border-radius: var(--pill);
   }
   .seal {
-    display: grid; gap: .35rem; padding: .6rem .7rem; border-radius: var(--radius, 12px);
+    display: grid; gap: .35rem; padding: .6rem .7rem; border-radius: var(--pill);
     background: linear-gradient(180deg, rgba(255,255,255,.5), rgba(255,255,255,.22));
     border: 1px solid var(--hairline, rgba(255,255,255,.85));
     box-shadow: inset 0 1px 0 rgba(255,255,255,.7);
@@ -713,7 +716,7 @@
   .seal__line, .seal__perks { margin: 0; font-size: .85rem; }
   .seal__lock {
     font-size: .78rem; font-weight: 700; color: #8a5a00;
-    background: rgba(255, 231, 158, .7); border-radius: 999px; padding: .1rem .5rem;
+    background: rgba(255, 231, 158, .7); border-radius: var(--pill); padding: .1rem .5rem;
     justify-self: start;
   }
   .seal__equip { justify-self: start; }
@@ -734,17 +737,18 @@
         <span>Rod <b id="rod">—</b></span>
         <span class="hud__dim" id="rod-stats"></span>
       </span>
-      <button id="inventory-open" class="btn btn--small" type="button" aria-haspopup="dialog">
-        Inventory <b id="inventory-count" class="hud__badge">1 rod</b>
-      </button>
-      <button id="index-open" class="btn btn--small" type="button" aria-haspopup="dialog">
-        Fish index
-      </button>
-      <button id="lake-picker" class="btn btn--small" type="button"
-              aria-haspopup="dialog" aria-expanded="false">
-        Lake <b id="lake-name" class="hud__badge">Aero Lake</b>
-      </button>
-      <span class="hud__spacer"></span>
+      <span class="hud__nav">
+        <button id="inventory-open" class="btn btn--small" type="button" aria-haspopup="dialog">
+          Inventory <b id="inventory-count" class="hud__badge">1 rod</b>
+        </button>
+        <button id="index-open" class="btn btn--small" type="button" aria-haspopup="dialog">
+          Fish index
+        </button>
+        <button id="lake-picker" class="btn btn--small" type="button"
+                aria-haspopup="dialog" aria-expanded="false">
+          Lake <b id="lake-name" class="hud__badge">Aero Lake</b>
+        </button>
+      </span>
     </div>
 
     <div class="lake" id="lake" data-phase="idle">
@@ -999,6 +1003,6 @@
     </div>
   </div>
 
-  <script type="module" src="./angler.js?v=2026-10-03-e"></script>
+  <script type="module" src="./angler.js?v=2026-10-03-f"></script>
 </body>
 </html>
