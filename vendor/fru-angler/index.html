@@ -151,22 +151,25 @@
   }
 
   /* Distant shore: a soft rise to the right, in water tones. */
-  .scene__shore { fill: #5aa6cf; }
+  .scene__shore { fill: url(#fa-shore); }
   /* The lake itself, glossy and slightly darker toward the viewer. */
   .scene__water { fill: url(#fa-water); }
-  .scene__glint { fill: rgba(255,255,255,.3); }
+  .scene__glint { fill: url(#fa-glint); }
 
   /* Pier and rod: varnished wood with a lit top edge. */
-  .scene__wood { fill: var(--wood); }
+  .scene__wood { fill: url(#fa-wood); }
+  /* The legs sat on the deck's colour with no rule of their own. */
+  .scene__wood--edge { fill: url(#fa-wood-edge); }
   .scene__wood--edge { fill: var(--wood-deep); }
   .scene__rod { stroke: var(--wood-deep); stroke-width: 1.6; fill: none; stroke-linecap: round; }
 
   /* The angler reads as a dark silhouette against the sky, like the sketch. */
   /* The blob reads best as a flat silhouette with a gloss on top, which is how
      the Messenger figure looked at small sizes. */
-  .scene__figure { fill: var(--deepest); }
-  .scene__shine { fill: #ffffff; opacity: .5; }
-  .scene__lure { fill: #e53935; }
+  .scene__figure { fill: url(#fa-figure); }
+  /* The specular over the angler, softened because the figure is dark. */
+  .scene__shine { fill: url(#fa-sheen); opacity: .8; }
+  .scene__lure { fill: url(#fa-wood); }
 
   /* The fishing line runs from the rod tip to the bobber; angler.js moves the
      far end whenever the bobber lands. */
@@ -446,6 +449,37 @@
             <stop offset="0.35" stop-color="#2f81c4"/>
             <stop offset="1" stop-color="#1b5e9c"/>
           </linearGradient>
+          <!-- the far shore: hazier at the ridge so it sits behind the lake -->
+          <linearGradient id="fa-shore" x1="0" y1="0" x2="0" y2="1">
+            <stop offset="0" stop-color="#9fd0ea"/>
+            <stop offset="0.5" stop-color="#5aa6cf"/>
+            <stop offset="1" stop-color="#3f8fc0"/>
+          </linearGradient>
+          <!-- varnished pier: a lit top edge falling into shadow underneath -->
+          <linearGradient id="fa-wood" x1="0" y1="0" x2="0.2" y2="1">
+            <stop offset="0" stop-color="#c68a5e"/>
+            <stop offset="0.45" stop-color="#a9714a"/>
+            <stop offset="1" stop-color="#7d4f2e"/>
+          </linearGradient>
+          <linearGradient id="fa-wood-edge" x1="0" y1="0" x2="0" y2="1">
+            <stop offset="0" stop-color="#a9714a"/>
+            <stop offset="1" stop-color="#5e3a20"/>
+          </linearGradient>
+          <!-- the angler: still a silhouette, but one that catches the light -->
+          <linearGradient id="fa-figure" x1="0.15" y1="0" x2="0.75" y2="1">
+            <stop offset="0" stop-color="#0b5586"/>
+            <stop offset="0.55" stop-color="#013a63"/>
+            <stop offset="1" stop-color="#012741"/>
+          </linearGradient>
+          <radialGradient id="fa-sheen" cx="0.3" cy="0.22" r="0.62">
+            <stop offset="0" stop-color="#ffffff" stop-opacity=".5"/>
+            <stop offset="1" stop-color="#ffffff" stop-opacity="0"/>
+          </radialGradient>
+          <!-- the sun broken up on the water -->
+          <radialGradient id="fa-glint" cx="0.5" cy="0.5" r="0.5">
+            <stop offset="0" stop-color="#ffffff" stop-opacity=".55"/>
+            <stop offset="1" stop-color="#ffffff" stop-opacity="0"/>
+          </radialGradient>
         </defs>
 
         <!-- far shore: a soft rise to the right -->

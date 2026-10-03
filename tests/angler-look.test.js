@@ -413,3 +413,38 @@ test('the sheen drift respects reduced motion', () => {
   assert.match(reduced, /\.lake::after\s*\{[^}]*animation:\s*none/,
     'the drift must stop for users who ask for reduced motion');
 });
+
+
+test('the scene paints with gradients and speculars, not flat fills', () => {
+  const scene = PAGE.slice(PAGE.indexOf('<svg class="scene"'), PAGE.indexOf('</svg>'));
+  const linear = (scene.match(/<linearGradient/g) || []).length;
+  const radial = (scene.match(/<radialGradient/g) || []).length;
+  assert.ok(linear >= 4, `expected 4+ linear gradients, found ${linear}`);
+  assert.ok(radial >= 2, `expected 2+ radial speculars, found ${radial}`);
+
+  // The flat fills must be gone: shore, wood and figure are gradient-filled now.
+  assert.equal(/\.scene__shore\s*\{[^}]*fill:\s*#5aa6cf/.test(PAGE), false,
+    'the shore must not be a flat hex fill');
+  assert.equal(/\.scene__figure\s*\{[^}]*fill:\s*var\(--deepest\)/.test(PAGE), false,
+    'the angler must not be a flat fill');
+  assert.equal(/\.scene__wood\s*\{[^}]*fill:\s*var\(--wood\)\s*;?\s*\}/.test(PAGE), false,
+    'the pier must not be a flat fill');
+});
+
+test('every gradient the scene references is defined in its own defs', () => {
+  const scene = PAGE.slice(PAGE.indexOf('<svg class="scene"'), PAGE.indexOf('</svg>'));
+  const ids = new Set([...scene.matchAll(/\bid="([^"]+)"/g)].map((m) => m[1]));
+  for (const ref of scene.matchAll(/url\(#([^)]+)\)/g)) {
+    assert.ok(ids.has(ref[1]), `dangling scene gradient #${ref[1]}`);
+  }
+});
+
+test('the rod keeps its inline colour so equipping still repaints it', () => {
+  // paintRod() writes stroke/fill on these elements. A stylesheet rule would be
+  // overridden by the inline attribute, which is correct, but it means the rod
+  // must not be moved into CSS.
+  const scene = PAGE.slice(PAGE.indexOf('<svg class="scene"'), PAGE.indexOf('</svg>'));
+  assert.match(scene, /id="rod-shaft"[^>]*stroke="#[0-9a-f]{6}"/i);
+  assert.match(scene, /id="rod-tip"[^>]*cx="/);
+  assert.match(scene, /id="rod-tip"[^>]*cy="/);
+});
