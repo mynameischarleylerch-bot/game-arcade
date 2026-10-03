@@ -13,7 +13,7 @@ import { readFileSync } from 'node:fs';
 import { JSDOM } from 'jsdom';
 import { FISH, RARITY_ORDER, fishIndex, hookLineFor, AREAS,
          RODS, RODS_BY_PRICE, SEALS, startingLoadout, TIMES, WEATHER, LOST_ITEMS,
-} from '../vendor/fru-angler/fishing.js?v=2026-10-03-v';
+} from '../vendor/fru-angler/fishing.js?v=2026-10-03-w';
 
 const PAGE = readFileSync(
   new URL('../vendor/fru-angler/index.html', import.meta.url),
@@ -188,7 +188,7 @@ test('the bobber travels and a bite eventually opens the minigame', async () => 
   assert.match(text(ctx, 'rod-stats'), /control .*resilience .*luck .*kg/);
 });
 
-test('a tracking player lands the fish, is paid, and the bestiary updates', async () => {
+test('a tracking player lands the fish into the creel, and the bestiary updates', async () => {
   const ctx = await boot(4, 0.1);   // pinned to a Glidefin: fight 0.35, easy to hold
   const before = Number(text(ctx, 'coins'));
 
@@ -215,10 +215,15 @@ test('a tracking player lands the fish, is paid, and the bestiary updates', asyn
   const meta = text(ctx, 'catch-meta');
   assert.ok(name.length > 0, 'the catch card names the fish');
   assert.doesNotMatch(name, /Line snapped/, 'a tracked fish is not snapped: ' + name);
-  assert.match(meta, /(Common|Uncommon|Rare|Legendary|Mythical) · [0-9.]+ kg/,
+  assert.match(meta, /(Common|Uncommon|Rare|Legendary|Mythical) \u00b7 [0-9.]+ kg/,
     'the card states rarity and weight: ' + meta);
-  assert.match(text(ctx, 'catch-value'), /^¤ \d+$/);
-  assert.ok(Number(text(ctx, 'coins')) > before, 'landing a fish pays out');
+  assert.match(text(ctx, 'catch-value'), /^\u00a4 \d+$/);
+
+  // It no longer pays: a landed fish waits in the creel. The card still shows what
+  // it WOULD sell for, because that is what the sell button will pay.
+  assert.equal(Number(text(ctx, 'coins')), before,
+    'landing a fish must not pay out -- it goes in the creel');
+  assert.equal(text(ctx, 'creel-count'), '(1)', 'and the creel badge must show it');
   assert.equal(text(ctx, 'bestiary'), `1/${FISH.length} species landed`);
 });
 
@@ -1151,7 +1156,7 @@ test('the gift cannot be farmed by leaving and coming back', async () => {
   assert.deepEqual(saved.giftedRods, ['channel'], 'the gift is recorded once');
 });
 
-test('junk goes into the bag, not straight into your wallet', async () => {
+test('nothing on a catch reaches the wallet, junk or fish', async () => {
   const ctx = await seedSave({
     coins: 0, rodId: 'bamboo', owned: ['bamboo'], bestiary: {}, areaId: 'aero-lake',
     xp: 0, ownedSeals: [], equippedSeal: null, lost: [], giftedRods: [], sealCoins: 0,
@@ -1161,11 +1166,12 @@ test('junk goes into the bag, not straight into your wallet', async () => {
   await landOne(ctx, 71);
   const coinsAfter = Number(ctx.doc.getElementById('coins').textContent);
 
-  // A cast pays rod coins for the fish. Junk only lands in the bag.
-  assert.ok(coinsAfter >= coinsBefore, 'the fish itself still pays rod coins');
-  assert.equal(coinsAfter - coinsBefore,
-    Number(ctx.doc.getElementById('catch-value').textContent.replace(/[^0-9.]/g, '')) || coinsAfter - coinsBefore,
-    'the wallet must move by the fish value alone, with no junk folded in');
+  // A cast pays nothing at all now: the fish waits in the creel and the junk waits
+  // in the finds bag. Both are sold deliberately, in two different currencies.
+  assert.equal(coinsAfter, coinsBefore,
+    `landing a fish must not move the rod wallet, moved ${coinsBefore} -> ${coinsAfter}`);
+  assert.equal(ctx.doc.getElementById('seal-coins').textContent, '0',
+    'nor the seal wallet');
 });
 
 test('the HUD shows Seal coins separately from rod coins', async () => {
@@ -2002,4 +2008,116 @@ test('the row lock blames the lake once rank and coins are out of the way', asyn
     }
   }
   assert.ok(sawLakeLock > 0, 'nothing was locked by its lake, so this test proved nothing');
+});
+
+test('a landed fish lands in the creel, not the wallet', async () => {
+  // The old line was `state.coins += value`: every fish was sold the instant it
+  // came over the side. If that survives, the bag is decoration.
+  const src = readFileSync(new URL('../vendor/fru-angler/angler.js', import.meta.url), 'utf8');
+  const fn = src.slice(src.indexOf('function landFish'));
+  const body = fn.slice(0, fn.indexOf('\n}\n'));
+  // Match CODE, not prose: scanning the raw text matched the `state.coins +=`
+  // inside the very comment that explains why the line is gone.
+  const code = body
+    .replace(/\/\*[\s\S]*?\*\//g, '')
+    .replace(/\/\/[^\r\n]*/g, '');
+  assert.doesNotMatch(code, /state\.coins\s*\+=/,
+    'landing a fish must not pay into the wallet');
+  assert.match(body, /addToCreel/, 'it must go in the creel');
+  assert.match(body, /fishEntrySpec/, 'as a proper entry');
+});
+
+test('the creel panel exists and offers both choices', async () => {
+  // "Favourite" and "sell" are the two things the player can do, so both have to
+  // exist as controls -- not one with the other implied.
+  assert.match(PAGE, /id="creel-panel"/, 'the creel needs a panel');
+  assert.match(PAGE, /id="creel-list"/, 'and somewhere to show the fish');
+  const src = readFileSync(new URL('../vendor/fru-angler/angler.js', import.meta.url), 'utf8');
+  assert.match(src, /function paintCreel/, 'and something to paint it');
+  assert.match(src, /sellFromCreel\(/, 'selling must be wired');
+  assert.match(src, /feedToBond\(/, 'and so must feeding');
+});
+
+test('the creel saves, loads and survives a reload', async () => {
+  // A bag that does not persist loses the fish between sessions, which is worse
+  // than never having had one.
+  const save = {
+    coins: 5000,
+    creel: [{ fishId: 'glidefin', weight: 3.2, mutation: null, multiplier: 1 }],
+    bond: { bubbles: 4 },
+    bestiary: { glidefin: 3.2 },
+  };
+  const ctx = await seedSave(save, 950);
+  const raw = ctx.win.localStorage.getItem('fru-angler-save');
+  assert.ok(raw, 'a save must be written');
+  assert.deepEqual(JSON.parse(raw).creel, save.creel, 'the creel must be saved');
+  assert.deepEqual(JSON.parse(raw).bond, save.bond, 'and the bond');
+});
+
+test('clicking Sell pays rod coins and takes that fish out', async () => {
+  // The rule is tested; this checks the BUTTON. A wired rule behind a dead button
+  // passes every pure test and leaves the player unable to sell anything.
+  const ctx = await seedSave({
+    coins: 0, rodId: 'bamboo', owned: ['bamboo'], bestiary: {}, areaId: 'aero-lake',
+    xp: 0, ownedSeals: [], equippedSeal: null, lost: [], giftedRods: [], sealCoins: 0,
+    creel: [{ fishId: 'glidefin', weight: 4, mutation: null, multiplier: 1 }],
+  }, 960);
+
+  ctx.doc.getElementById('creel-open').dispatchEvent(
+    new ctx.win.MouseEvent('click', { bubbles: true }));
+  const row = ctx.doc.querySelector('#creel-list .creel__row');
+  assert.ok(row, 'the creel must list the saved fish');
+
+  const sell = row.querySelector('.creel__sell');
+  const want = Number(sell.textContent.replace(/[^0-9]/g, ''));
+  assert.ok(want > 0, 'the sell button states the price');
+
+  sell.dispatchEvent(new ctx.win.MouseEvent('click', { bubbles: true }));
+  assert.equal(Number(ctx.doc.getElementById('coins').textContent), want,
+    'selling must pay exactly the stated price');
+  assert.equal(ctx.doc.querySelectorAll('#creel-list .creel__row').length, 0,
+    'and the fish must be gone');
+  assert.equal(text(ctx, 'creel-count'), '', 'the badge must clear');
+});
+
+test('clicking Feed spends the fish and raises that seal bond', async () => {
+  const ctx = await seedSave({
+    coins: 0, rodId: 'bamboo', owned: ['bamboo'], bestiary: {}, areaId: 'aero-lake',
+    xp: 0, ownedSeals: ['bubbles'], equippedSeal: 'bubbles', lost: [],
+    giftedRods: [], sealCoins: 0, bond: {},
+    creel: [{ fishId: 'glidefin', weight: 4, mutation: null, multiplier: 1 }],
+  }, 961);
+
+  ctx.doc.getElementById('creel-open').dispatchEvent(
+    new ctx.win.MouseEvent('click', { bubbles: true }));
+  const feed = ctx.doc.querySelector('#creel-list .creel__feed');
+  assert.equal(feed.disabled, false, 'a seal is equipped, so feeding must be possible');
+  assert.match(feed.textContent, /Bubbles/, 'and the button must name the seal it feeds');
+
+  feed.dispatchEvent(new ctx.win.MouseEvent('click', { bubbles: true }));
+  assert.equal(ctx.doc.querySelectorAll('#creel-list .creel__row').length, 0,
+    'a fed fish is gone');
+  assert.equal(Number(ctx.doc.getElementById('coins').textContent), 0,
+    'and feeding must pay no coins');
+
+  const saved = JSON.parse(ctx.win.localStorage.getItem('fru-angler-save'));
+  assert.deepEqual(saved.bond, { bubbles: 1 },
+    `bond must be saved per seal, got ${JSON.stringify(saved.bond)}`);
+});
+
+test('with no seal equipped, Feed is disabled and says why', async () => {
+  const ctx = await seedSave({
+    coins: 0, rodId: 'bamboo', owned: ['bamboo'], bestiary: {}, areaId: 'aero-lake',
+    xp: 0, ownedSeals: [], equippedSeal: null, lost: [], giftedRods: [], sealCoins: 0,
+    creel: [{ fishId: 'glidefin', weight: 4, mutation: null, multiplier: 1 }],
+  }, 962);
+
+  ctx.doc.getElementById('creel-open').dispatchEvent(
+    new ctx.win.MouseEvent('click', { bubbles: true }));
+  const feed = ctx.doc.querySelector('#creel-list .creel__feed');
+  assert.equal(feed.disabled, true, 'no seal, no feeding');
+  assert.match(feed.title, /seal/i, 'and it must say why');
+  // Selling must still work, or a player with no seal has a dead bag.
+  assert.equal(ctx.doc.querySelector('#creel-list .creel__sell').disabled, false,
+    'sell must remain available');
 });

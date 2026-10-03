@@ -23,11 +23,13 @@ import {
  SEALS, LOST_ITEMS,
  levelFrom, xpForCatch, xpForLevel, luckFor, luckFromLevel,
  rollLostItem, lostItemsFor, sellLostItems, lostItemById,
+ addToCreel, fishEntrySpec, creelWorth, creelEntryValue,
+ sellFromCreel, feedToBond, bondLuck, bondCount,
  buySeal, equipSeal, sealComment, sealDuplicates, sealIdleLine,
-} from './fishing.js?v=2026-10-03-v';
+} from './fishing.js?v=2026-10-03-w';
 import {
   reelConfig, stepReel as advance, reelOutcomeFor, isCaught, lineSnapped,
-} from './reel.js?v=2026-10-03-v';
+} from './reel.js?v=2026-10-03-w';
 
 /* ------------------------------------------------------------------ tuning */
 
@@ -81,6 +83,8 @@ const ui = {
   findsList: el('finds-list'), sellFinds: el('sell-finds'),
   pet: el('fa-pet'),
   sealPanel: el('seal-shop-panel'), sealList: el('seal-shop-list'),
+  creel: el('creel-panel'), creelList: el('creel-list'), creelSummary: el('creel-summary'),
+  creelOpen: el('creel-open'), creelClose: el('creel-close'), creelCount: el('creel-count'),
   sealCoins: el('seal-shop-coins'),
   sealOpen: el('seal-shop-open'), sealClose: el('seal-shop-close'),
   rodShaft: el('rod-shaft'), rodTipDot: el('rod-tip'),
@@ -114,6 +118,8 @@ const state = {
   lost: [],            // lost items recovered, newest last
   sealCoins: 0,        // the seal economy; sold finds are the ONLY way in
   giftedRods: [],      // rods handed over on arrival, so they cannot be farmed
+  creel: [],           // landed fish, unsold. They are worth nothing until you act.
+  bond: {},            // sealId -> how many fish it has been fed
 };
 
 const rod = () => RODS[state.rodId];
@@ -168,6 +174,18 @@ function load() {
     if (!('sealCoins' in saved)) {
       state.lost = [];
     }
+    // The creel. Filtered against the fish table so a save naming a fish that
+    // no longer exists cannot put a ghost in the bag.
+    state.creel = Array.isArray(saved.creel)
+      ? saved.creel.filter((e) => e && FISH.some((f) => f.id === e.fishId))
+      : [];
+    // Bond, per seal. Unknown seal ids are dropped for the same reason.
+    state.bond = saved.bond && typeof saved.bond === 'object'
+      ? Object.fromEntries(
+        Object.entries(saved.bond)
+          .filter(([id, n]) => SEALS.some((s) => s.id === id) && Number.isFinite(n) && n > 0),
+      )
+      : {};
     // Rods already handed over. An old save has none, which correctly means the
     // player has not been gifted yet -- they will be, on their first arrival.
     state.giftedRods = Array.isArray(saved.giftedRods)
@@ -197,6 +215,8 @@ function save() {
       lost: state.lost,
       sealCoins: state.sealCoins,
       giftedRods: state.giftedRods,
+      creel: state.creel,
+      bond: state.bond,
     }));
   } catch {
     // Storage blocked: the session still plays, it just will not persist.
@@ -352,6 +372,14 @@ function paintBoosts() {
     { key: 'rod', name: 'Rod', value: Number(current?.luck) || 0 },
     { key: 'rank', name: `Rank ${rank}`, value: luckFromLevel(rank) },
     { key: 'seal', name: seal ? seal.name : 'Seal', value: Number(seal?.luck) || 0 },
+    // Fed fish. Its own row rather than folded into the seal's, so the player can
+    // see what feeding bought -- otherwise the seal row would silently grow and
+    // there would be no way to tell feeding from a better seal.
+    {
+      key: 'bond',
+      name: seal ? `${seal.name}'s bond` : 'Seal bond',
+      value: bondLuck(seal ? bondCount(state.bond, seal.id) : 0),
+    },
     // Weather's own contribution only. The seal is a row of its own, so folding
     // it in here too would show every boost twice.
     {
@@ -852,7 +880,12 @@ function landFish() {
   const mutation = rollMutation();
   const value = catchValue(fish, kg, mutation.multiplier);
   const wasBest = state.bestiary[fish.id] ?? 0;
-  state.coins += value;
+  // Into the creel, NOT the wallet. `state.coins += value` here meant every fish
+  // was sold the instant it came over the side, so there was no choice to make:
+  // a catch could be worth coins or worth bond, and it was always coins.
+  //
+  // Bestiary and rank still happen on landing -- the fish was caught either way.
+  state.creel = addToCreel(state.creel, fishEntrySpec(fish, kg, mutation));
   state.bestiary = recordCatch(state.bestiary, fish, kg);
 
   const meta = [
@@ -912,6 +945,8 @@ function landFish() {
 
   save();
   paintChrome();
+  paintCreelBadge(Array.isArray(state.creel) ? state.creel.length : 0);
+
 }
 
 function loseFish(reason) {
@@ -1445,6 +1480,110 @@ function closeShop() {
   ui.shopOpen.focus();
 }
 
+/**
+ * The creel count in the HUD. Split from paintCreel() because the badge is
+ * permanent and the rows are not: a catch lands in the creel without the panel
+ * ever being opened, and a fish nobody can see in the HUD is a fish that looks
+ * like it vanished.
+ */
+function paintCreelBadge(count) {
+  if (!ui.creelCount) return;
+  ui.creelCount.textContent = count ? `(${count})` : '';
+}
+
+/**
+ * The creel: every landed fish, with both choices on each row.
+ *
+ * A catch is worth nothing until you do something with it. Sell pays rod coins;
+ * feed raises that seal's bond, which adds luck. The two compete for the same
+ * fish, which is the only reason the bag is a decision rather than a queue.
+ */
+function paintCreel() {
+  if (!ui.creelList) return;
+  const bag = Array.isArray(state.creel) ? state.creel : [];
+  const seal = SEALS.find((s) => s.id === state.equippedSeal) ?? null;
+
+  paintCreelBadge(bag.length);
+
+  if (ui.creelSummary) {
+    ui.creelSummary.textContent = bag.length
+      ? `${bag.length} fish in the creel, worth ${creelWorth(bag).toLocaleString('en-US')} rod coins.`
+      : 'Nothing in the creel. Fish something and it waits here.';
+  }
+
+  ui.creelList.textContent = '';
+  if (bag.length === 0) return;
+
+  bag.forEach((entry, index) => {
+    const fish = fishById(entry.fishId);
+    if (!fish) return;
+    const worth = creelEntryValue(entry);
+
+    const row = document.createElement('div');
+    row.className = 'creel__row';
+
+    const what = document.createElement('div');
+    what.className = 'creel__what';
+    what.innerHTML = `
+      <span class="creel__portrait" style="--fish-hue:${fish.hue}"></span>
+      <span class="creel__titles">
+        <b class="creel__name">${entry.mutation ? entry.mutation + ' ' : ''}${fish.name}</b>
+        <span class="creel__meta">${fish.rarity} \u00b7 ${entry.weight} kg</span>
+      </span>`;
+
+    const actions = document.createElement('div');
+    actions.className = 'creel__actions';
+
+    const sell = document.createElement('button');
+    sell.className = 'btn btn--small creel__sell';
+    sell.textContent = `Sell ${worth.toLocaleString('en-US')}`;
+    sell.addEventListener('click', () => {
+      const result = sellFromCreel(state.creel, index);
+      if (!result.ok) return say(result.reason);
+      state.coins += result.coins;
+      state.creel = result.creel;
+      save(); paintChrome(); paintCreel();
+      say(`${fish.name} sold for ${result.coins.toLocaleString('en-US')} coins.`);
+    });
+
+    const feed = document.createElement('button');
+    feed.className = 'btn btn--small creel__feed';
+    // No seal, no feeding: say why, rather than a button that cannot work.
+    if (!seal) {
+      feed.textContent = 'Feed';
+      feed.disabled = true;
+      feed.title = 'Equip a seal first, then you can feed it.';
+    } else {
+      feed.textContent = `Feed ${seal.name}`;
+      feed.addEventListener('click', () => {
+        const result = feedToBond(state.creel, index, state.bond, seal.id);
+        if (!result.ok) return say(result.reason);
+        state.creel = result.creel;
+        state.bond = result.bond;
+        save(); paintChrome(); paintCreel();
+        sealChatter();
+        say(`${fish.name} fed to ${seal.name}. Bond ${bondCount(state.bond, seal.id)}.`);
+      });
+    }
+
+    actions.appendChild(sell);
+    actions.appendChild(feed);
+    row.appendChild(what);
+    row.appendChild(actions);
+    ui.creelList.appendChild(row);
+  });
+}
+
+function openCreel() {
+  if (!ui.creel) return;
+  paintCreel();
+  ui.creel.removeAttribute('hidden');
+}
+
+function closeCreel() {
+  ui.creel?.setAttribute('hidden', '');
+}
+
 function openBag() {
   ui.shopPanel.hidden = true;
   renderInventory();
@@ -1553,6 +1692,8 @@ function frame(now) {
     rod: rod(),
     level: levelFrom({ xp: state.xp }).level,
     seal: sealNow,
+    // Fed fish, so feeding shows up in the roll rather than only on a panel.
+    bond: sealNow ? bondCount(state.bond, sealNow.id) : 0,
   }) + (luckFromSky(skyNow.time, skyNow.weather) - 1);
   hookSet(rollFish(Math.random(), rod(), state.areaId, luck));
   }
@@ -1596,6 +1737,9 @@ paintChrome();
 // Fill the picker now as well as on open, so its rows exist and their locked
 // state is readable without having to open it.
 renderLakes();
+// The creel count is a HUD badge, so it has to be right on load -- a returning
+// player should see how many fish are waiting without opening the panel.
+paintCreel();
 // A seal already on the dock at boot has already met you, so it says hello. No
 // seal means no chatter, so a fresh save is still quiet.
 sealChatter();

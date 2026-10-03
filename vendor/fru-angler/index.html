@@ -1033,7 +1033,39 @@
   }
   .seal__equip.is-active{
     background: #2ea043; color: #fff; border-color: rgba(255,255,255,.6);
-  }</style>
+  }
+/* The creel: a landed fish, unsold, with both choices on one row. Sell pays rod
+   coins, feed raises the seal's bond, and they compete for the same fish. */
+.shop__title--creel { }
+.creel__row {
+  display: flex; align-items: center; justify-content: space-between;
+  gap: .7rem; padding: .5rem .7rem; margin-bottom: .4rem;
+  border-radius: var(--glass-radius, 14px);
+  background: var(--glass-top, rgba(255, 255, 255, .5));
+  border: 1px solid var(--glass-line, rgba(255, 255, 255, .7));
+}
+.creel__what { display: flex; align-items: center; gap: .6rem; min-width: 0; }
+.creel__titles { display: flex; flex-direction: column; min-width: 0; }
+.creel__name { font-weight: 600; }
+.creel__meta { font-size: .8em; opacity: .78; }
+/* The fish's own hue, as a tinted chip -- the same trick the catch card uses, so
+   a fish looks like itself wherever it is listed. */
+.creel__portrait {
+  width: 26px; height: 18px; flex: none; border-radius: 9px;
+  background: hsl(var(--fish-hue, 200) 70% 62%);
+  border: 1px solid hsl(var(--fish-hue, 200) 60% 40%);
+  box-shadow: inset 0 2px 3px rgba(255, 255, 255, .75);
+}
+.creel__actions { display: flex; gap: .4rem; flex: none; }
+/* Sell is the money option, feed is the luck one; they must read as different
+   kinds of button, not two identical pills. */
+.creel__sell { background: var(--glass-mid, rgba(255, 255, 255, .6)); }
+.creel__feed { background: hsl(150 60% 62% / .8); }
+.creel__feed:disabled { opacity: .5; cursor: not-allowed; }
+@media (prefers-reduced-motion: reduce) {
+  .creel__row { transition: none; }
+}
+</style>
 </head>
 <body>
   <div class="stage">
@@ -1328,6 +1360,22 @@
       </div>
 
       <!-- The fish index: every species grouped by rarity, with the real odds. -->
+      <!-- The creel. A landed fish waits here until it is sold or fed to a seal:
+           it is never worth money the instant it comes over the side. -->
+      <div class="shop" id="creel-panel" hidden>
+        <div class="shop__panel" role="dialog" aria-modal="true" aria-labelledby="creel-title">
+          <h2 class="shop__title" id="creel-title">Creel</h2>
+          <p class="shop__wallet" id="creel-summary"></p>
+          <p class="shop__wallet">
+            Sell a fish for rod coins, or feed it to your seal to raise its bond.
+          </p>
+          <div class="shop__list" id="creel-list"></div>
+          <p style="margin:.9rem 0 0">
+            <button class="btn" id="creel-close" type="button">Close</button>
+          </p>
+        </div>
+      </div>
+
       <!-- The lakes. Each opens by clearing the one before it. -->
       <div class="shop" id="lake-panel" hidden>
         <div class="shop__panel" role="dialog" aria-modal="true" aria-labelledby="lake-title">
@@ -1394,11 +1442,12 @@
     <div class="hud" style="justify-content:space-between">
       <button class="btn" id="shop-open" type="button">Rods &amp; shop</button>
       <button class="btn" id="seal-shop-open" type="button">Seals</button>
+      <button class="btn" id="creel-open" type="button">Creel <span id="creel-count"></span></button>
       <span id="bestiary" class="hud__dim"></span>
       <span class="hud__dim">Hold <kbd>Space</kbd> to cast</span>
     </div>
   </div>
 
-  <script type="module" src="./angler.js?v=2026-10-03-v"></script>
+  <script type="module" src="./angler.js?v=2026-10-03-w"></script>
 </body>
 </html>

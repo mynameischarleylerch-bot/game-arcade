@@ -7,7 +7,9 @@ import {
   startingInventory, ownsRod, addRodToInventory, equipRod, rodArt, RODS_BY_PRICE,
   fishSvg, FISH_SHAPES, hookLineFor, AREAS, areaUnlocked,
   rodWorksIn, rodCheckIn,
- areaProgress, levelFrom, xpForCatch, luckFromLevel, luckFor, LOST_ITEMS, rollLostItem, lostItemsFor, SEALS, buySeal, equipSeal, sealComment, sealDuplicates, visitArea, xpForLevel, sellLostItems, lostItemById, MUTATIONS, mutationMultiplierFor, mutationById, sealLines, WEATHER, TIMES, skyFor, luckFromSky,} from '../vendor/fru-angler/fishing.js';
+ areaProgress, levelFrom, xpForCatch, luckFromLevel, luckFor, LOST_ITEMS, rollLostItem, lostItemsFor, SEALS, buySeal, equipSeal, sealComment, sealDuplicates, visitArea, xpForLevel, sellLostItems, lostItemById, MUTATIONS, mutationMultiplierFor, mutationById, sealLines, WEATHER, TIMES, skyFor, luckFromSky,
+  addToCreel, fishEntrySpec, creelWorth, creelEntryValue,
+  sellFromCreel, feedToBond, bondLuck, bondCount,} from '../vendor/fru-angler/fishing.js';
 
 test('the starting wallet can afford exactly one upgrade from the cheapest rod', () => {
   const loadout = startingLoadout();
@@ -2037,4 +2039,106 @@ test('the rank gate still applies on top of the lake gate', () => {
     `${seal.name} must still refuse below rank ${seal.level}`);
   assert.equal(buySeal({ coins: 999999 }, seal.id, seal.level, open).ok, true,
     `${seal.name} must sell at rank ${seal.level} in its own lake`);
+});
+
+// ---------------------------------------------------------------- the creel
+
+test('a landed fish goes in the creel, not straight into the wallet', () => {
+  // state.coins += value at the moment of the catch. Every fish was sold the
+  // instant it hit the deck, so the player never chose whether a catch was worth
+  // money or worth feeding to their seal -- there was no bag to choose with.
+  const creel = addToCreel([], fishEntrySpec(FISH[0], 2.4));
+  assert.equal(creel.length, 1, 'the fish must land in the creel');
+  assert.equal(creelWorth(creel), catchValue(FISH[0], 2.4),
+    'and it must still be worth what it was');
+  // Adding never mutates the input: the save holds one array, not a history.
+  const before = [];
+  addToCreel(before, fishEntrySpec(FISH[0], 2.4));
+  assert.equal(before.length, 0, 'the creel must be immutable');
+});
+
+test('selling a fish takes exactly that fish out and pays rod coins', () => {
+  const a1 = fishEntrySpec(FISH[0], 1.5);
+  const b1 = fishEntrySpec(FISH[3], 2);
+  const creel = addToCreel(addToCreel([], a1), b1);
+  assert.equal(creel.length, 2);
+
+  const sold = sellFromCreel(creel, 0);
+  assert.equal(sold.ok, true);
+  assert.equal(sold.coins, catchValue(FISH[0], 1.5), 'the price must be that fish alone');
+  assert.equal(sold.creel.length, 1, 'and only that fish leaves');
+  assert.equal(sold.creel[0].fishId, b1.fishId, 'the wrong one went');
+
+  // An index that does not exist must refuse, not silently sell something.
+  assert.equal(sellFromCreel(creel, 7).ok, false);
+  assert.equal(sellFromCreel(creel, -1).ok, false);
+  assert.equal(sellFromCreel([], 0).ok, false);
+});
+
+test('feeding a fish spends it and raises the seal bond', () => {
+  // Feeding is the whole point of the bag: a catch can become luck instead of
+  // coins. Bond is what makes that a decision rather than a second shop.
+  const creel = addToCreel([], fishEntrySpec(FISH[0], 2));
+  const fed = feedToBond(creel, 0, { bubbles: 3 }, 'bubbles');
+  assert.equal(fed.ok, true);
+  assert.equal(fed.creel.length, 0, 'a fed fish is gone');
+  assert.equal(fed.bond.bubbles, 4, `bond must rise from 3 to 4, got ${fed.bond.bubbles}`);
+
+  // Feeding four DIFFERENT fish to one seal is one bond of four, not four bonds
+  // of one. The first version keyed the bond by fish id and got this backwards.
+  let c = creel;
+  let bond = {};
+  for (const other of [FISH[0], FISH[1], FISH[2], FISH[3]]) {
+    const step = feedToBond(addToCreel(c, fishEntrySpec(other, 1)), 0, bond, 'bubbles');
+    assert.equal(step.ok, true);
+    c = step.creel;
+    bond = step.bond;
+  }
+  assert.deepEqual(bond, { bubbles: 4 },
+    `four fish to one seal must be one bond of four, got ${JSON.stringify(bond)}`);
+  assert.equal(bondLuck(bondCount(bond, 'bubbles')), bondLuck(4));
+
+  // Feeding nothing must not work, and neither must feeding with no seal.
+  assert.equal(feedToBond([], 0, {}, 'bubbles').ok, false);
+  assert.equal(feedToBond(creel, 9, {}, 'bubbles').ok, false);
+  assert.equal(feedToBond(creel, 0, {}, null).ok, false, 'no seal, no feeding');
+  assert.equal(feedToBond(creel, 0, {}, 'not-a-seal').ok, false, 'and no ghosts');
+});
+
+
+test('bond luck is real, monotonic and bounded', () => {
+  // Unbounded luck would flatten the fish table: one very lucky rod would erase
+  // every rarity above Common and Mythical would stop meaning anything.
+  let last = -1;
+  for (let n = 0; n <= 60; n += 1) {
+    const l = bondLuck(n);
+    assert.ok(l >= last, `bond luck fell at ${n} fed fish: ${l} < ${last}`);
+    last = l;
+  }
+  assert.ok(bondLuck(0) === 0, 'no fish, no luck');
+  assert.ok(bondLuck(60) < 1.6,
+    `bond luck must stay modest, got ${bondLuck(60)} at 60 fed fish`);
+  // Diminishing: the tenth fish should be worth less than the first.
+  assert.ok(bondLuck(1) > bondLuck(10) - bondLuck(9),
+    'the curve must flatten');
+});
+
+test('bond actually reaches the cast, or feeding buys nothing', () => {
+  // A bond that no rule reads would be a number on a panel. luckFor() is what a
+  // cast rolls with, so that is where feeding has to land.
+  const rod = RODS.titan;
+  const bare = luckFor({ rod, level: 1, seal: null });
+  const fed = luckFor({ rod, level: 1, seal: null, bond: 16 });
+  assert.ok(fed > bare,
+    `16 fed fish must roll better than none: ${fed} vs ${bare}`);
+  assert.equal(fed - bare, bondLuck(16), 'and the bonus must be exactly the bond luck');
+
+  // And it stacks with a seal rather than replacing it.
+  const seal = SEALS[0];
+  const withSeal = luckFor({ rod, level: 1, seal });
+  const withSealFed = luckFor({ rod, level: 1, seal, bond: 16 });
+  // Rounded: these are sums of decimals, and 3.4000000000000004 - 2.6 is not
+  // exactly 0.8. An equality check on a float sum fails for arithmetic, not logic.
+  assert.ok(Math.abs((withSealFed - withSeal) - bondLuck(16)) < 1e-9,
+    `bond must add on top of the seal: ${withSealFed - withSeal} vs ${bondLuck(16)}`);
 });

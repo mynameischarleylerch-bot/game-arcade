@@ -970,14 +970,19 @@ export function fishSvg(fish) {
 
 /**
  * The luck a cast actually rolls with: the rod's own, plus the rank's, plus an
- * equipped seal's.
+ * equipped seal's, plus whatever that seal has been fed.
  *
  * Every part defaults to zero rather than throwing, because a save written
  * before any of this existed has none of it.
  */
-export function luckFor({ rod, level = 1, seal = null } = {}) {
+export function luckFor({ rod, level = 1, seal = null, bond = 0 } = {}) {
   const rodLuck = Number.isFinite(rod?.luck) ? rod.luck : 0;
-  return rodLuck + luckFromLevel(level) + (Number.isFinite(seal?.luck) ? seal.luck : 0);
+  // Bond is the fed-fish bonus, and it stacks: a fed seal is a better seal, not a
+  // replacement for one. Feeding has to land HERE or it buys nothing at all.
+  return rodLuck
+    + luckFromLevel(level)
+    + (Number.isFinite(seal?.luck) ? seal.luck : 0)
+    + bondLuck(bond);
 }
 
 /* --------------------------------------------------------- lost Frutiger items */
@@ -1097,6 +1102,114 @@ export function sellLostItems(held) {
 /** The junk a given lake can turn up, cheapest first. */
 export function lostItemsFor(areaId) {
   return LOST_ITEMS.filter((i) => i.water === areaId).sort((a, b) => a.value - b.value);
+}
+
+/* -------------------------------------------------------------- the creel */
+
+/**
+ * What a landed fish is, in the bag.
+ *
+ * A catch used to pay rod coins the instant it came over the side
+ * (`state.coins += value`), so the player never chose anything: every fish was
+ * sold the moment it existed, and a bag of them would have been a list of things
+ * that had already been spent. A catch now sits in the creel until you do one of
+ * two things with it -- sell it for rod coins, or feed it to your seal for bond.
+ *
+ * `mutation` is stored rather than baked into `value`, because the multiplier is
+ * how the fish was landed and the creel has to show and sell it as that fish.
+ */
+export function fishEntrySpec(fish, weight, mutation = null) {
+  return {
+    fishId: fish.id,
+    weight,
+    mutation: mutation?.name ?? null,
+    multiplier: mutation?.multiplier ?? 1,
+  };
+}
+
+/** Put a fish in the creel. Never mutates: the save holds one array, not a log. */
+export function addToCreel(creel, entry) {
+  const owned = Array.isArray(creel) ? creel.filter((e) => e && FISH.some((f) => f.id === e.fishId)) : [];
+  if (!entry || !FISH.some((f) => f.id === entry.fishId)) return [...owned];
+  return [...owned, { ...entry }];
+}
+
+/** What one creel entry is worth in rod coins, mutation included. */
+export function creelEntryValue(entry) {
+  const fish = FISH.find((f) => f.id === entry?.fishId);
+  if (!fish) return 0;
+  return catchValue(fish, entry.weight, entry.multiplier ?? 1);
+}
+
+/** The whole creel, in rod coins. Shown so selling is never a surprise. */
+export function creelWorth(creel) {
+  return (Array.isArray(creel) ? creel : []).reduce((sum, e) => sum + creelEntryValue(e), 0);
+}
+
+/** Sell one fish. Takes out exactly that one and pays exactly that one. */
+export function sellFromCreel(creel, index) {
+  const owned = Array.isArray(creel) ? creel : [];
+  if (!Number.isInteger(index) || index < 0 || index >= owned.length) {
+    return { ok: false, reason: 'No such fish in the creel.' };
+  }
+  return {
+    ok: true,
+    creel: owned.filter((_, i) => i !== index),
+    coins: creelEntryValue(owned[index]),
+  };
+}
+
+/**
+ * How much luck `fed` fish have earned a seal.
+ *
+ * Bounded on purpose. Luck multiplies the weight of everything rarer than Common,
+ * so an unbounded bond would flatten the fish table -- one very well fed seal
+ * would erase every tier above Common and Mythical would stop meaning anything.
+ * Square-rooted, so the first fish is worth a lot and the fiftieth is worth a little.
+ */
+export function bondLuck(fed) {
+  const n = Math.max(0, Number(fed) || 0);
+  return Math.round(Math.sqrt(n) * 0.2 * 1000) / 1000;
+}
+
+/**
+ * Feed one fish to a seal. The fish is spent; the seal's bond rises.
+ *
+ * Bond is per seal, not global: feeding Tangerine does nothing for Bubbles, so a
+ * player with two seals has to pick who they are raising.
+ */
+export function feedToBond(creel, index, bond = {}, sealId = null) {
+  const owned = Array.isArray(creel) ? creel : [];
+  if (!Number.isInteger(index) || index < 0 || index >= owned.length) {
+    return { ok: false, reason: 'No such fish in the creel.' };
+  }
+  // Bond is keyed by SEAL, not by fish. The first version keyed it by the fish
+  // being fed, so feeding four different Glidefins gave four bonds of one rather
+  // than one bond of four -- and `seal` was the running count of the wrong thing.
+  if (!sealId || !SEALS.some((s) => s.id === sealId)) {
+    return { ok: false, reason: 'Equip a seal before you feed it.' };
+  }
+  const current = bondCount(bond, sealId);
+  return {
+    ok: true,
+    creel: owned.filter((_, i) => i !== index),
+    bond: { ...bond, [sealId]: current + 1 },
+    fed: owned[index],
+  };
+}
+
+/** How many fish a seal has been fed, for a single seal. */
+export function bondCount(bond, sealId) {
+  return Math.max(0, Number(bond?.[sealId]) || 0);
+}
+
+/** Total rod coins in a creel, by seal, so the dock can show what each is worth. */
+export function creelWorthByFish(creel) {
+  const out = new Map();
+  for (const entry of Array.isArray(creel) ? creel : []) {
+    out.set(entry.fishId, (out.get(entry.fishId) ?? 0) + creelEntryValue(entry));
+  }
+  return out;
 }
 
 /* ---------------------------------------------------------------- pet seals */
