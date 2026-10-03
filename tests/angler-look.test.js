@@ -482,7 +482,9 @@ test('the fish drawing itself keeps its gloss layers', () => {
   assert.match(block, /<linearGradient/, 'the body needs a gradient');
   assert.match(block, /<radialGradient/, 'and a specular');
   assert.match(block, /class="belly"/, 'and a belly highlight');
-  assert.match(block, /class="sheen"/, 'and a gloss overlay');
+  assert.match(block, /class="specular"/, 'and a gloss overlay');
+  // The gloss layers sit on top of the fish, so it must not read as flat.
+  assert.match(block, /class="scales"/, 'and scale sheen arcs along the flank');
 });
 
 

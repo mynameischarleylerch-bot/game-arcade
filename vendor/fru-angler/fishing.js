@@ -328,44 +328,191 @@ export function fishSvg(fish) {
   const spec = FISH.find((f) => f && f.id === (fish && fish.id)) ?? FISH[0];
   const shape = FISH_SHAPES[spec.draw] ?? FISH_SHAPES[FISH[0].draw];
   const h = spec.hue ?? FISH[0].hue;
-
-  const light = `hsl(${h} 88% 74%)`;
-  const mid = `hsl(${h} 68% 52%)`;
-  const deep = `hsl(${h} 60% 26%)`;
   const { eye } = shape;
+
+  /* Every id here is namespaced per fish. They used to be a flat id="fb" and
+   * id="fs", so six fish in the index produced six copies of each and url(#fb)
+   * resolved to whichever gradient came first in the document. */
+  const id = `fa-${spec.id}`;
+  const body_ = `url(#${id}-body)`;
+  const fin_ = `url(#${id}-fin)`;
+  const tail_ = `url(#${id}-tail)`;
+  const sheen_ = `url(#${id}-sheen)`;
+  const bloom_ = `url(#${id}-bloom)`;
+
+  // A deeper, more saturated set than the old pastel trio: maximalist Aero wants
+  // a lit top surface falling into a deep, saturated belly.
+  const top = `hsl(${h} 92% 78%)`;
+  const high = `hsl(${h} 88% 62%)`;
+  const mid = `hsl(${h} 78% 46%)`;
+  const low = `hsl(${h} 72% 28%)`;
+  const deep = `hsl(${h} 68% 17%)`;
+
+  // Rarer fish get more of everything: more sparkle, a brighter bloom, a crown of
+  // light. This is the visual half of the rarity curve.
+  const tier = RARITY_ORDER.indexOf(spec.rarity);              // 0 Common .. 4 Mythical
+  const lavish = tier;                                          // 0 for Common, 4 for Mythical
+  const sparkleCount = 2 + tier * 2;                            // 2 for Common, 10 for Mythical
+  const glow = 1.4 + tier * 1.1;                                // rarer fish glow harder
+  const sparkleR = 4.6 - tier * 0.5;                            // and their glints tighten
+  const crown = tier >= 3;                                      // Legendary and up
+
+  // Sparkles sit on a spread-out ring so they read as scattered glints.
+  const sparkles = Array.from({ length: sparkleCount }, (_, n) => {
+    const angle = (n / sparkleCount) * Math.PI * 2 + 0.4;
+    const rx = 46 + ((n * 13) % 9);
+    const ry = 30 + ((n * 7) % 7);
+    const cx = (60 + Math.cos(angle) * rx * 0.62).toFixed(1);
+    const cy = (40 + Math.sin(angle) * ry * 0.5).toFixed(1);
+    const r = (sparkleR + ((n * 3) % 2) * 0.7).toFixed(2);
+    return `<path class="sparkle" d="M${cx} ${(+cy - +r).toFixed(1)}
+      L${(+cx + +r * 0.32).toFixed(1)} ${(+cy - +r * 0.32).toFixed(1)}
+      L${cx} ${(+cy + +r).toFixed(1)}
+      L${(+cx - +r * 0.32).toFixed(1)} ${(+cy - +r * 0.32).toFixed(1)} Z"
+      fill="#ffffff" opacity="${(0.5 + lavish * 0.09).toFixed(2)}"/>`;
+  }).join('\n    ');
+
+  const bubbles = Array.from({ length: 4 + lavish }, (_, n) => {
+    const cx = 14 + ((n * 23) % 96);
+    const cy = 12 + ((n * 31) % 58);
+    const r = (1.8 + ((n * 5) % 4) * 0.7).toFixed(1);
+    return `<circle class="bubbles" cx="${cx}" cy="${cy}" r="${r}"
+      fill="#ffffff" opacity="${(0.34 + ((n % 3) * 0.12)).toFixed(2)}"/>`;
+  }).join('\n    ');
 
   return `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 120 80" width="120" height="80"
      role="img" aria-label="A ${spec.name}">
   <defs>
-    <linearGradient id="fb" x1="0.15" y1="0" x2="0.75" y2="1">
-      <stop offset="0" stop-color="${light}"/>
-      <stop offset="0.5" stop-color="${mid}"/>
+    <!-- the body: a lit dorsal surface falling to a deep belly -->
+    <linearGradient id="${id}-body" x1="0.18" y1="0" x2="0.72" y2="1">
+      <stop offset="0" stop-color="${top}"/>
+      <stop offset="0.34" stop-color="${high}"/>
+      <stop offset="0.62" stop-color="${mid}"/>
       <stop offset="1" stop-color="${deep}"/>
     </linearGradient>
-    <radialGradient id="fs" cx="0.3" cy="0.24" r="0.62">
-      <stop offset="0" stop-color="#ffffff" stop-opacity=".62"/>
+    <linearGradient id="${id}-fin" x1="0.3" y1="0" x2="0.8" y2="1">
+      <stop offset="0" stop-color="${high}"/>
+      <stop offset="1" stop-color="${low}"/>
+    </linearGradient>
+    <linearGradient id="${id}-tail" x1="0" y1="0" x2="1" y2="0.6">
+      <stop offset="0" stop-color="${low}"/>
+      <stop offset="1" stop-color="${deep}"/>
+    </linearGradient>
+    <!-- the specular sweep across the back -->
+    <radialGradient id="${id}-sheen" cx="0.32" cy="0.22" r="0.6">
+      <stop offset="0" stop-color="#ffffff" stop-opacity=".85"/>
+      <stop offset="0.55" stop-color="#ffffff" stop-opacity=".18"/>
       <stop offset="1" stop-color="#ffffff" stop-opacity="0"/>
     </radialGradient>
+    <!-- light spilling out of the fish; stronger on rare ones -->
+    <radialGradient id="${id}-bloom" cx="0.5" cy="0.5" r="0.5">
+      <stop offset="0" stop-color="hsl(${h} 100% 82%)" stop-opacity="${(0.3 + lavish * 0.11).toFixed(2)}"/>
+      <stop offset="0.6" stop-color="hsl(${h} 100% 78%)" stop-opacity="${(0.12 + lavish * 0.06).toFixed(2)}"/>
+      <stop offset="1" stop-color="hsl(${h} 100% 74%)" stop-opacity="0"/>
+    </radialGradient>
+    <!-- the pond, deep at the bottom and bright at the surface -->
+    <linearGradient id="${id}-water" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#eaf9ff"/>
+      <stop offset="0.42" stop-color="#a9e2fb"/>
+      <stop offset="0.78" stop-color="#5cc0ee"/>
+      <stop offset="1" stop-color="#2b8fd0"/>
+    </linearGradient>
+    <!-- a glassy sheet of light lying on the water -->
+    <linearGradient id="${id}-glass" x1="0" y1="0" x2="1" y2="0">
+      <stop offset="0" stop-color="#ffffff" stop-opacity="0"/>
+      <stop offset="0.45" stop-color="#ffffff" stop-opacity=".55"/>
+      <stop offset="0.55" stop-color="#ffffff" stop-opacity=".55"/>
+      <stop offset="1" stop-color="#ffffff" stop-opacity="0"/>
+    </linearGradient>
+    <filter id="${id}-glow" x="-40%" y="-40%" width="180%" height="180%">
+      <feGaussianBlur stdDeviation="${glow.toFixed(1)}" result="b"/>
+      <feMerge>
+        <feMergeNode in="b"/>
+        <feMergeNode in="b"/>
+        <feMergeNode in="SourceGraphic"/>
+      </feMerge>
+    </filter>
   </defs>
 
-  <!-- the Aero pond behind the fish -->
-  <rect width="120" height="80" rx="14" fill="#e1f5fe"/>
-  <circle cx="98" cy="16" r="13" fill="#fff9c4" opacity=".7"/>
-  <ellipse cx="60" cy="72" rx="52" ry="7" fill="#b3e5fc" opacity=".8"/>
+  <!-- the pond, deepest layer -->
+  <rect width="120" height="80" rx="14" fill="url(#${id}-water)"/>
 
-  <!-- tail first, so the body overlaps it -->
-  <path class="tail" d="${shape.tail}" fill="${deep}" opacity=".85"/>
-  <path class="fin" d="${shape.fin}" fill="${mid}"/>
-  <path class="body" d="${shape.body}" fill="url(#fb)"/>
-  <g class="stripe" stroke="${deep}" stroke-width="1.6" opacity=".38"
-     stroke-linecap="round" fill="none">
-    <path d="${shape.stripe}"/>
+  <!-- the sun burning through the surface, behind everything -->
+  <circle class="bloom" cx="100" cy="14" r="26" fill="url(#${id}-bloom)"/>
+  <circle cx="100" cy="14" r="10" fill="#fffde7" opacity=".85"/>
+  <circle cx="100" cy="14" r="6" fill="#ffffff" opacity=".9"/>
+
+  <!-- caustics: the light ripples that say "underwater" -->
+  <g class="caustics" fill="none" stroke="#ffffff" stroke-linecap="round">
+    <path d="M8 22 C22 15 36 29 50 22 C64 15 78 29 92 22" stroke-width="2" opacity=".5"/>
+    <path d="M12 34 C26 27 40 41 54 34 C68 27 82 41 96 34" stroke-width="1.6" opacity=".38"/>
+    <path d="M6 46 C20 39 34 53 48 46 C62 39 76 53 90 46" stroke-width="1.4" opacity=".28"/>
   </g>
-  <path class="belly" d="M40 52 C56 60 76 58 88 48 C76 58 56 62 40 54 Z"
-        fill="#ffffff" opacity=".3"/>
+
+  <!-- bubbles rising through the water column -->
+  <g class="bubbles">
+    ${bubbles}
+  </g>
+
+  <!-- the fish's own halo, so it sits in the light rather than on top of it -->
+  <ellipse class="halo" cx="58" cy="40" rx="44" ry="26" fill="url(#${id}-bloom)"
+           opacity="${(0.3 + lavish * 0.12).toFixed(2)}" filter="url(#${id}-glow)"/>
+
+  <!-- tail and fins first, so the body overlaps them -->
+  <g filter="url(#${id}-glow)">
+    <path class="tail" d="${shape.tail}" fill="${tail_}"/>
+    <path class="fin" d="${shape.fin}" fill="${fin_}"/>
+    <path class="body" d="${shape.body}" fill="${body_}" stroke="${deep}"
+          stroke-width="1.1" stroke-opacity=".35"/>
+
+    <!-- the belly, lit from below by the water -->
+    <path class="belly" d="M40 52 C56 60 76 58 88 48 C76 58 56 62 40 54 Z"
+          fill="#ffffff" opacity=".34"/>
+
+    <!-- lateral stripes, in the deep tone so they read as depth not decoration -->
+    <g class="stripe" stroke="${deep}" stroke-width="1.8" opacity=".42"
+       stroke-linecap="round" fill="none">
+      <path d="${shape.stripe}"/>
+    </g>
+
+    <!-- the scale sheen: three offset arcs of light along the flank -->
+    <g class="scales" fill="none" stroke="#ffffff" stroke-linecap="round" opacity=".3">
+      <path d="M44 44 C52 40 60 40 68 43" stroke-width="1.2"/>
+      <path d="M48 48 C56 45 64 45 72 47" stroke-width="1"/>
+      <path d="M52 52 C60 50 68 50 76 51" stroke-width=".8"/>
+    </g>
+  </g>
+
+  <!-- the specular sweep: the gloss cap that makes it read as glassy -->
+  <ellipse class="specular" cx="50" cy="29" rx="19" ry="9" fill="${sheen_}"
+           transform="rotate(-16 50 29)"/>
+
+  <!-- the eye, with a highlight so it looks wet -->
   <circle class="eye" cx="${eye.cx}" cy="${eye.cy}" r="${eye.r}" fill="#ffffff"/>
-  <circle cx="${eye.cx + 0.8}" cy="${eye.cy}" r="${(eye.r * 0.5).toFixed(2)}" fill="#06334f"/>
-  <ellipse class="sheen" cx="52" cy="30" rx="16" ry="8" fill="url(#fs)"/>
+  <circle cx="${+eye.cx + 0.8}" cy="${eye.cy}" r="${(eye.r * 0.52).toFixed(2)}" fill="#06334f"/>
+  <circle cx="${+eye.cx + eye.r * 0.3}" cy="${+eye.cy - eye.r * 0.4}" r="${(eye.r * 0.2).toFixed(2)}"
+          fill="#ffffff"/>
+
+  <!-- sparkles, more the rarer the fish -->
+  <g class="sparkles">
+    ${sparkles}
+  </g>
+
+  <!-- a soft shadow on the water under the fish -->
+  <ellipse class="shadow" cx="56" cy="66" rx="34" ry="5"
+           fill="#0a4a70" opacity=".18"/>
+
+  <!-- the glassy surface sheet, catching the sun -->
+  <rect class="surface" width="120" height="26" fill="url(#${id}-glass)"
+        opacity=".38" rx="14"/>
+
+  <!-- a Legendary or Mythical gets a crown of light above it -->
+  ${crown ? `<g class="ring">
+    <ellipse cx="58" cy="17" rx="26" ry="7" fill="none" stroke="#ffffff"
+             stroke-width="1.6" opacity=".5"/>
+    <ellipse cx="58" cy="17" rx="17" ry="4.6" fill="none" stroke="#fff9c4"
+             stroke-width="1.2" opacity=".65"/>
+  </g>` : ''}
 </svg>`;
 }
 

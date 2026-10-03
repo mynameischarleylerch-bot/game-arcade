@@ -1,0 +1,2026 @@
+<!doctype html><meta charset="utf-8">
+<style>
+  body { margin:0; padding:24px; background:linear-gradient(180deg,#dff3ff,#9fd8f5 60%,#5cb8e8);
+         font:14px system-ui,sans-serif; }
+  .grid { display:grid; grid-template-columns:repeat(3,1fr); gap:20px; max-width:1000px; }
+  figure { margin:0; padding:14px; border-radius:18px; text-align:center;
+           background:linear-gradient(180deg,rgba(255,255,255,.94),rgba(255,255,255,.6));
+           border:1px solid rgba(255,255,255,.9);
+           box-shadow:0 12px 28px rgba(1,87,155,.28), inset 0 1px 0 #fff; }
+  .art svg { width:100%; height:auto; border-radius:14px; }
+  figcaption { margin-top:8px; font-size:13px; color:#013a63; }
+  /* also show them at index size, where they must still read */
+  .small { display:flex; gap:12px; justify-content:center; align-items:center; margin-top:6px; }
+  .small svg { width:40px; height:40px; border-radius:10px; }
+</style>
+<div class="grid"><figure>
+  <div class="art"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 120 80" width="120" height="80"
+     role="img" aria-label="A Glidefin">
+  <defs>
+    <!-- the body: a lit dorsal surface falling to a deep belly -->
+    <linearGradient id="fa-glidefin-body" x1="0.18" y1="0" x2="0.72" y2="1">
+      <stop offset="0" stop-color="hsl(195 92% 78%)"/>
+      <stop offset="0.34" stop-color="hsl(195 88% 62%)"/>
+      <stop offset="0.62" stop-color="hsl(195 78% 46%)"/>
+      <stop offset="1" stop-color="hsl(195 68% 17%)"/>
+    </linearGradient>
+    <linearGradient id="fa-glidefin-fin" x1="0.3" y1="0" x2="0.8" y2="1">
+      <stop offset="0" stop-color="hsl(195 88% 62%)"/>
+      <stop offset="1" stop-color="hsl(195 72% 28%)"/>
+    </linearGradient>
+    <linearGradient id="fa-glidefin-tail" x1="0" y1="0" x2="1" y2="0.6">
+      <stop offset="0" stop-color="hsl(195 72% 28%)"/>
+      <stop offset="1" stop-color="hsl(195 68% 17%)"/>
+    </linearGradient>
+    <!-- the specular sweep across the back -->
+    <radialGradient id="fa-glidefin-sheen" cx="0.32" cy="0.22" r="0.6">
+      <stop offset="0" stop-color="#ffffff" stop-opacity=".85"/>
+      <stop offset="0.55" stop-color="#ffffff" stop-opacity=".18"/>
+      <stop offset="1" stop-color="#ffffff" stop-opacity="0"/>
+    </radialGradient>
+    <!-- light spilling out of the fish; stronger on rare ones -->
+    <radialGradient id="fa-glidefin-bloom" cx="0.5" cy="0.5" r="0.5">
+      <stop offset="0" stop-color="hsl(195 100% 82%)" stop-opacity="0.30"/>
+      <stop offset="0.6" stop-color="hsl(195 100% 78%)" stop-opacity="0.12"/>
+      <stop offset="1" stop-color="hsl(195 100% 74%)" stop-opacity="0"/>
+    </radialGradient>
+    <!-- the pond, deep at the bottom and bright at the surface -->
+    <linearGradient id="fa-glidefin-water" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#eaf9ff"/>
+      <stop offset="0.42" stop-color="#a9e2fb"/>
+      <stop offset="0.78" stop-color="#5cc0ee"/>
+      <stop offset="1" stop-color="#2b8fd0"/>
+    </linearGradient>
+    <!-- a glassy sheet of light lying on the water -->
+    <linearGradient id="fa-glidefin-glass" x1="0" y1="0" x2="1" y2="0">
+      <stop offset="0" stop-color="#ffffff" stop-opacity="0"/>
+      <stop offset="0.45" stop-color="#ffffff" stop-opacity=".55"/>
+      <stop offset="0.55" stop-color="#ffffff" stop-opacity=".55"/>
+      <stop offset="1" stop-color="#ffffff" stop-opacity="0"/>
+    </linearGradient>
+    <filter id="fa-glidefin-glow" x="-40%" y="-40%" width="180%" height="180%">
+      <feGaussianBlur stdDeviation="1.4" result="b"/>
+      <feMerge>
+        <feMergeNode in="b"/>
+        <feMergeNode in="b"/>
+        <feMergeNode in="SourceGraphic"/>
+      </feMerge>
+    </filter>
+  </defs>
+
+  <!-- the pond, deepest layer -->
+  <rect width="120" height="80" rx="14" fill="url(#fa-glidefin-water)"/>
+
+  <!-- the sun burning through the surface, behind everything -->
+  <circle class="bloom" cx="100" cy="14" r="26" fill="url(#fa-glidefin-bloom)"/>
+  <circle cx="100" cy="14" r="10" fill="#fffde7" opacity=".85"/>
+  <circle cx="100" cy="14" r="6" fill="#ffffff" opacity=".9"/>
+
+  <!-- caustics: the light ripples that say "underwater" -->
+  <g class="caustics" fill="none" stroke="#ffffff" stroke-linecap="round">
+    <path d="M8 22 C22 15 36 29 50 22 C64 15 78 29 92 22" stroke-width="2" opacity=".5"/>
+    <path d="M12 34 C26 27 40 41 54 34 C68 27 82 41 96 34" stroke-width="1.6" opacity=".38"/>
+    <path d="M6 46 C20 39 34 53 48 46 C62 39 76 53 90 46" stroke-width="1.4" opacity=".28"/>
+  </g>
+
+  <!-- bubbles rising through the water column -->
+  <g class="bubbles">
+    <circle class="bubbles" cx="14" cy="12" r="1.8"
+      fill="#ffffff" opacity="0.34"/>
+    <circle class="bubbles" cx="37" cy="43" r="2.5"
+      fill="#ffffff" opacity="0.46"/>
+    <circle class="bubbles" cx="60" cy="16" r="3.2"
+      fill="#ffffff" opacity="0.58"/>
+    <circle class="bubbles" cx="83" cy="47" r="3.9"
+      fill="#ffffff" opacity="0.34"/>
+  </g>
+
+  <!-- the fish's own halo, so it sits in the light rather than on top of it -->
+  <ellipse class="halo" cx="58" cy="40" rx="44" ry="26" fill="url(#fa-glidefin-bloom)"
+           opacity="0.30" filter="url(#fa-glidefin-glow)"/>
+
+  <!-- tail and fins first, so the body overlaps them -->
+  <g filter="url(#fa-glidefin-glow)">
+    <path class="tail" d="M34 40 L12 24 L18 40 L12 58 Z" fill="url(#fa-glidefin-tail)"/>
+    <path class="fin" d="M56 34 C60 26 66 24 70 28 C66 32 62 36 58 42 Z" fill="url(#fa-glidefin-fin)"/>
+    <path class="body" d="M34 40 C44 26 66 24 80 34 C88 40 88 42 80 48 C66 58 44 56 34 42 Z" fill="url(#fa-glidefin-body)" stroke="hsl(195 68% 17%)"
+          stroke-width="1.1" stroke-opacity=".35"/>
+
+    <!-- the belly, lit from below by the water -->
+    <path class="belly" d="M40 52 C56 60 76 58 88 48 C76 58 56 62 40 54 Z"
+          fill="#ffffff" opacity=".34"/>
+
+    <!-- lateral stripes, in the deep tone so they read as depth not decoration -->
+    <g class="stripe" stroke="hsl(195 68% 17%)" stroke-width="1.8" opacity=".42"
+       stroke-linecap="round" fill="none">
+      <path d="M48 33 L52 49 M58 32 L62 50 M68 34 L72 46"/>
+    </g>
+
+    <!-- the scale sheen: three offset arcs of light along the flank -->
+    <g class="scales" fill="none" stroke="#ffffff" stroke-linecap="round" opacity=".3">
+      <path d="M44 44 C52 40 60 40 68 43" stroke-width="1.2"/>
+      <path d="M48 48 C56 45 64 45 72 47" stroke-width="1"/>
+      <path d="M52 52 C60 50 68 50 76 51" stroke-width=".8"/>
+    </g>
+  </g>
+
+  <!-- the specular sweep: the gloss cap that makes it read as glassy -->
+  <ellipse class="specular" cx="50" cy="29" rx="19" ry="9" fill="url(#fa-glidefin-sheen)"
+           transform="rotate(-16 50 29)"/>
+
+  <!-- the eye, with a highlight so it looks wet -->
+  <circle class="eye" cx="72" cy="38" r="3.4" fill="#ffffff"/>
+  <circle cx="72.8" cy="38" r="1.77" fill="#06334f"/>
+  <circle cx="73.02" cy="36.64" r="0.68"
+          fill="#ffffff"/>
+
+  <!-- sparkles, more the rarer the fish -->
+  <g class="sparkles">
+    <path class="sparkle" d="M86.3 41.2
+      L87.8 44.3
+      L86.3 50.4
+      L84.8 44.3 Z"
+      fill="#ffffff" opacity="0.50"/>
+    <path class="sparkle" d="M31.4 28.9
+      L33.1 32.5
+      L31.4 39.5
+      L29.7 32.5 Z"
+      fill="#ffffff" opacity="0.50"/>
+  </g>
+
+  <!-- a soft shadow on the water under the fish -->
+  <ellipse class="shadow" cx="56" cy="66" rx="34" ry="5"
+           fill="#0a4a70" opacity=".18"/>
+
+  <!-- the glassy surface sheet, catching the sun -->
+  <rect class="surface" width="120" height="26" fill="url(#fa-glidefin-glass)"
+        opacity=".38" rx="14"/>
+
+  <!-- a Legendary or Mythical gets a crown of light above it -->
+  
+</svg></div>
+  <figcaption><b style="color:#7ea8bd">Glidefin</b><br>Common</figcaption>
+</figure><figure>
+  <div class="art"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 120 80" width="120" height="80"
+     role="img" aria-label="A Aero Minnow">
+  <defs>
+    <!-- the body: a lit dorsal surface falling to a deep belly -->
+    <linearGradient id="fa-aero-minnow-body" x1="0.18" y1="0" x2="0.72" y2="1">
+      <stop offset="0" stop-color="hsl(210 92% 78%)"/>
+      <stop offset="0.34" stop-color="hsl(210 88% 62%)"/>
+      <stop offset="0.62" stop-color="hsl(210 78% 46%)"/>
+      <stop offset="1" stop-color="hsl(210 68% 17%)"/>
+    </linearGradient>
+    <linearGradient id="fa-aero-minnow-fin" x1="0.3" y1="0" x2="0.8" y2="1">
+      <stop offset="0" stop-color="hsl(210 88% 62%)"/>
+      <stop offset="1" stop-color="hsl(210 72% 28%)"/>
+    </linearGradient>
+    <linearGradient id="fa-aero-minnow-tail" x1="0" y1="0" x2="1" y2="0.6">
+      <stop offset="0" stop-color="hsl(210 72% 28%)"/>
+      <stop offset="1" stop-color="hsl(210 68% 17%)"/>
+    </linearGradient>
+    <!-- the specular sweep across the back -->
+    <radialGradient id="fa-aero-minnow-sheen" cx="0.32" cy="0.22" r="0.6">
+      <stop offset="0" stop-color="#ffffff" stop-opacity=".85"/>
+      <stop offset="0.55" stop-color="#ffffff" stop-opacity=".18"/>
+      <stop offset="1" stop-color="#ffffff" stop-opacity="0"/>
+    </radialGradient>
+    <!-- light spilling out of the fish; stronger on rare ones -->
+    <radialGradient id="fa-aero-minnow-bloom" cx="0.5" cy="0.5" r="0.5">
+      <stop offset="0" stop-color="hsl(210 100% 82%)" stop-opacity="0.30"/>
+      <stop offset="0.6" stop-color="hsl(210 100% 78%)" stop-opacity="0.12"/>
+      <stop offset="1" stop-color="hsl(210 100% 74%)" stop-opacity="0"/>
+    </radialGradient>
+    <!-- the pond, deep at the bottom and bright at the surface -->
+    <linearGradient id="fa-aero-minnow-water" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#eaf9ff"/>
+      <stop offset="0.42" stop-color="#a9e2fb"/>
+      <stop offset="0.78" stop-color="#5cc0ee"/>
+      <stop offset="1" stop-color="#2b8fd0"/>
+    </linearGradient>
+    <!-- a glassy sheet of light lying on the water -->
+    <linearGradient id="fa-aero-minnow-glass" x1="0" y1="0" x2="1" y2="0">
+      <stop offset="0" stop-color="#ffffff" stop-opacity="0"/>
+      <stop offset="0.45" stop-color="#ffffff" stop-opacity=".55"/>
+      <stop offset="0.55" stop-color="#ffffff" stop-opacity=".55"/>
+      <stop offset="1" stop-color="#ffffff" stop-opacity="0"/>
+    </linearGradient>
+    <filter id="fa-aero-minnow-glow" x="-40%" y="-40%" width="180%" height="180%">
+      <feGaussianBlur stdDeviation="1.4" result="b"/>
+      <feMerge>
+        <feMergeNode in="b"/>
+        <feMergeNode in="b"/>
+        <feMergeNode in="SourceGraphic"/>
+      </feMerge>
+    </filter>
+  </defs>
+
+  <!-- the pond, deepest layer -->
+  <rect width="120" height="80" rx="14" fill="url(#fa-aero-minnow-water)"/>
+
+  <!-- the sun burning through the surface, behind everything -->
+  <circle class="bloom" cx="100" cy="14" r="26" fill="url(#fa-aero-minnow-bloom)"/>
+  <circle cx="100" cy="14" r="10" fill="#fffde7" opacity=".85"/>
+  <circle cx="100" cy="14" r="6" fill="#ffffff" opacity=".9"/>
+
+  <!-- caustics: the light ripples that say "underwater" -->
+  <g class="caustics" fill="none" stroke="#ffffff" stroke-linecap="round">
+    <path d="M8 22 C22 15 36 29 50 22 C64 15 78 29 92 22" stroke-width="2" opacity=".5"/>
+    <path d="M12 34 C26 27 40 41 54 34 C68 27 82 41 96 34" stroke-width="1.6" opacity=".38"/>
+    <path d="M6 46 C20 39 34 53 48 46 C62 39 76 53 90 46" stroke-width="1.4" opacity=".28"/>
+  </g>
+
+  <!-- bubbles rising through the water column -->
+  <g class="bubbles">
+    <circle class="bubbles" cx="14" cy="12" r="1.8"
+      fill="#ffffff" opacity="0.34"/>
+    <circle class="bubbles" cx="37" cy="43" r="2.5"
+      fill="#ffffff" opacity="0.46"/>
+    <circle class="bubbles" cx="60" cy="16" r="3.2"
+      fill="#ffffff" opacity="0.58"/>
+    <circle class="bubbles" cx="83" cy="47" r="3.9"
+      fill="#ffffff" opacity="0.34"/>
+  </g>
+
+  <!-- the fish's own halo, so it sits in the light rather than on top of it -->
+  <ellipse class="halo" cx="58" cy="40" rx="44" ry="26" fill="url(#fa-aero-minnow-bloom)"
+           opacity="0.30" filter="url(#fa-aero-minnow-glow)"/>
+
+  <!-- tail and fins first, so the body overlaps them -->
+  <g filter="url(#fa-aero-minnow-glow)">
+    <path class="tail" d="M34 40 L12 24 L18 40 L12 58 Z" fill="url(#fa-aero-minnow-tail)"/>
+    <path class="fin" d="M56 34 C60 26 66 24 70 28 C66 32 62 36 58 42 Z" fill="url(#fa-aero-minnow-fin)"/>
+    <path class="body" d="M34 40 C44 26 66 24 80 34 C88 40 88 42 80 48 C66 58 44 56 34 42 Z" fill="url(#fa-aero-minnow-body)" stroke="hsl(210 68% 17%)"
+          stroke-width="1.1" stroke-opacity=".35"/>
+
+    <!-- the belly, lit from below by the water -->
+    <path class="belly" d="M40 52 C56 60 76 58 88 48 C76 58 56 62 40 54 Z"
+          fill="#ffffff" opacity=".34"/>
+
+    <!-- lateral stripes, in the deep tone so they read as depth not decoration -->
+    <g class="stripe" stroke="hsl(210 68% 17%)" stroke-width="1.8" opacity=".42"
+       stroke-linecap="round" fill="none">
+      <path d="M48 33 L52 49 M58 32 L62 50 M68 34 L72 46"/>
+    </g>
+
+    <!-- the scale sheen: three offset arcs of light along the flank -->
+    <g class="scales" fill="none" stroke="#ffffff" stroke-linecap="round" opacity=".3">
+      <path d="M44 44 C52 40 60 40 68 43" stroke-width="1.2"/>
+      <path d="M48 48 C56 45 64 45 72 47" stroke-width="1"/>
+      <path d="M52 52 C60 50 68 50 76 51" stroke-width=".8"/>
+    </g>
+  </g>
+
+  <!-- the specular sweep: the gloss cap that makes it read as glassy -->
+  <ellipse class="specular" cx="50" cy="29" rx="19" ry="9" fill="url(#fa-aero-minnow-sheen)"
+           transform="rotate(-16 50 29)"/>
+
+  <!-- the eye, with a highlight so it looks wet -->
+  <circle class="eye" cx="72" cy="38" r="3.4" fill="#ffffff"/>
+  <circle cx="72.8" cy="38" r="1.77" fill="#06334f"/>
+  <circle cx="73.02" cy="36.64" r="0.68"
+          fill="#ffffff"/>
+
+  <!-- sparkles, more the rarer the fish -->
+  <g class="sparkles">
+    <path class="sparkle" d="M86.3 41.2
+      L87.8 44.3
+      L86.3 50.4
+      L84.8 44.3 Z"
+      fill="#ffffff" opacity="0.50"/>
+    <path class="sparkle" d="M31.4 28.9
+      L33.1 32.5
+      L31.4 39.5
+      L29.7 32.5 Z"
+      fill="#ffffff" opacity="0.50"/>
+  </g>
+
+  <!-- a soft shadow on the water under the fish -->
+  <ellipse class="shadow" cx="56" cy="66" rx="34" ry="5"
+           fill="#0a4a70" opacity=".18"/>
+
+  <!-- the glassy surface sheet, catching the sun -->
+  <rect class="surface" width="120" height="26" fill="url(#fa-aero-minnow-glass)"
+        opacity=".38" rx="14"/>
+
+  <!-- a Legendary or Mythical gets a crown of light above it -->
+  
+</svg></div>
+  <figcaption><b style="color:#7ea8bd">Aero Minnow</b><br>Common</figcaption>
+</figure><figure>
+  <div class="art"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 120 80" width="120" height="80"
+     role="img" aria-label="A Metro Trout">
+  <defs>
+    <!-- the body: a lit dorsal surface falling to a deep belly -->
+    <linearGradient id="fa-metro-trout-body" x1="0.18" y1="0" x2="0.72" y2="1">
+      <stop offset="0" stop-color="hsl(150 92% 78%)"/>
+      <stop offset="0.34" stop-color="hsl(150 88% 62%)"/>
+      <stop offset="0.62" stop-color="hsl(150 78% 46%)"/>
+      <stop offset="1" stop-color="hsl(150 68% 17%)"/>
+    </linearGradient>
+    <linearGradient id="fa-metro-trout-fin" x1="0.3" y1="0" x2="0.8" y2="1">
+      <stop offset="0" stop-color="hsl(150 88% 62%)"/>
+      <stop offset="1" stop-color="hsl(150 72% 28%)"/>
+    </linearGradient>
+    <linearGradient id="fa-metro-trout-tail" x1="0" y1="0" x2="1" y2="0.6">
+      <stop offset="0" stop-color="hsl(150 72% 28%)"/>
+      <stop offset="1" stop-color="hsl(150 68% 17%)"/>
+    </linearGradient>
+    <!-- the specular sweep across the back -->
+    <radialGradient id="fa-metro-trout-sheen" cx="0.32" cy="0.22" r="0.6">
+      <stop offset="0" stop-color="#ffffff" stop-opacity=".85"/>
+      <stop offset="0.55" stop-color="#ffffff" stop-opacity=".18"/>
+      <stop offset="1" stop-color="#ffffff" stop-opacity="0"/>
+    </radialGradient>
+    <!-- light spilling out of the fish; stronger on rare ones -->
+    <radialGradient id="fa-metro-trout-bloom" cx="0.5" cy="0.5" r="0.5">
+      <stop offset="0" stop-color="hsl(150 100% 82%)" stop-opacity="0.41"/>
+      <stop offset="0.6" stop-color="hsl(150 100% 78%)" stop-opacity="0.18"/>
+      <stop offset="1" stop-color="hsl(150 100% 74%)" stop-opacity="0"/>
+    </radialGradient>
+    <!-- the pond, deep at the bottom and bright at the surface -->
+    <linearGradient id="fa-metro-trout-water" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#eaf9ff"/>
+      <stop offset="0.42" stop-color="#a9e2fb"/>
+      <stop offset="0.78" stop-color="#5cc0ee"/>
+      <stop offset="1" stop-color="#2b8fd0"/>
+    </linearGradient>
+    <!-- a glassy sheet of light lying on the water -->
+    <linearGradient id="fa-metro-trout-glass" x1="0" y1="0" x2="1" y2="0">
+      <stop offset="0" stop-color="#ffffff" stop-opacity="0"/>
+      <stop offset="0.45" stop-color="#ffffff" stop-opacity=".55"/>
+      <stop offset="0.55" stop-color="#ffffff" stop-opacity=".55"/>
+      <stop offset="1" stop-color="#ffffff" stop-opacity="0"/>
+    </linearGradient>
+    <filter id="fa-metro-trout-glow" x="-40%" y="-40%" width="180%" height="180%">
+      <feGaussianBlur stdDeviation="2.5" result="b"/>
+      <feMerge>
+        <feMergeNode in="b"/>
+        <feMergeNode in="b"/>
+        <feMergeNode in="SourceGraphic"/>
+      </feMerge>
+    </filter>
+  </defs>
+
+  <!-- the pond, deepest layer -->
+  <rect width="120" height="80" rx="14" fill="url(#fa-metro-trout-water)"/>
+
+  <!-- the sun burning through the surface, behind everything -->
+  <circle class="bloom" cx="100" cy="14" r="26" fill="url(#fa-metro-trout-bloom)"/>
+  <circle cx="100" cy="14" r="10" fill="#fffde7" opacity=".85"/>
+  <circle cx="100" cy="14" r="6" fill="#ffffff" opacity=".9"/>
+
+  <!-- caustics: the light ripples that say "underwater" -->
+  <g class="caustics" fill="none" stroke="#ffffff" stroke-linecap="round">
+    <path d="M8 22 C22 15 36 29 50 22 C64 15 78 29 92 22" stroke-width="2" opacity=".5"/>
+    <path d="M12 34 C26 27 40 41 54 34 C68 27 82 41 96 34" stroke-width="1.6" opacity=".38"/>
+    <path d="M6 46 C20 39 34 53 48 46 C62 39 76 53 90 46" stroke-width="1.4" opacity=".28"/>
+  </g>
+
+  <!-- bubbles rising through the water column -->
+  <g class="bubbles">
+    <circle class="bubbles" cx="14" cy="12" r="1.8"
+      fill="#ffffff" opacity="0.34"/>
+    <circle class="bubbles" cx="37" cy="43" r="2.5"
+      fill="#ffffff" opacity="0.46"/>
+    <circle class="bubbles" cx="60" cy="16" r="3.2"
+      fill="#ffffff" opacity="0.58"/>
+    <circle class="bubbles" cx="83" cy="47" r="3.9"
+      fill="#ffffff" opacity="0.34"/>
+    <circle class="bubbles" cx="106" cy="20" r="1.8"
+      fill="#ffffff" opacity="0.46"/>
+  </g>
+
+  <!-- the fish's own halo, so it sits in the light rather than on top of it -->
+  <ellipse class="halo" cx="58" cy="40" rx="44" ry="26" fill="url(#fa-metro-trout-bloom)"
+           opacity="0.42" filter="url(#fa-metro-trout-glow)"/>
+
+  <!-- tail and fins first, so the body overlaps them -->
+  <g filter="url(#fa-metro-trout-glow)">
+    <path class="tail" d="M32 40 L8 20 L16 40 L8 62 Z" fill="url(#fa-metro-trout-tail)"/>
+    <path class="fin" d="M56 26 C62 14 72 12 78 18 C72 22 66 28 60 38 Z" fill="url(#fa-metro-trout-fin)"/>
+    <path class="body" d="M32 40 C42 20 70 18 84 32 C92 40 92 44 84 50 C70 62 42 60 32 40 Z" fill="url(#fa-metro-trout-body)" stroke="hsl(150 68% 17%)"
+          stroke-width="1.1" stroke-opacity=".35"/>
+
+    <!-- the belly, lit from below by the water -->
+    <path class="belly" d="M40 52 C56 60 76 58 88 48 C76 58 56 62 40 54 Z"
+          fill="#ffffff" opacity=".34"/>
+
+    <!-- lateral stripes, in the deep tone so they read as depth not decoration -->
+    <g class="stripe" stroke="hsl(150 68% 17%)" stroke-width="1.8" opacity=".42"
+       stroke-linecap="round" fill="none">
+      <path d="M46 28 L50 56 M58 25 L62 59 M70 28 L74 54"/>
+    </g>
+
+    <!-- the scale sheen: three offset arcs of light along the flank -->
+    <g class="scales" fill="none" stroke="#ffffff" stroke-linecap="round" opacity=".3">
+      <path d="M44 44 C52 40 60 40 68 43" stroke-width="1.2"/>
+      <path d="M48 48 C56 45 64 45 72 47" stroke-width="1"/>
+      <path d="M52 52 C60 50 68 50 76 51" stroke-width=".8"/>
+    </g>
+  </g>
+
+  <!-- the specular sweep: the gloss cap that makes it read as glassy -->
+  <ellipse class="specular" cx="50" cy="29" rx="19" ry="9" fill="url(#fa-metro-trout-sheen)"
+           transform="rotate(-16 50 29)"/>
+
+  <!-- the eye, with a highlight so it looks wet -->
+  <circle class="eye" cx="76" cy="36" r="4" fill="#ffffff"/>
+  <circle cx="76.8" cy="36" r="2.08" fill="#06334f"/>
+  <circle cx="77.2" cy="34.4" r="0.80"
+          fill="#ffffff"/>
+
+  <!-- sparkles, more the rarer the fish -->
+  <g class="sparkles">
+    <path class="sparkle" d="M86.3 41.7
+      L87.6 44.5
+      L86.3 49.9
+      L85.0 44.5 Z"
+      fill="#ffffff" opacity="0.59"/>
+    <path class="sparkle" d="M47.9 49.0
+      L49.4 52.3
+      L47.9 58.6
+      L46.4 52.3 Z"
+      fill="#ffffff" opacity="0.59"/>
+    <path class="sparkle" d="M29.2 30.1
+      L30.5 32.9
+      L29.2 38.3
+      L27.9 32.9 Z"
+      fill="#ffffff" opacity="0.59"/>
+    <path class="sparkle" d="M71.8 21.4
+      L73.3 24.7
+      L71.8 31.0
+      L70.3 24.7 Z"
+      fill="#ffffff" opacity="0.59"/>
+  </g>
+
+  <!-- a soft shadow on the water under the fish -->
+  <ellipse class="shadow" cx="56" cy="66" rx="34" ry="5"
+           fill="#0a4a70" opacity=".18"/>
+
+  <!-- the glassy surface sheet, catching the sun -->
+  <rect class="surface" width="120" height="26" fill="url(#fa-metro-trout-glass)"
+        opacity=".38" rx="14"/>
+
+  <!-- a Legendary or Mythical gets a crown of light above it -->
+  
+</svg></div>
+  <figcaption><b style="color:#7aa84a">Metro Trout</b><br>Uncommon</figcaption>
+</figure><figure>
+  <div class="art"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 120 80" width="120" height="80"
+     role="img" aria-label="A DORFic Dab">
+  <defs>
+    <!-- the body: a lit dorsal surface falling to a deep belly -->
+    <linearGradient id="fa-doric-dab-body" x1="0.18" y1="0" x2="0.72" y2="1">
+      <stop offset="0" stop-color="hsl(45 92% 78%)"/>
+      <stop offset="0.34" stop-color="hsl(45 88% 62%)"/>
+      <stop offset="0.62" stop-color="hsl(45 78% 46%)"/>
+      <stop offset="1" stop-color="hsl(45 68% 17%)"/>
+    </linearGradient>
+    <linearGradient id="fa-doric-dab-fin" x1="0.3" y1="0" x2="0.8" y2="1">
+      <stop offset="0" stop-color="hsl(45 88% 62%)"/>
+      <stop offset="1" stop-color="hsl(45 72% 28%)"/>
+    </linearGradient>
+    <linearGradient id="fa-doric-dab-tail" x1="0" y1="0" x2="1" y2="0.6">
+      <stop offset="0" stop-color="hsl(45 72% 28%)"/>
+      <stop offset="1" stop-color="hsl(45 68% 17%)"/>
+    </linearGradient>
+    <!-- the specular sweep across the back -->
+    <radialGradient id="fa-doric-dab-sheen" cx="0.32" cy="0.22" r="0.6">
+      <stop offset="0" stop-color="#ffffff" stop-opacity=".85"/>
+      <stop offset="0.55" stop-color="#ffffff" stop-opacity=".18"/>
+      <stop offset="1" stop-color="#ffffff" stop-opacity="0"/>
+    </radialGradient>
+    <!-- light spilling out of the fish; stronger on rare ones -->
+    <radialGradient id="fa-doric-dab-bloom" cx="0.5" cy="0.5" r="0.5">
+      <stop offset="0" stop-color="hsl(45 100% 82%)" stop-opacity="0.52"/>
+      <stop offset="0.6" stop-color="hsl(45 100% 78%)" stop-opacity="0.24"/>
+      <stop offset="1" stop-color="hsl(45 100% 74%)" stop-opacity="0"/>
+    </radialGradient>
+    <!-- the pond, deep at the bottom and bright at the surface -->
+    <linearGradient id="fa-doric-dab-water" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#eaf9ff"/>
+      <stop offset="0.42" stop-color="#a9e2fb"/>
+      <stop offset="0.78" stop-color="#5cc0ee"/>
+      <stop offset="1" stop-color="#2b8fd0"/>
+    </linearGradient>
+    <!-- a glassy sheet of light lying on the water -->
+    <linearGradient id="fa-doric-dab-glass" x1="0" y1="0" x2="1" y2="0">
+      <stop offset="0" stop-color="#ffffff" stop-opacity="0"/>
+      <stop offset="0.45" stop-color="#ffffff" stop-opacity=".55"/>
+      <stop offset="0.55" stop-color="#ffffff" stop-opacity=".55"/>
+      <stop offset="1" stop-color="#ffffff" stop-opacity="0"/>
+    </linearGradient>
+    <filter id="fa-doric-dab-glow" x="-40%" y="-40%" width="180%" height="180%">
+      <feGaussianBlur stdDeviation="3.6" result="b"/>
+      <feMerge>
+        <feMergeNode in="b"/>
+        <feMergeNode in="b"/>
+        <feMergeNode in="SourceGraphic"/>
+      </feMerge>
+    </filter>
+  </defs>
+
+  <!-- the pond, deepest layer -->
+  <rect width="120" height="80" rx="14" fill="url(#fa-doric-dab-water)"/>
+
+  <!-- the sun burning through the surface, behind everything -->
+  <circle class="bloom" cx="100" cy="14" r="26" fill="url(#fa-doric-dab-bloom)"/>
+  <circle cx="100" cy="14" r="10" fill="#fffde7" opacity=".85"/>
+  <circle cx="100" cy="14" r="6" fill="#ffffff" opacity=".9"/>
+
+  <!-- caustics: the light ripples that say "underwater" -->
+  <g class="caustics" fill="none" stroke="#ffffff" stroke-linecap="round">
+    <path d="M8 22 C22 15 36 29 50 22 C64 15 78 29 92 22" stroke-width="2" opacity=".5"/>
+    <path d="M12 34 C26 27 40 41 54 34 C68 27 82 41 96 34" stroke-width="1.6" opacity=".38"/>
+    <path d="M6 46 C20 39 34 53 48 46 C62 39 76 53 90 46" stroke-width="1.4" opacity=".28"/>
+  </g>
+
+  <!-- bubbles rising through the water column -->
+  <g class="bubbles">
+    <circle class="bubbles" cx="14" cy="12" r="1.8"
+      fill="#ffffff" opacity="0.34"/>
+    <circle class="bubbles" cx="37" cy="43" r="2.5"
+      fill="#ffffff" opacity="0.46"/>
+    <circle class="bubbles" cx="60" cy="16" r="3.2"
+      fill="#ffffff" opacity="0.58"/>
+    <circle class="bubbles" cx="83" cy="47" r="3.9"
+      fill="#ffffff" opacity="0.34"/>
+    <circle class="bubbles" cx="106" cy="20" r="1.8"
+      fill="#ffffff" opacity="0.46"/>
+    <circle class="bubbles" cx="33" cy="51" r="2.5"
+      fill="#ffffff" opacity="0.58"/>
+  </g>
+
+  <!-- the fish's own halo, so it sits in the light rather than on top of it -->
+  <ellipse class="halo" cx="58" cy="40" rx="44" ry="26" fill="url(#fa-doric-dab-bloom)"
+           opacity="0.54" filter="url(#fa-doric-dab-glow)"/>
+
+  <!-- tail and fins first, so the body overlaps them -->
+  <g filter="url(#fa-doric-dab-glow)">
+    <path class="tail" d="M30 42 L8 32 L14 42 L8 54 Z" fill="url(#fa-doric-dab-tail)"/>
+    <path class="fin" d="M58 32 C64 22 74 20 80 26 C74 30 68 34 62 40 Z" fill="url(#fa-doric-dab-fin)"/>
+    <path class="body" d="M30 42 C40 28 72 26 86 36 C94 42 94 46 86 52 C72 60 40 58 30 42 Z" fill="url(#fa-doric-dab-body)" stroke="hsl(45 68% 17%)"
+          stroke-width="1.1" stroke-opacity=".35"/>
+
+    <!-- the belly, lit from below by the water -->
+    <path class="belly" d="M40 52 C56 60 76 58 88 48 C76 58 56 62 40 54 Z"
+          fill="#ffffff" opacity=".34"/>
+
+    <!-- lateral stripes, in the deep tone so they read as depth not decoration -->
+    <g class="stripe" stroke="hsl(45 68% 17%)" stroke-width="1.8" opacity=".42"
+       stroke-linecap="round" fill="none">
+      <path d="M44 34 C56 30 70 32 82 38 M44 50 C58 54 72 52 82 46"/>
+    </g>
+
+    <!-- the scale sheen: three offset arcs of light along the flank -->
+    <g class="scales" fill="none" stroke="#ffffff" stroke-linecap="round" opacity=".3">
+      <path d="M44 44 C52 40 60 40 68 43" stroke-width="1.2"/>
+      <path d="M48 48 C56 45 64 45 72 47" stroke-width="1"/>
+      <path d="M52 52 C60 50 68 50 76 51" stroke-width=".8"/>
+    </g>
+  </g>
+
+  <!-- the specular sweep: the gloss cap that makes it read as glassy -->
+  <ellipse class="specular" cx="50" cy="29" rx="19" ry="9" fill="url(#fa-doric-dab-sheen)"
+           transform="rotate(-16 50 29)"/>
+
+  <!-- the eye, with a highlight so it looks wet -->
+  <circle class="eye" cx="78" cy="40" r="3.6" fill="#ffffff"/>
+  <circle cx="78.8" cy="40" r="1.87" fill="#06334f"/>
+  <circle cx="79.08" cy="38.56" r="0.72"
+          fill="#ffffff"/>
+
+  <!-- sparkles, more the rarer the fish -->
+  <g class="sparkles">
+    <path class="sparkle" d="M86.3 42.2
+      L87.5 44.6
+      L86.3 49.4
+      L85.1 44.6 Z"
+      fill="#ffffff" opacity="0.68"/>
+    <path class="sparkle" d="M63.8 50.6
+      L65.2 53.5
+      L63.8 59.2
+      L62.4 53.5 Z"
+      fill="#ffffff" opacity="0.68"/>
+    <path class="sparkle" d="M33.3 45.4
+      L34.5 47.8
+      L33.3 52.6
+      L32.1 47.8 Z"
+      fill="#ffffff" opacity="0.68"/>
+    <path class="sparkle" d="M32.0 29.9
+      L33.4 32.8
+      L32.0 38.5
+      L30.6 32.8 Z"
+      fill="#ffffff" opacity="0.68"/>
+    <path class="sparkle" d="M55.9 21.5
+      L57.1 23.9
+      L55.9 28.7
+      L54.7 23.9 Z"
+      fill="#ffffff" opacity="0.68"/>
+    <path class="sparkle" d="M83.7 26.7
+      L85.1 29.6
+      L83.7 35.3
+      L82.3 29.6 Z"
+      fill="#ffffff" opacity="0.68"/>
+  </g>
+
+  <!-- a soft shadow on the water under the fish -->
+  <ellipse class="shadow" cx="56" cy="66" rx="34" ry="5"
+           fill="#0a4a70" opacity=".18"/>
+
+  <!-- the glassy surface sheet, catching the sun -->
+  <rect class="surface" width="120" height="26" fill="url(#fa-doric-dab-glass)"
+        opacity=".38" rx="14"/>
+
+  <!-- a Legendary or Mythical gets a crown of light above it -->
+  
+</svg></div>
+  <figcaption><b style="color:#e07b2a">DORFic Dab</b><br>Rare</figcaption>
+</figure><figure>
+  <div class="art"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 120 80" width="120" height="80"
+     role="img" aria-label="A Eco Gar">
+  <defs>
+    <!-- the body: a lit dorsal surface falling to a deep belly -->
+    <linearGradient id="fa-eco-gar-body" x1="0.18" y1="0" x2="0.72" y2="1">
+      <stop offset="0" stop-color="hsl(110 92% 78%)"/>
+      <stop offset="0.34" stop-color="hsl(110 88% 62%)"/>
+      <stop offset="0.62" stop-color="hsl(110 78% 46%)"/>
+      <stop offset="1" stop-color="hsl(110 68% 17%)"/>
+    </linearGradient>
+    <linearGradient id="fa-eco-gar-fin" x1="0.3" y1="0" x2="0.8" y2="1">
+      <stop offset="0" stop-color="hsl(110 88% 62%)"/>
+      <stop offset="1" stop-color="hsl(110 72% 28%)"/>
+    </linearGradient>
+    <linearGradient id="fa-eco-gar-tail" x1="0" y1="0" x2="1" y2="0.6">
+      <stop offset="0" stop-color="hsl(110 72% 28%)"/>
+      <stop offset="1" stop-color="hsl(110 68% 17%)"/>
+    </linearGradient>
+    <!-- the specular sweep across the back -->
+    <radialGradient id="fa-eco-gar-sheen" cx="0.32" cy="0.22" r="0.6">
+      <stop offset="0" stop-color="#ffffff" stop-opacity=".85"/>
+      <stop offset="0.55" stop-color="#ffffff" stop-opacity=".18"/>
+      <stop offset="1" stop-color="#ffffff" stop-opacity="0"/>
+    </radialGradient>
+    <!-- light spilling out of the fish; stronger on rare ones -->
+    <radialGradient id="fa-eco-gar-bloom" cx="0.5" cy="0.5" r="0.5">
+      <stop offset="0" stop-color="hsl(110 100% 82%)" stop-opacity="0.63"/>
+      <stop offset="0.6" stop-color="hsl(110 100% 78%)" stop-opacity="0.30"/>
+      <stop offset="1" stop-color="hsl(110 100% 74%)" stop-opacity="0"/>
+    </radialGradient>
+    <!-- the pond, deep at the bottom and bright at the surface -->
+    <linearGradient id="fa-eco-gar-water" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#eaf9ff"/>
+      <stop offset="0.42" stop-color="#a9e2fb"/>
+      <stop offset="0.78" stop-color="#5cc0ee"/>
+      <stop offset="1" stop-color="#2b8fd0"/>
+    </linearGradient>
+    <!-- a glassy sheet of light lying on the water -->
+    <linearGradient id="fa-eco-gar-glass" x1="0" y1="0" x2="1" y2="0">
+      <stop offset="0" stop-color="#ffffff" stop-opacity="0"/>
+      <stop offset="0.45" stop-color="#ffffff" stop-opacity=".55"/>
+      <stop offset="0.55" stop-color="#ffffff" stop-opacity=".55"/>
+      <stop offset="1" stop-color="#ffffff" stop-opacity="0"/>
+    </linearGradient>
+    <filter id="fa-eco-gar-glow" x="-40%" y="-40%" width="180%" height="180%">
+      <feGaussianBlur stdDeviation="4.7" result="b"/>
+      <feMerge>
+        <feMergeNode in="b"/>
+        <feMergeNode in="b"/>
+        <feMergeNode in="SourceGraphic"/>
+      </feMerge>
+    </filter>
+  </defs>
+
+  <!-- the pond, deepest layer -->
+  <rect width="120" height="80" rx="14" fill="url(#fa-eco-gar-water)"/>
+
+  <!-- the sun burning through the surface, behind everything -->
+  <circle class="bloom" cx="100" cy="14" r="26" fill="url(#fa-eco-gar-bloom)"/>
+  <circle cx="100" cy="14" r="10" fill="#fffde7" opacity=".85"/>
+  <circle cx="100" cy="14" r="6" fill="#ffffff" opacity=".9"/>
+
+  <!-- caustics: the light ripples that say "underwater" -->
+  <g class="caustics" fill="none" stroke="#ffffff" stroke-linecap="round">
+    <path d="M8 22 C22 15 36 29 50 22 C64 15 78 29 92 22" stroke-width="2" opacity=".5"/>
+    <path d="M12 34 C26 27 40 41 54 34 C68 27 82 41 96 34" stroke-width="1.6" opacity=".38"/>
+    <path d="M6 46 C20 39 34 53 48 46 C62 39 76 53 90 46" stroke-width="1.4" opacity=".28"/>
+  </g>
+
+  <!-- bubbles rising through the water column -->
+  <g class="bubbles">
+    <circle class="bubbles" cx="14" cy="12" r="1.8"
+      fill="#ffffff" opacity="0.34"/>
+    <circle class="bubbles" cx="37" cy="43" r="2.5"
+      fill="#ffffff" opacity="0.46"/>
+    <circle class="bubbles" cx="60" cy="16" r="3.2"
+      fill="#ffffff" opacity="0.58"/>
+    <circle class="bubbles" cx="83" cy="47" r="3.9"
+      fill="#ffffff" opacity="0.34"/>
+    <circle class="bubbles" cx="106" cy="20" r="1.8"
+      fill="#ffffff" opacity="0.46"/>
+    <circle class="bubbles" cx="33" cy="51" r="2.5"
+      fill="#ffffff" opacity="0.58"/>
+    <circle class="bubbles" cx="56" cy="24" r="3.2"
+      fill="#ffffff" opacity="0.34"/>
+  </g>
+
+  <!-- the fish's own halo, so it sits in the light rather than on top of it -->
+  <ellipse class="halo" cx="58" cy="40" rx="44" ry="26" fill="url(#fa-eco-gar-bloom)"
+           opacity="0.66" filter="url(#fa-eco-gar-glow)"/>
+
+  <!-- tail and fins first, so the body overlaps them -->
+  <g filter="url(#fa-eco-gar-glow)">
+    <path class="tail" d="M26 40 L4 18 L13 40 L4 64 Z" fill="url(#fa-eco-gar-tail)"/>
+    <path class="fin" d="M54 26 C62 12 74 10 82 16 C74 20 66 28 58 38 Z" fill="url(#fa-eco-gar-fin)"/>
+    <path class="body" d="M26 40 C38 22 74 18 90 30 C100 38 100 44 90 50 C74 62 38 58 26 40 Z" fill="url(#fa-eco-gar-body)" stroke="hsl(110 68% 17%)"
+          stroke-width="1.1" stroke-opacity=".35"/>
+
+    <!-- the belly, lit from below by the water -->
+    <path class="belly" d="M40 52 C56 60 76 58 88 48 C76 58 56 62 40 54 Z"
+          fill="#ffffff" opacity=".34"/>
+
+    <!-- lateral stripes, in the deep tone so they read as depth not decoration -->
+    <g class="stripe" stroke="hsl(110 68% 17%)" stroke-width="1.8" opacity=".42"
+       stroke-linecap="round" fill="none">
+      <path d="M40 28 L44 54 M52 25 L56 57 M64 24 L68 56 M76 26 L80 52"/>
+    </g>
+
+    <!-- the scale sheen: three offset arcs of light along the flank -->
+    <g class="scales" fill="none" stroke="#ffffff" stroke-linecap="round" opacity=".3">
+      <path d="M44 44 C52 40 60 40 68 43" stroke-width="1.2"/>
+      <path d="M48 48 C56 45 64 45 72 47" stroke-width="1"/>
+      <path d="M52 52 C60 50 68 50 76 51" stroke-width=".8"/>
+    </g>
+  </g>
+
+  <!-- the specular sweep: the gloss cap that makes it read as glassy -->
+  <ellipse class="specular" cx="50" cy="29" rx="19" ry="9" fill="url(#fa-eco-gar-sheen)"
+           transform="rotate(-16 50 29)"/>
+
+  <!-- the eye, with a highlight so it looks wet -->
+  <circle class="eye" cx="82" cy="36" r="4.2" fill="#ffffff"/>
+  <circle cx="82.8" cy="36" r="2.18" fill="#06334f"/>
+  <circle cx="83.26" cy="34.32" r="0.84"
+          fill="#ffffff"/>
+
+  <!-- sparkles, more the rarer the fish -->
+  <g class="sparkles">
+    <path class="sparkle" d="M86.3 42.7
+      L87.3 44.8
+      L86.3 48.9
+      L85.3 44.8 Z"
+      fill="#ffffff" opacity="0.77"/>
+    <path class="sparkle" d="M71.7 50.1
+      L72.9 52.7
+      L71.7 57.7
+      L70.5 52.7 Z"
+      fill="#ffffff" opacity="0.77"/>
+    <path class="sparkle" d="M47.0 50.7
+      L48.0 52.8
+      L47.0 56.9
+      L46.0 52.8 Z"
+      fill="#ffffff" opacity="0.77"/>
+    <path class="sparkle" d="M31.8 41.8
+      L33.0 44.4
+      L31.8 49.4
+      L30.6 44.4 Z"
+      fill="#ffffff" opacity="0.77"/>
+    <path class="sparkle" d="M29.7 31.1
+      L30.7 33.2
+      L29.7 37.3
+      L28.7 33.2 Z"
+      fill="#ffffff" opacity="0.77"/>
+    <path class="sparkle" d="M48.8 22.3
+      L50.0 24.9
+      L48.8 29.9
+      L47.6 24.9 Z"
+      fill="#ffffff" opacity="0.77"/>
+    <path class="sparkle" d="M72.6 23.1
+      L73.6 25.2
+      L72.6 29.3
+      L71.6 25.2 Z"
+      fill="#ffffff" opacity="0.77"/>
+    <path class="sparkle" d="M87.0 30.6
+      L88.2 33.2
+      L87.0 38.2
+      L85.8 33.2 Z"
+      fill="#ffffff" opacity="0.77"/>
+  </g>
+
+  <!-- a soft shadow on the water under the fish -->
+  <ellipse class="shadow" cx="56" cy="66" rx="34" ry="5"
+           fill="#0a4a70" opacity=".18"/>
+
+  <!-- the glassy surface sheet, catching the sun -->
+  <rect class="surface" width="120" height="26" fill="url(#fa-eco-gar-glass)"
+        opacity=".38" rx="14"/>
+
+  <!-- a Legendary or Mythical gets a crown of light above it -->
+  <g class="ring">
+    <ellipse cx="58" cy="17" rx="26" ry="7" fill="none" stroke="#ffffff"
+             stroke-width="1.6" opacity=".5"/>
+    <ellipse cx="58" cy="17" rx="17" ry="4.6" fill="none" stroke="#fff9c4"
+             stroke-width="1.2" opacity=".65"/>
+  </g>
+</svg></div>
+  <figcaption><b style="color:#c8a02e">Eco Gar</b><br>Legendary</figcaption>
+</figure><figure>
+  <div class="art"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 120 80" width="120" height="80"
+     role="img" aria-label="A Glacier Char">
+  <defs>
+    <!-- the body: a lit dorsal surface falling to a deep belly -->
+    <linearGradient id="fa-glacier-char-body" x1="0.18" y1="0" x2="0.72" y2="1">
+      <stop offset="0" stop-color="hsl(275 92% 78%)"/>
+      <stop offset="0.34" stop-color="hsl(275 88% 62%)"/>
+      <stop offset="0.62" stop-color="hsl(275 78% 46%)"/>
+      <stop offset="1" stop-color="hsl(275 68% 17%)"/>
+    </linearGradient>
+    <linearGradient id="fa-glacier-char-fin" x1="0.3" y1="0" x2="0.8" y2="1">
+      <stop offset="0" stop-color="hsl(275 88% 62%)"/>
+      <stop offset="1" stop-color="hsl(275 72% 28%)"/>
+    </linearGradient>
+    <linearGradient id="fa-glacier-char-tail" x1="0" y1="0" x2="1" y2="0.6">
+      <stop offset="0" stop-color="hsl(275 72% 28%)"/>
+      <stop offset="1" stop-color="hsl(275 68% 17%)"/>
+    </linearGradient>
+    <!-- the specular sweep across the back -->
+    <radialGradient id="fa-glacier-char-sheen" cx="0.32" cy="0.22" r="0.6">
+      <stop offset="0" stop-color="#ffffff" stop-opacity=".85"/>
+      <stop offset="0.55" stop-color="#ffffff" stop-opacity=".18"/>
+      <stop offset="1" stop-color="#ffffff" stop-opacity="0"/>
+    </radialGradient>
+    <!-- light spilling out of the fish; stronger on rare ones -->
+    <radialGradient id="fa-glacier-char-bloom" cx="0.5" cy="0.5" r="0.5">
+      <stop offset="0" stop-color="hsl(275 100% 82%)" stop-opacity="0.74"/>
+      <stop offset="0.6" stop-color="hsl(275 100% 78%)" stop-opacity="0.36"/>
+      <stop offset="1" stop-color="hsl(275 100% 74%)" stop-opacity="0"/>
+    </radialGradient>
+    <!-- the pond, deep at the bottom and bright at the surface -->
+    <linearGradient id="fa-glacier-char-water" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#eaf9ff"/>
+      <stop offset="0.42" stop-color="#a9e2fb"/>
+      <stop offset="0.78" stop-color="#5cc0ee"/>
+      <stop offset="1" stop-color="#2b8fd0"/>
+    </linearGradient>
+    <!-- a glassy sheet of light lying on the water -->
+    <linearGradient id="fa-glacier-char-glass" x1="0" y1="0" x2="1" y2="0">
+      <stop offset="0" stop-color="#ffffff" stop-opacity="0"/>
+      <stop offset="0.45" stop-color="#ffffff" stop-opacity=".55"/>
+      <stop offset="0.55" stop-color="#ffffff" stop-opacity=".55"/>
+      <stop offset="1" stop-color="#ffffff" stop-opacity="0"/>
+    </linearGradient>
+    <filter id="fa-glacier-char-glow" x="-40%" y="-40%" width="180%" height="180%">
+      <feGaussianBlur stdDeviation="5.8" result="b"/>
+      <feMerge>
+        <feMergeNode in="b"/>
+        <feMergeNode in="b"/>
+        <feMergeNode in="SourceGraphic"/>
+      </feMerge>
+    </filter>
+  </defs>
+
+  <!-- the pond, deepest layer -->
+  <rect width="120" height="80" rx="14" fill="url(#fa-glacier-char-water)"/>
+
+  <!-- the sun burning through the surface, behind everything -->
+  <circle class="bloom" cx="100" cy="14" r="26" fill="url(#fa-glacier-char-bloom)"/>
+  <circle cx="100" cy="14" r="10" fill="#fffde7" opacity=".85"/>
+  <circle cx="100" cy="14" r="6" fill="#ffffff" opacity=".9"/>
+
+  <!-- caustics: the light ripples that say "underwater" -->
+  <g class="caustics" fill="none" stroke="#ffffff" stroke-linecap="round">
+    <path d="M8 22 C22 15 36 29 50 22 C64 15 78 29 92 22" stroke-width="2" opacity=".5"/>
+    <path d="M12 34 C26 27 40 41 54 34 C68 27 82 41 96 34" stroke-width="1.6" opacity=".38"/>
+    <path d="M6 46 C20 39 34 53 48 46 C62 39 76 53 90 46" stroke-width="1.4" opacity=".28"/>
+  </g>
+
+  <!-- bubbles rising through the water column -->
+  <g class="bubbles">
+    <circle class="bubbles" cx="14" cy="12" r="1.8"
+      fill="#ffffff" opacity="0.34"/>
+    <circle class="bubbles" cx="37" cy="43" r="2.5"
+      fill="#ffffff" opacity="0.46"/>
+    <circle class="bubbles" cx="60" cy="16" r="3.2"
+      fill="#ffffff" opacity="0.58"/>
+    <circle class="bubbles" cx="83" cy="47" r="3.9"
+      fill="#ffffff" opacity="0.34"/>
+    <circle class="bubbles" cx="106" cy="20" r="1.8"
+      fill="#ffffff" opacity="0.46"/>
+    <circle class="bubbles" cx="33" cy="51" r="2.5"
+      fill="#ffffff" opacity="0.58"/>
+    <circle class="bubbles" cx="56" cy="24" r="3.2"
+      fill="#ffffff" opacity="0.34"/>
+    <circle class="bubbles" cx="79" cy="55" r="3.9"
+      fill="#ffffff" opacity="0.46"/>
+  </g>
+
+  <!-- the fish's own halo, so it sits in the light rather than on top of it -->
+  <ellipse class="halo" cx="58" cy="40" rx="44" ry="26" fill="url(#fa-glacier-char-bloom)"
+           opacity="0.78" filter="url(#fa-glacier-char-glow)"/>
+
+  <!-- tail and fins first, so the body overlaps them -->
+  <g filter="url(#fa-glacier-char-glow)">
+    <path class="tail" d="M26 40 L4 18 L13 40 L4 64 Z" fill="url(#fa-glacier-char-tail)"/>
+    <path class="fin" d="M54 26 C62 12 74 10 82 16 C74 20 66 28 58 38 Z" fill="url(#fa-glacier-char-fin)"/>
+    <path class="body" d="M26 40 C38 22 74 18 90 30 C100 38 100 44 90 50 C74 62 38 58 26 40 Z" fill="url(#fa-glacier-char-body)" stroke="hsl(275 68% 17%)"
+          stroke-width="1.1" stroke-opacity=".35"/>
+
+    <!-- the belly, lit from below by the water -->
+    <path class="belly" d="M40 52 C56 60 76 58 88 48 C76 58 56 62 40 54 Z"
+          fill="#ffffff" opacity=".34"/>
+
+    <!-- lateral stripes, in the deep tone so they read as depth not decoration -->
+    <g class="stripe" stroke="hsl(275 68% 17%)" stroke-width="1.8" opacity=".42"
+       stroke-linecap="round" fill="none">
+      <path d="M40 28 L44 54 M52 25 L56 57 M64 24 L68 56 M76 26 L80 52"/>
+    </g>
+
+    <!-- the scale sheen: three offset arcs of light along the flank -->
+    <g class="scales" fill="none" stroke="#ffffff" stroke-linecap="round" opacity=".3">
+      <path d="M44 44 C52 40 60 40 68 43" stroke-width="1.2"/>
+      <path d="M48 48 C56 45 64 45 72 47" stroke-width="1"/>
+      <path d="M52 52 C60 50 68 50 76 51" stroke-width=".8"/>
+    </g>
+  </g>
+
+  <!-- the specular sweep: the gloss cap that makes it read as glassy -->
+  <ellipse class="specular" cx="50" cy="29" rx="19" ry="9" fill="url(#fa-glacier-char-sheen)"
+           transform="rotate(-16 50 29)"/>
+
+  <!-- the eye, with a highlight so it looks wet -->
+  <circle class="eye" cx="82" cy="36" r="4.2" fill="#ffffff"/>
+  <circle cx="82.8" cy="36" r="2.18" fill="#06334f"/>
+  <circle cx="83.26" cy="34.32" r="0.84"
+          fill="#ffffff"/>
+
+  <!-- sparkles, more the rarer the fish -->
+  <g class="sparkles">
+    <path class="sparkle" d="M86.3 43.2
+      L87.1 45.0
+      L86.3 48.4
+      L85.5 45.0 Z"
+      fill="#ffffff" opacity="0.86"/>
+    <path class="sparkle" d="M76.0 49.5
+      L77.1 51.7
+      L76.0 56.1
+      L74.9 51.7 Z"
+      fill="#ffffff" opacity="0.86"/>
+    <path class="sparkle" d="M57.1 52.3
+      L57.9 54.1
+      L57.1 57.5
+      L56.3 54.1 Z"
+      fill="#ffffff" opacity="0.86"/>
+    <path class="sparkle" d="M40.1 48.0
+      L41.2 50.2
+      L40.1 54.6
+      L39.0 50.2 Z"
+      fill="#ffffff" opacity="0.86"/>
+    <path class="sparkle" d="M28.0 40.8
+      L28.8 42.6
+      L28.0 46.0
+      L27.2 42.6 Z"
+      fill="#ffffff" opacity="0.86"/>
+    <path class="sparkle" d="M32.6 30.9
+      L33.7 33.1
+      L32.6 37.5
+      L31.5 33.1 Z"
+      fill="#ffffff" opacity="0.86"/>
+    <path class="sparkle" d="M43.4 24.6
+      L44.2 26.4
+      L43.4 29.8
+      L42.6 26.4 Z"
+      fill="#ffffff" opacity="0.86"/>
+    <path class="sparkle" d="M62.5 21.8
+      L63.6 24.0
+      L62.5 28.4
+      L61.4 24.0 Z"
+      fill="#ffffff" opacity="0.86"/>
+    <path class="sparkle" d="M80.7 26.1
+      L81.5 27.9
+      L80.7 31.3
+      L79.9 27.9 Z"
+      fill="#ffffff" opacity="0.86"/>
+    <path class="sparkle" d="M87.8 33.3
+      L88.9 35.5
+      L87.8 39.9
+      L86.7 35.5 Z"
+      fill="#ffffff" opacity="0.86"/>
+  </g>
+
+  <!-- a soft shadow on the water under the fish -->
+  <ellipse class="shadow" cx="56" cy="66" rx="34" ry="5"
+           fill="#0a4a70" opacity=".18"/>
+
+  <!-- the glassy surface sheet, catching the sun -->
+  <rect class="surface" width="120" height="26" fill="url(#fa-glacier-char-glass)"
+        opacity=".38" rx="14"/>
+
+  <!-- a Legendary or Mythical gets a crown of light above it -->
+  <g class="ring">
+    <ellipse cx="58" cy="17" rx="26" ry="7" fill="none" stroke="#ffffff"
+             stroke-width="1.6" opacity=".5"/>
+    <ellipse cx="58" cy="17" rx="17" ry="4.6" fill="none" stroke="#fff9c4"
+             stroke-width="1.2" opacity=".65"/>
+  </g>
+</svg></div>
+  <figcaption><b style="color:#8b5cf6">Glacier Char</b><br>Mythical</figcaption>
+</figure></div>
+<h3 style="color:#013a63;max-width:1000px;margin:28px auto 8px">At index size (40px) — must still read as a fish</h3>
+<div class="small" style="max-width:1000px;margin:0 auto">
+  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 120 80" width="120" height="80"
+     role="img" aria-label="A Glidefin">
+  <defs>
+    <!-- the body: a lit dorsal surface falling to a deep belly -->
+    <linearGradient id="fa-glidefin-body" x1="0.18" y1="0" x2="0.72" y2="1">
+      <stop offset="0" stop-color="hsl(195 92% 78%)"/>
+      <stop offset="0.34" stop-color="hsl(195 88% 62%)"/>
+      <stop offset="0.62" stop-color="hsl(195 78% 46%)"/>
+      <stop offset="1" stop-color="hsl(195 68% 17%)"/>
+    </linearGradient>
+    <linearGradient id="fa-glidefin-fin" x1="0.3" y1="0" x2="0.8" y2="1">
+      <stop offset="0" stop-color="hsl(195 88% 62%)"/>
+      <stop offset="1" stop-color="hsl(195 72% 28%)"/>
+    </linearGradient>
+    <linearGradient id="fa-glidefin-tail" x1="0" y1="0" x2="1" y2="0.6">
+      <stop offset="0" stop-color="hsl(195 72% 28%)"/>
+      <stop offset="1" stop-color="hsl(195 68% 17%)"/>
+    </linearGradient>
+    <!-- the specular sweep across the back -->
+    <radialGradient id="fa-glidefin-sheen" cx="0.32" cy="0.22" r="0.6">
+      <stop offset="0" stop-color="#ffffff" stop-opacity=".85"/>
+      <stop offset="0.55" stop-color="#ffffff" stop-opacity=".18"/>
+      <stop offset="1" stop-color="#ffffff" stop-opacity="0"/>
+    </radialGradient>
+    <!-- light spilling out of the fish; stronger on rare ones -->
+    <radialGradient id="fa-glidefin-bloom" cx="0.5" cy="0.5" r="0.5">
+      <stop offset="0" stop-color="hsl(195 100% 82%)" stop-opacity="0.30"/>
+      <stop offset="0.6" stop-color="hsl(195 100% 78%)" stop-opacity="0.12"/>
+      <stop offset="1" stop-color="hsl(195 100% 74%)" stop-opacity="0"/>
+    </radialGradient>
+    <!-- the pond, deep at the bottom and bright at the surface -->
+    <linearGradient id="fa-glidefin-water" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#eaf9ff"/>
+      <stop offset="0.42" stop-color="#a9e2fb"/>
+      <stop offset="0.78" stop-color="#5cc0ee"/>
+      <stop offset="1" stop-color="#2b8fd0"/>
+    </linearGradient>
+    <!-- a glassy sheet of light lying on the water -->
+    <linearGradient id="fa-glidefin-glass" x1="0" y1="0" x2="1" y2="0">
+      <stop offset="0" stop-color="#ffffff" stop-opacity="0"/>
+      <stop offset="0.45" stop-color="#ffffff" stop-opacity=".55"/>
+      <stop offset="0.55" stop-color="#ffffff" stop-opacity=".55"/>
+      <stop offset="1" stop-color="#ffffff" stop-opacity="0"/>
+    </linearGradient>
+    <filter id="fa-glidefin-glow" x="-40%" y="-40%" width="180%" height="180%">
+      <feGaussianBlur stdDeviation="1.4" result="b"/>
+      <feMerge>
+        <feMergeNode in="b"/>
+        <feMergeNode in="b"/>
+        <feMergeNode in="SourceGraphic"/>
+      </feMerge>
+    </filter>
+  </defs>
+
+  <!-- the pond, deepest layer -->
+  <rect width="120" height="80" rx="14" fill="url(#fa-glidefin-water)"/>
+
+  <!-- the sun burning through the surface, behind everything -->
+  <circle class="bloom" cx="100" cy="14" r="26" fill="url(#fa-glidefin-bloom)"/>
+  <circle cx="100" cy="14" r="10" fill="#fffde7" opacity=".85"/>
+  <circle cx="100" cy="14" r="6" fill="#ffffff" opacity=".9"/>
+
+  <!-- caustics: the light ripples that say "underwater" -->
+  <g class="caustics" fill="none" stroke="#ffffff" stroke-linecap="round">
+    <path d="M8 22 C22 15 36 29 50 22 C64 15 78 29 92 22" stroke-width="2" opacity=".5"/>
+    <path d="M12 34 C26 27 40 41 54 34 C68 27 82 41 96 34" stroke-width="1.6" opacity=".38"/>
+    <path d="M6 46 C20 39 34 53 48 46 C62 39 76 53 90 46" stroke-width="1.4" opacity=".28"/>
+  </g>
+
+  <!-- bubbles rising through the water column -->
+  <g class="bubbles">
+    <circle class="bubbles" cx="14" cy="12" r="1.8"
+      fill="#ffffff" opacity="0.34"/>
+    <circle class="bubbles" cx="37" cy="43" r="2.5"
+      fill="#ffffff" opacity="0.46"/>
+    <circle class="bubbles" cx="60" cy="16" r="3.2"
+      fill="#ffffff" opacity="0.58"/>
+    <circle class="bubbles" cx="83" cy="47" r="3.9"
+      fill="#ffffff" opacity="0.34"/>
+  </g>
+
+  <!-- the fish's own halo, so it sits in the light rather than on top of it -->
+  <ellipse class="halo" cx="58" cy="40" rx="44" ry="26" fill="url(#fa-glidefin-bloom)"
+           opacity="0.30" filter="url(#fa-glidefin-glow)"/>
+
+  <!-- tail and fins first, so the body overlaps them -->
+  <g filter="url(#fa-glidefin-glow)">
+    <path class="tail" d="M34 40 L12 24 L18 40 L12 58 Z" fill="url(#fa-glidefin-tail)"/>
+    <path class="fin" d="M56 34 C60 26 66 24 70 28 C66 32 62 36 58 42 Z" fill="url(#fa-glidefin-fin)"/>
+    <path class="body" d="M34 40 C44 26 66 24 80 34 C88 40 88 42 80 48 C66 58 44 56 34 42 Z" fill="url(#fa-glidefin-body)" stroke="hsl(195 68% 17%)"
+          stroke-width="1.1" stroke-opacity=".35"/>
+
+    <!-- the belly, lit from below by the water -->
+    <path class="belly" d="M40 52 C56 60 76 58 88 48 C76 58 56 62 40 54 Z"
+          fill="#ffffff" opacity=".34"/>
+
+    <!-- lateral stripes, in the deep tone so they read as depth not decoration -->
+    <g class="stripe" stroke="hsl(195 68% 17%)" stroke-width="1.8" opacity=".42"
+       stroke-linecap="round" fill="none">
+      <path d="M48 33 L52 49 M58 32 L62 50 M68 34 L72 46"/>
+    </g>
+
+    <!-- the scale sheen: three offset arcs of light along the flank -->
+    <g class="scales" fill="none" stroke="#ffffff" stroke-linecap="round" opacity=".3">
+      <path d="M44 44 C52 40 60 40 68 43" stroke-width="1.2"/>
+      <path d="M48 48 C56 45 64 45 72 47" stroke-width="1"/>
+      <path d="M52 52 C60 50 68 50 76 51" stroke-width=".8"/>
+    </g>
+  </g>
+
+  <!-- the specular sweep: the gloss cap that makes it read as glassy -->
+  <ellipse class="specular" cx="50" cy="29" rx="19" ry="9" fill="url(#fa-glidefin-sheen)"
+           transform="rotate(-16 50 29)"/>
+
+  <!-- the eye, with a highlight so it looks wet -->
+  <circle class="eye" cx="72" cy="38" r="3.4" fill="#ffffff"/>
+  <circle cx="72.8" cy="38" r="1.77" fill="#06334f"/>
+  <circle cx="73.02" cy="36.64" r="0.68"
+          fill="#ffffff"/>
+
+  <!-- sparkles, more the rarer the fish -->
+  <g class="sparkles">
+    <path class="sparkle" d="M86.3 41.2
+      L87.8 44.3
+      L86.3 50.4
+      L84.8 44.3 Z"
+      fill="#ffffff" opacity="0.50"/>
+    <path class="sparkle" d="M31.4 28.9
+      L33.1 32.5
+      L31.4 39.5
+      L29.7 32.5 Z"
+      fill="#ffffff" opacity="0.50"/>
+  </g>
+
+  <!-- a soft shadow on the water under the fish -->
+  <ellipse class="shadow" cx="56" cy="66" rx="34" ry="5"
+           fill="#0a4a70" opacity=".18"/>
+
+  <!-- the glassy surface sheet, catching the sun -->
+  <rect class="surface" width="120" height="26" fill="url(#fa-glidefin-glass)"
+        opacity=".38" rx="14"/>
+
+  <!-- a Legendary or Mythical gets a crown of light above it -->
+  
+</svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 120 80" width="120" height="80"
+     role="img" aria-label="A Aero Minnow">
+  <defs>
+    <!-- the body: a lit dorsal surface falling to a deep belly -->
+    <linearGradient id="fa-aero-minnow-body" x1="0.18" y1="0" x2="0.72" y2="1">
+      <stop offset="0" stop-color="hsl(210 92% 78%)"/>
+      <stop offset="0.34" stop-color="hsl(210 88% 62%)"/>
+      <stop offset="0.62" stop-color="hsl(210 78% 46%)"/>
+      <stop offset="1" stop-color="hsl(210 68% 17%)"/>
+    </linearGradient>
+    <linearGradient id="fa-aero-minnow-fin" x1="0.3" y1="0" x2="0.8" y2="1">
+      <stop offset="0" stop-color="hsl(210 88% 62%)"/>
+      <stop offset="1" stop-color="hsl(210 72% 28%)"/>
+    </linearGradient>
+    <linearGradient id="fa-aero-minnow-tail" x1="0" y1="0" x2="1" y2="0.6">
+      <stop offset="0" stop-color="hsl(210 72% 28%)"/>
+      <stop offset="1" stop-color="hsl(210 68% 17%)"/>
+    </linearGradient>
+    <!-- the specular sweep across the back -->
+    <radialGradient id="fa-aero-minnow-sheen" cx="0.32" cy="0.22" r="0.6">
+      <stop offset="0" stop-color="#ffffff" stop-opacity=".85"/>
+      <stop offset="0.55" stop-color="#ffffff" stop-opacity=".18"/>
+      <stop offset="1" stop-color="#ffffff" stop-opacity="0"/>
+    </radialGradient>
+    <!-- light spilling out of the fish; stronger on rare ones -->
+    <radialGradient id="fa-aero-minnow-bloom" cx="0.5" cy="0.5" r="0.5">
+      <stop offset="0" stop-color="hsl(210 100% 82%)" stop-opacity="0.30"/>
+      <stop offset="0.6" stop-color="hsl(210 100% 78%)" stop-opacity="0.12"/>
+      <stop offset="1" stop-color="hsl(210 100% 74%)" stop-opacity="0"/>
+    </radialGradient>
+    <!-- the pond, deep at the bottom and bright at the surface -->
+    <linearGradient id="fa-aero-minnow-water" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#eaf9ff"/>
+      <stop offset="0.42" stop-color="#a9e2fb"/>
+      <stop offset="0.78" stop-color="#5cc0ee"/>
+      <stop offset="1" stop-color="#2b8fd0"/>
+    </linearGradient>
+    <!-- a glassy sheet of light lying on the water -->
+    <linearGradient id="fa-aero-minnow-glass" x1="0" y1="0" x2="1" y2="0">
+      <stop offset="0" stop-color="#ffffff" stop-opacity="0"/>
+      <stop offset="0.45" stop-color="#ffffff" stop-opacity=".55"/>
+      <stop offset="0.55" stop-color="#ffffff" stop-opacity=".55"/>
+      <stop offset="1" stop-color="#ffffff" stop-opacity="0"/>
+    </linearGradient>
+    <filter id="fa-aero-minnow-glow" x="-40%" y="-40%" width="180%" height="180%">
+      <feGaussianBlur stdDeviation="1.4" result="b"/>
+      <feMerge>
+        <feMergeNode in="b"/>
+        <feMergeNode in="b"/>
+        <feMergeNode in="SourceGraphic"/>
+      </feMerge>
+    </filter>
+  </defs>
+
+  <!-- the pond, deepest layer -->
+  <rect width="120" height="80" rx="14" fill="url(#fa-aero-minnow-water)"/>
+
+  <!-- the sun burning through the surface, behind everything -->
+  <circle class="bloom" cx="100" cy="14" r="26" fill="url(#fa-aero-minnow-bloom)"/>
+  <circle cx="100" cy="14" r="10" fill="#fffde7" opacity=".85"/>
+  <circle cx="100" cy="14" r="6" fill="#ffffff" opacity=".9"/>
+
+  <!-- caustics: the light ripples that say "underwater" -->
+  <g class="caustics" fill="none" stroke="#ffffff" stroke-linecap="round">
+    <path d="M8 22 C22 15 36 29 50 22 C64 15 78 29 92 22" stroke-width="2" opacity=".5"/>
+    <path d="M12 34 C26 27 40 41 54 34 C68 27 82 41 96 34" stroke-width="1.6" opacity=".38"/>
+    <path d="M6 46 C20 39 34 53 48 46 C62 39 76 53 90 46" stroke-width="1.4" opacity=".28"/>
+  </g>
+
+  <!-- bubbles rising through the water column -->
+  <g class="bubbles">
+    <circle class="bubbles" cx="14" cy="12" r="1.8"
+      fill="#ffffff" opacity="0.34"/>
+    <circle class="bubbles" cx="37" cy="43" r="2.5"
+      fill="#ffffff" opacity="0.46"/>
+    <circle class="bubbles" cx="60" cy="16" r="3.2"
+      fill="#ffffff" opacity="0.58"/>
+    <circle class="bubbles" cx="83" cy="47" r="3.9"
+      fill="#ffffff" opacity="0.34"/>
+  </g>
+
+  <!-- the fish's own halo, so it sits in the light rather than on top of it -->
+  <ellipse class="halo" cx="58" cy="40" rx="44" ry="26" fill="url(#fa-aero-minnow-bloom)"
+           opacity="0.30" filter="url(#fa-aero-minnow-glow)"/>
+
+  <!-- tail and fins first, so the body overlaps them -->
+  <g filter="url(#fa-aero-minnow-glow)">
+    <path class="tail" d="M34 40 L12 24 L18 40 L12 58 Z" fill="url(#fa-aero-minnow-tail)"/>
+    <path class="fin" d="M56 34 C60 26 66 24 70 28 C66 32 62 36 58 42 Z" fill="url(#fa-aero-minnow-fin)"/>
+    <path class="body" d="M34 40 C44 26 66 24 80 34 C88 40 88 42 80 48 C66 58 44 56 34 42 Z" fill="url(#fa-aero-minnow-body)" stroke="hsl(210 68% 17%)"
+          stroke-width="1.1" stroke-opacity=".35"/>
+
+    <!-- the belly, lit from below by the water -->
+    <path class="belly" d="M40 52 C56 60 76 58 88 48 C76 58 56 62 40 54 Z"
+          fill="#ffffff" opacity=".34"/>
+
+    <!-- lateral stripes, in the deep tone so they read as depth not decoration -->
+    <g class="stripe" stroke="hsl(210 68% 17%)" stroke-width="1.8" opacity=".42"
+       stroke-linecap="round" fill="none">
+      <path d="M48 33 L52 49 M58 32 L62 50 M68 34 L72 46"/>
+    </g>
+
+    <!-- the scale sheen: three offset arcs of light along the flank -->
+    <g class="scales" fill="none" stroke="#ffffff" stroke-linecap="round" opacity=".3">
+      <path d="M44 44 C52 40 60 40 68 43" stroke-width="1.2"/>
+      <path d="M48 48 C56 45 64 45 72 47" stroke-width="1"/>
+      <path d="M52 52 C60 50 68 50 76 51" stroke-width=".8"/>
+    </g>
+  </g>
+
+  <!-- the specular sweep: the gloss cap that makes it read as glassy -->
+  <ellipse class="specular" cx="50" cy="29" rx="19" ry="9" fill="url(#fa-aero-minnow-sheen)"
+           transform="rotate(-16 50 29)"/>
+
+  <!-- the eye, with a highlight so it looks wet -->
+  <circle class="eye" cx="72" cy="38" r="3.4" fill="#ffffff"/>
+  <circle cx="72.8" cy="38" r="1.77" fill="#06334f"/>
+  <circle cx="73.02" cy="36.64" r="0.68"
+          fill="#ffffff"/>
+
+  <!-- sparkles, more the rarer the fish -->
+  <g class="sparkles">
+    <path class="sparkle" d="M86.3 41.2
+      L87.8 44.3
+      L86.3 50.4
+      L84.8 44.3 Z"
+      fill="#ffffff" opacity="0.50"/>
+    <path class="sparkle" d="M31.4 28.9
+      L33.1 32.5
+      L31.4 39.5
+      L29.7 32.5 Z"
+      fill="#ffffff" opacity="0.50"/>
+  </g>
+
+  <!-- a soft shadow on the water under the fish -->
+  <ellipse class="shadow" cx="56" cy="66" rx="34" ry="5"
+           fill="#0a4a70" opacity=".18"/>
+
+  <!-- the glassy surface sheet, catching the sun -->
+  <rect class="surface" width="120" height="26" fill="url(#fa-aero-minnow-glass)"
+        opacity=".38" rx="14"/>
+
+  <!-- a Legendary or Mythical gets a crown of light above it -->
+  
+</svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 120 80" width="120" height="80"
+     role="img" aria-label="A Metro Trout">
+  <defs>
+    <!-- the body: a lit dorsal surface falling to a deep belly -->
+    <linearGradient id="fa-metro-trout-body" x1="0.18" y1="0" x2="0.72" y2="1">
+      <stop offset="0" stop-color="hsl(150 92% 78%)"/>
+      <stop offset="0.34" stop-color="hsl(150 88% 62%)"/>
+      <stop offset="0.62" stop-color="hsl(150 78% 46%)"/>
+      <stop offset="1" stop-color="hsl(150 68% 17%)"/>
+    </linearGradient>
+    <linearGradient id="fa-metro-trout-fin" x1="0.3" y1="0" x2="0.8" y2="1">
+      <stop offset="0" stop-color="hsl(150 88% 62%)"/>
+      <stop offset="1" stop-color="hsl(150 72% 28%)"/>
+    </linearGradient>
+    <linearGradient id="fa-metro-trout-tail" x1="0" y1="0" x2="1" y2="0.6">
+      <stop offset="0" stop-color="hsl(150 72% 28%)"/>
+      <stop offset="1" stop-color="hsl(150 68% 17%)"/>
+    </linearGradient>
+    <!-- the specular sweep across the back -->
+    <radialGradient id="fa-metro-trout-sheen" cx="0.32" cy="0.22" r="0.6">
+      <stop offset="0" stop-color="#ffffff" stop-opacity=".85"/>
+      <stop offset="0.55" stop-color="#ffffff" stop-opacity=".18"/>
+      <stop offset="1" stop-color="#ffffff" stop-opacity="0"/>
+    </radialGradient>
+    <!-- light spilling out of the fish; stronger on rare ones -->
+    <radialGradient id="fa-metro-trout-bloom" cx="0.5" cy="0.5" r="0.5">
+      <stop offset="0" stop-color="hsl(150 100% 82%)" stop-opacity="0.41"/>
+      <stop offset="0.6" stop-color="hsl(150 100% 78%)" stop-opacity="0.18"/>
+      <stop offset="1" stop-color="hsl(150 100% 74%)" stop-opacity="0"/>
+    </radialGradient>
+    <!-- the pond, deep at the bottom and bright at the surface -->
+    <linearGradient id="fa-metro-trout-water" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#eaf9ff"/>
+      <stop offset="0.42" stop-color="#a9e2fb"/>
+      <stop offset="0.78" stop-color="#5cc0ee"/>
+      <stop offset="1" stop-color="#2b8fd0"/>
+    </linearGradient>
+    <!-- a glassy sheet of light lying on the water -->
+    <linearGradient id="fa-metro-trout-glass" x1="0" y1="0" x2="1" y2="0">
+      <stop offset="0" stop-color="#ffffff" stop-opacity="0"/>
+      <stop offset="0.45" stop-color="#ffffff" stop-opacity=".55"/>
+      <stop offset="0.55" stop-color="#ffffff" stop-opacity=".55"/>
+      <stop offset="1" stop-color="#ffffff" stop-opacity="0"/>
+    </linearGradient>
+    <filter id="fa-metro-trout-glow" x="-40%" y="-40%" width="180%" height="180%">
+      <feGaussianBlur stdDeviation="2.5" result="b"/>
+      <feMerge>
+        <feMergeNode in="b"/>
+        <feMergeNode in="b"/>
+        <feMergeNode in="SourceGraphic"/>
+      </feMerge>
+    </filter>
+  </defs>
+
+  <!-- the pond, deepest layer -->
+  <rect width="120" height="80" rx="14" fill="url(#fa-metro-trout-water)"/>
+
+  <!-- the sun burning through the surface, behind everything -->
+  <circle class="bloom" cx="100" cy="14" r="26" fill="url(#fa-metro-trout-bloom)"/>
+  <circle cx="100" cy="14" r="10" fill="#fffde7" opacity=".85"/>
+  <circle cx="100" cy="14" r="6" fill="#ffffff" opacity=".9"/>
+
+  <!-- caustics: the light ripples that say "underwater" -->
+  <g class="caustics" fill="none" stroke="#ffffff" stroke-linecap="round">
+    <path d="M8 22 C22 15 36 29 50 22 C64 15 78 29 92 22" stroke-width="2" opacity=".5"/>
+    <path d="M12 34 C26 27 40 41 54 34 C68 27 82 41 96 34" stroke-width="1.6" opacity=".38"/>
+    <path d="M6 46 C20 39 34 53 48 46 C62 39 76 53 90 46" stroke-width="1.4" opacity=".28"/>
+  </g>
+
+  <!-- bubbles rising through the water column -->
+  <g class="bubbles">
+    <circle class="bubbles" cx="14" cy="12" r="1.8"
+      fill="#ffffff" opacity="0.34"/>
+    <circle class="bubbles" cx="37" cy="43" r="2.5"
+      fill="#ffffff" opacity="0.46"/>
+    <circle class="bubbles" cx="60" cy="16" r="3.2"
+      fill="#ffffff" opacity="0.58"/>
+    <circle class="bubbles" cx="83" cy="47" r="3.9"
+      fill="#ffffff" opacity="0.34"/>
+    <circle class="bubbles" cx="106" cy="20" r="1.8"
+      fill="#ffffff" opacity="0.46"/>
+  </g>
+
+  <!-- the fish's own halo, so it sits in the light rather than on top of it -->
+  <ellipse class="halo" cx="58" cy="40" rx="44" ry="26" fill="url(#fa-metro-trout-bloom)"
+           opacity="0.42" filter="url(#fa-metro-trout-glow)"/>
+
+  <!-- tail and fins first, so the body overlaps them -->
+  <g filter="url(#fa-metro-trout-glow)">
+    <path class="tail" d="M32 40 L8 20 L16 40 L8 62 Z" fill="url(#fa-metro-trout-tail)"/>
+    <path class="fin" d="M56 26 C62 14 72 12 78 18 C72 22 66 28 60 38 Z" fill="url(#fa-metro-trout-fin)"/>
+    <path class="body" d="M32 40 C42 20 70 18 84 32 C92 40 92 44 84 50 C70 62 42 60 32 40 Z" fill="url(#fa-metro-trout-body)" stroke="hsl(150 68% 17%)"
+          stroke-width="1.1" stroke-opacity=".35"/>
+
+    <!-- the belly, lit from below by the water -->
+    <path class="belly" d="M40 52 C56 60 76 58 88 48 C76 58 56 62 40 54 Z"
+          fill="#ffffff" opacity=".34"/>
+
+    <!-- lateral stripes, in the deep tone so they read as depth not decoration -->
+    <g class="stripe" stroke="hsl(150 68% 17%)" stroke-width="1.8" opacity=".42"
+       stroke-linecap="round" fill="none">
+      <path d="M46 28 L50 56 M58 25 L62 59 M70 28 L74 54"/>
+    </g>
+
+    <!-- the scale sheen: three offset arcs of light along the flank -->
+    <g class="scales" fill="none" stroke="#ffffff" stroke-linecap="round" opacity=".3">
+      <path d="M44 44 C52 40 60 40 68 43" stroke-width="1.2"/>
+      <path d="M48 48 C56 45 64 45 72 47" stroke-width="1"/>
+      <path d="M52 52 C60 50 68 50 76 51" stroke-width=".8"/>
+    </g>
+  </g>
+
+  <!-- the specular sweep: the gloss cap that makes it read as glassy -->
+  <ellipse class="specular" cx="50" cy="29" rx="19" ry="9" fill="url(#fa-metro-trout-sheen)"
+           transform="rotate(-16 50 29)"/>
+
+  <!-- the eye, with a highlight so it looks wet -->
+  <circle class="eye" cx="76" cy="36" r="4" fill="#ffffff"/>
+  <circle cx="76.8" cy="36" r="2.08" fill="#06334f"/>
+  <circle cx="77.2" cy="34.4" r="0.80"
+          fill="#ffffff"/>
+
+  <!-- sparkles, more the rarer the fish -->
+  <g class="sparkles">
+    <path class="sparkle" d="M86.3 41.7
+      L87.6 44.5
+      L86.3 49.9
+      L85.0 44.5 Z"
+      fill="#ffffff" opacity="0.59"/>
+    <path class="sparkle" d="M47.9 49.0
+      L49.4 52.3
+      L47.9 58.6
+      L46.4 52.3 Z"
+      fill="#ffffff" opacity="0.59"/>
+    <path class="sparkle" d="M29.2 30.1
+      L30.5 32.9
+      L29.2 38.3
+      L27.9 32.9 Z"
+      fill="#ffffff" opacity="0.59"/>
+    <path class="sparkle" d="M71.8 21.4
+      L73.3 24.7
+      L71.8 31.0
+      L70.3 24.7 Z"
+      fill="#ffffff" opacity="0.59"/>
+  </g>
+
+  <!-- a soft shadow on the water under the fish -->
+  <ellipse class="shadow" cx="56" cy="66" rx="34" ry="5"
+           fill="#0a4a70" opacity=".18"/>
+
+  <!-- the glassy surface sheet, catching the sun -->
+  <rect class="surface" width="120" height="26" fill="url(#fa-metro-trout-glass)"
+        opacity=".38" rx="14"/>
+
+  <!-- a Legendary or Mythical gets a crown of light above it -->
+  
+</svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 120 80" width="120" height="80"
+     role="img" aria-label="A DORFic Dab">
+  <defs>
+    <!-- the body: a lit dorsal surface falling to a deep belly -->
+    <linearGradient id="fa-doric-dab-body" x1="0.18" y1="0" x2="0.72" y2="1">
+      <stop offset="0" stop-color="hsl(45 92% 78%)"/>
+      <stop offset="0.34" stop-color="hsl(45 88% 62%)"/>
+      <stop offset="0.62" stop-color="hsl(45 78% 46%)"/>
+      <stop offset="1" stop-color="hsl(45 68% 17%)"/>
+    </linearGradient>
+    <linearGradient id="fa-doric-dab-fin" x1="0.3" y1="0" x2="0.8" y2="1">
+      <stop offset="0" stop-color="hsl(45 88% 62%)"/>
+      <stop offset="1" stop-color="hsl(45 72% 28%)"/>
+    </linearGradient>
+    <linearGradient id="fa-doric-dab-tail" x1="0" y1="0" x2="1" y2="0.6">
+      <stop offset="0" stop-color="hsl(45 72% 28%)"/>
+      <stop offset="1" stop-color="hsl(45 68% 17%)"/>
+    </linearGradient>
+    <!-- the specular sweep across the back -->
+    <radialGradient id="fa-doric-dab-sheen" cx="0.32" cy="0.22" r="0.6">
+      <stop offset="0" stop-color="#ffffff" stop-opacity=".85"/>
+      <stop offset="0.55" stop-color="#ffffff" stop-opacity=".18"/>
+      <stop offset="1" stop-color="#ffffff" stop-opacity="0"/>
+    </radialGradient>
+    <!-- light spilling out of the fish; stronger on rare ones -->
+    <radialGradient id="fa-doric-dab-bloom" cx="0.5" cy="0.5" r="0.5">
+      <stop offset="0" stop-color="hsl(45 100% 82%)" stop-opacity="0.52"/>
+      <stop offset="0.6" stop-color="hsl(45 100% 78%)" stop-opacity="0.24"/>
+      <stop offset="1" stop-color="hsl(45 100% 74%)" stop-opacity="0"/>
+    </radialGradient>
+    <!-- the pond, deep at the bottom and bright at the surface -->
+    <linearGradient id="fa-doric-dab-water" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#eaf9ff"/>
+      <stop offset="0.42" stop-color="#a9e2fb"/>
+      <stop offset="0.78" stop-color="#5cc0ee"/>
+      <stop offset="1" stop-color="#2b8fd0"/>
+    </linearGradient>
+    <!-- a glassy sheet of light lying on the water -->
+    <linearGradient id="fa-doric-dab-glass" x1="0" y1="0" x2="1" y2="0">
+      <stop offset="0" stop-color="#ffffff" stop-opacity="0"/>
+      <stop offset="0.45" stop-color="#ffffff" stop-opacity=".55"/>
+      <stop offset="0.55" stop-color="#ffffff" stop-opacity=".55"/>
+      <stop offset="1" stop-color="#ffffff" stop-opacity="0"/>
+    </linearGradient>
+    <filter id="fa-doric-dab-glow" x="-40%" y="-40%" width="180%" height="180%">
+      <feGaussianBlur stdDeviation="3.6" result="b"/>
+      <feMerge>
+        <feMergeNode in="b"/>
+        <feMergeNode in="b"/>
+        <feMergeNode in="SourceGraphic"/>
+      </feMerge>
+    </filter>
+  </defs>
+
+  <!-- the pond, deepest layer -->
+  <rect width="120" height="80" rx="14" fill="url(#fa-doric-dab-water)"/>
+
+  <!-- the sun burning through the surface, behind everything -->
+  <circle class="bloom" cx="100" cy="14" r="26" fill="url(#fa-doric-dab-bloom)"/>
+  <circle cx="100" cy="14" r="10" fill="#fffde7" opacity=".85"/>
+  <circle cx="100" cy="14" r="6" fill="#ffffff" opacity=".9"/>
+
+  <!-- caustics: the light ripples that say "underwater" -->
+  <g class="caustics" fill="none" stroke="#ffffff" stroke-linecap="round">
+    <path d="M8 22 C22 15 36 29 50 22 C64 15 78 29 92 22" stroke-width="2" opacity=".5"/>
+    <path d="M12 34 C26 27 40 41 54 34 C68 27 82 41 96 34" stroke-width="1.6" opacity=".38"/>
+    <path d="M6 46 C20 39 34 53 48 46 C62 39 76 53 90 46" stroke-width="1.4" opacity=".28"/>
+  </g>
+
+  <!-- bubbles rising through the water column -->
+  <g class="bubbles">
+    <circle class="bubbles" cx="14" cy="12" r="1.8"
+      fill="#ffffff" opacity="0.34"/>
+    <circle class="bubbles" cx="37" cy="43" r="2.5"
+      fill="#ffffff" opacity="0.46"/>
+    <circle class="bubbles" cx="60" cy="16" r="3.2"
+      fill="#ffffff" opacity="0.58"/>
+    <circle class="bubbles" cx="83" cy="47" r="3.9"
+      fill="#ffffff" opacity="0.34"/>
+    <circle class="bubbles" cx="106" cy="20" r="1.8"
+      fill="#ffffff" opacity="0.46"/>
+    <circle class="bubbles" cx="33" cy="51" r="2.5"
+      fill="#ffffff" opacity="0.58"/>
+  </g>
+
+  <!-- the fish's own halo, so it sits in the light rather than on top of it -->
+  <ellipse class="halo" cx="58" cy="40" rx="44" ry="26" fill="url(#fa-doric-dab-bloom)"
+           opacity="0.54" filter="url(#fa-doric-dab-glow)"/>
+
+  <!-- tail and fins first, so the body overlaps them -->
+  <g filter="url(#fa-doric-dab-glow)">
+    <path class="tail" d="M30 42 L8 32 L14 42 L8 54 Z" fill="url(#fa-doric-dab-tail)"/>
+    <path class="fin" d="M58 32 C64 22 74 20 80 26 C74 30 68 34 62 40 Z" fill="url(#fa-doric-dab-fin)"/>
+    <path class="body" d="M30 42 C40 28 72 26 86 36 C94 42 94 46 86 52 C72 60 40 58 30 42 Z" fill="url(#fa-doric-dab-body)" stroke="hsl(45 68% 17%)"
+          stroke-width="1.1" stroke-opacity=".35"/>
+
+    <!-- the belly, lit from below by the water -->
+    <path class="belly" d="M40 52 C56 60 76 58 88 48 C76 58 56 62 40 54 Z"
+          fill="#ffffff" opacity=".34"/>
+
+    <!-- lateral stripes, in the deep tone so they read as depth not decoration -->
+    <g class="stripe" stroke="hsl(45 68% 17%)" stroke-width="1.8" opacity=".42"
+       stroke-linecap="round" fill="none">
+      <path d="M44 34 C56 30 70 32 82 38 M44 50 C58 54 72 52 82 46"/>
+    </g>
+
+    <!-- the scale sheen: three offset arcs of light along the flank -->
+    <g class="scales" fill="none" stroke="#ffffff" stroke-linecap="round" opacity=".3">
+      <path d="M44 44 C52 40 60 40 68 43" stroke-width="1.2"/>
+      <path d="M48 48 C56 45 64 45 72 47" stroke-width="1"/>
+      <path d="M52 52 C60 50 68 50 76 51" stroke-width=".8"/>
+    </g>
+  </g>
+
+  <!-- the specular sweep: the gloss cap that makes it read as glassy -->
+  <ellipse class="specular" cx="50" cy="29" rx="19" ry="9" fill="url(#fa-doric-dab-sheen)"
+           transform="rotate(-16 50 29)"/>
+
+  <!-- the eye, with a highlight so it looks wet -->
+  <circle class="eye" cx="78" cy="40" r="3.6" fill="#ffffff"/>
+  <circle cx="78.8" cy="40" r="1.87" fill="#06334f"/>
+  <circle cx="79.08" cy="38.56" r="0.72"
+          fill="#ffffff"/>
+
+  <!-- sparkles, more the rarer the fish -->
+  <g class="sparkles">
+    <path class="sparkle" d="M86.3 42.2
+      L87.5 44.6
+      L86.3 49.4
+      L85.1 44.6 Z"
+      fill="#ffffff" opacity="0.68"/>
+    <path class="sparkle" d="M63.8 50.6
+      L65.2 53.5
+      L63.8 59.2
+      L62.4 53.5 Z"
+      fill="#ffffff" opacity="0.68"/>
+    <path class="sparkle" d="M33.3 45.4
+      L34.5 47.8
+      L33.3 52.6
+      L32.1 47.8 Z"
+      fill="#ffffff" opacity="0.68"/>
+    <path class="sparkle" d="M32.0 29.9
+      L33.4 32.8
+      L32.0 38.5
+      L30.6 32.8 Z"
+      fill="#ffffff" opacity="0.68"/>
+    <path class="sparkle" d="M55.9 21.5
+      L57.1 23.9
+      L55.9 28.7
+      L54.7 23.9 Z"
+      fill="#ffffff" opacity="0.68"/>
+    <path class="sparkle" d="M83.7 26.7
+      L85.1 29.6
+      L83.7 35.3
+      L82.3 29.6 Z"
+      fill="#ffffff" opacity="0.68"/>
+  </g>
+
+  <!-- a soft shadow on the water under the fish -->
+  <ellipse class="shadow" cx="56" cy="66" rx="34" ry="5"
+           fill="#0a4a70" opacity=".18"/>
+
+  <!-- the glassy surface sheet, catching the sun -->
+  <rect class="surface" width="120" height="26" fill="url(#fa-doric-dab-glass)"
+        opacity=".38" rx="14"/>
+
+  <!-- a Legendary or Mythical gets a crown of light above it -->
+  
+</svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 120 80" width="120" height="80"
+     role="img" aria-label="A Eco Gar">
+  <defs>
+    <!-- the body: a lit dorsal surface falling to a deep belly -->
+    <linearGradient id="fa-eco-gar-body" x1="0.18" y1="0" x2="0.72" y2="1">
+      <stop offset="0" stop-color="hsl(110 92% 78%)"/>
+      <stop offset="0.34" stop-color="hsl(110 88% 62%)"/>
+      <stop offset="0.62" stop-color="hsl(110 78% 46%)"/>
+      <stop offset="1" stop-color="hsl(110 68% 17%)"/>
+    </linearGradient>
+    <linearGradient id="fa-eco-gar-fin" x1="0.3" y1="0" x2="0.8" y2="1">
+      <stop offset="0" stop-color="hsl(110 88% 62%)"/>
+      <stop offset="1" stop-color="hsl(110 72% 28%)"/>
+    </linearGradient>
+    <linearGradient id="fa-eco-gar-tail" x1="0" y1="0" x2="1" y2="0.6">
+      <stop offset="0" stop-color="hsl(110 72% 28%)"/>
+      <stop offset="1" stop-color="hsl(110 68% 17%)"/>
+    </linearGradient>
+    <!-- the specular sweep across the back -->
+    <radialGradient id="fa-eco-gar-sheen" cx="0.32" cy="0.22" r="0.6">
+      <stop offset="0" stop-color="#ffffff" stop-opacity=".85"/>
+      <stop offset="0.55" stop-color="#ffffff" stop-opacity=".18"/>
+      <stop offset="1" stop-color="#ffffff" stop-opacity="0"/>
+    </radialGradient>
+    <!-- light spilling out of the fish; stronger on rare ones -->
+    <radialGradient id="fa-eco-gar-bloom" cx="0.5" cy="0.5" r="0.5">
+      <stop offset="0" stop-color="hsl(110 100% 82%)" stop-opacity="0.63"/>
+      <stop offset="0.6" stop-color="hsl(110 100% 78%)" stop-opacity="0.30"/>
+      <stop offset="1" stop-color="hsl(110 100% 74%)" stop-opacity="0"/>
+    </radialGradient>
+    <!-- the pond, deep at the bottom and bright at the surface -->
+    <linearGradient id="fa-eco-gar-water" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#eaf9ff"/>
+      <stop offset="0.42" stop-color="#a9e2fb"/>
+      <stop offset="0.78" stop-color="#5cc0ee"/>
+      <stop offset="1" stop-color="#2b8fd0"/>
+    </linearGradient>
+    <!-- a glassy sheet of light lying on the water -->
+    <linearGradient id="fa-eco-gar-glass" x1="0" y1="0" x2="1" y2="0">
+      <stop offset="0" stop-color="#ffffff" stop-opacity="0"/>
+      <stop offset="0.45" stop-color="#ffffff" stop-opacity=".55"/>
+      <stop offset="0.55" stop-color="#ffffff" stop-opacity=".55"/>
+      <stop offset="1" stop-color="#ffffff" stop-opacity="0"/>
+    </linearGradient>
+    <filter id="fa-eco-gar-glow" x="-40%" y="-40%" width="180%" height="180%">
+      <feGaussianBlur stdDeviation="4.7" result="b"/>
+      <feMerge>
+        <feMergeNode in="b"/>
+        <feMergeNode in="b"/>
+        <feMergeNode in="SourceGraphic"/>
+      </feMerge>
+    </filter>
+  </defs>
+
+  <!-- the pond, deepest layer -->
+  <rect width="120" height="80" rx="14" fill="url(#fa-eco-gar-water)"/>
+
+  <!-- the sun burning through the surface, behind everything -->
+  <circle class="bloom" cx="100" cy="14" r="26" fill="url(#fa-eco-gar-bloom)"/>
+  <circle cx="100" cy="14" r="10" fill="#fffde7" opacity=".85"/>
+  <circle cx="100" cy="14" r="6" fill="#ffffff" opacity=".9"/>
+
+  <!-- caustics: the light ripples that say "underwater" -->
+  <g class="caustics" fill="none" stroke="#ffffff" stroke-linecap="round">
+    <path d="M8 22 C22 15 36 29 50 22 C64 15 78 29 92 22" stroke-width="2" opacity=".5"/>
+    <path d="M12 34 C26 27 40 41 54 34 C68 27 82 41 96 34" stroke-width="1.6" opacity=".38"/>
+    <path d="M6 46 C20 39 34 53 48 46 C62 39 76 53 90 46" stroke-width="1.4" opacity=".28"/>
+  </g>
+
+  <!-- bubbles rising through the water column -->
+  <g class="bubbles">
+    <circle class="bubbles" cx="14" cy="12" r="1.8"
+      fill="#ffffff" opacity="0.34"/>
+    <circle class="bubbles" cx="37" cy="43" r="2.5"
+      fill="#ffffff" opacity="0.46"/>
+    <circle class="bubbles" cx="60" cy="16" r="3.2"
+      fill="#ffffff" opacity="0.58"/>
+    <circle class="bubbles" cx="83" cy="47" r="3.9"
+      fill="#ffffff" opacity="0.34"/>
+    <circle class="bubbles" cx="106" cy="20" r="1.8"
+      fill="#ffffff" opacity="0.46"/>
+    <circle class="bubbles" cx="33" cy="51" r="2.5"
+      fill="#ffffff" opacity="0.58"/>
+    <circle class="bubbles" cx="56" cy="24" r="3.2"
+      fill="#ffffff" opacity="0.34"/>
+  </g>
+
+  <!-- the fish's own halo, so it sits in the light rather than on top of it -->
+  <ellipse class="halo" cx="58" cy="40" rx="44" ry="26" fill="url(#fa-eco-gar-bloom)"
+           opacity="0.66" filter="url(#fa-eco-gar-glow)"/>
+
+  <!-- tail and fins first, so the body overlaps them -->
+  <g filter="url(#fa-eco-gar-glow)">
+    <path class="tail" d="M26 40 L4 18 L13 40 L4 64 Z" fill="url(#fa-eco-gar-tail)"/>
+    <path class="fin" d="M54 26 C62 12 74 10 82 16 C74 20 66 28 58 38 Z" fill="url(#fa-eco-gar-fin)"/>
+    <path class="body" d="M26 40 C38 22 74 18 90 30 C100 38 100 44 90 50 C74 62 38 58 26 40 Z" fill="url(#fa-eco-gar-body)" stroke="hsl(110 68% 17%)"
+          stroke-width="1.1" stroke-opacity=".35"/>
+
+    <!-- the belly, lit from below by the water -->
+    <path class="belly" d="M40 52 C56 60 76 58 88 48 C76 58 56 62 40 54 Z"
+          fill="#ffffff" opacity=".34"/>
+
+    <!-- lateral stripes, in the deep tone so they read as depth not decoration -->
+    <g class="stripe" stroke="hsl(110 68% 17%)" stroke-width="1.8" opacity=".42"
+       stroke-linecap="round" fill="none">
+      <path d="M40 28 L44 54 M52 25 L56 57 M64 24 L68 56 M76 26 L80 52"/>
+    </g>
+
+    <!-- the scale sheen: three offset arcs of light along the flank -->
+    <g class="scales" fill="none" stroke="#ffffff" stroke-linecap="round" opacity=".3">
+      <path d="M44 44 C52 40 60 40 68 43" stroke-width="1.2"/>
+      <path d="M48 48 C56 45 64 45 72 47" stroke-width="1"/>
+      <path d="M52 52 C60 50 68 50 76 51" stroke-width=".8"/>
+    </g>
+  </g>
+
+  <!-- the specular sweep: the gloss cap that makes it read as glassy -->
+  <ellipse class="specular" cx="50" cy="29" rx="19" ry="9" fill="url(#fa-eco-gar-sheen)"
+           transform="rotate(-16 50 29)"/>
+
+  <!-- the eye, with a highlight so it looks wet -->
+  <circle class="eye" cx="82" cy="36" r="4.2" fill="#ffffff"/>
+  <circle cx="82.8" cy="36" r="2.18" fill="#06334f"/>
+  <circle cx="83.26" cy="34.32" r="0.84"
+          fill="#ffffff"/>
+
+  <!-- sparkles, more the rarer the fish -->
+  <g class="sparkles">
+    <path class="sparkle" d="M86.3 42.7
+      L87.3 44.8
+      L86.3 48.9
+      L85.3 44.8 Z"
+      fill="#ffffff" opacity="0.77"/>
+    <path class="sparkle" d="M71.7 50.1
+      L72.9 52.7
+      L71.7 57.7
+      L70.5 52.7 Z"
+      fill="#ffffff" opacity="0.77"/>
+    <path class="sparkle" d="M47.0 50.7
+      L48.0 52.8
+      L47.0 56.9
+      L46.0 52.8 Z"
+      fill="#ffffff" opacity="0.77"/>
+    <path class="sparkle" d="M31.8 41.8
+      L33.0 44.4
+      L31.8 49.4
+      L30.6 44.4 Z"
+      fill="#ffffff" opacity="0.77"/>
+    <path class="sparkle" d="M29.7 31.1
+      L30.7 33.2
+      L29.7 37.3
+      L28.7 33.2 Z"
+      fill="#ffffff" opacity="0.77"/>
+    <path class="sparkle" d="M48.8 22.3
+      L50.0 24.9
+      L48.8 29.9
+      L47.6 24.9 Z"
+      fill="#ffffff" opacity="0.77"/>
+    <path class="sparkle" d="M72.6 23.1
+      L73.6 25.2
+      L72.6 29.3
+      L71.6 25.2 Z"
+      fill="#ffffff" opacity="0.77"/>
+    <path class="sparkle" d="M87.0 30.6
+      L88.2 33.2
+      L87.0 38.2
+      L85.8 33.2 Z"
+      fill="#ffffff" opacity="0.77"/>
+  </g>
+
+  <!-- a soft shadow on the water under the fish -->
+  <ellipse class="shadow" cx="56" cy="66" rx="34" ry="5"
+           fill="#0a4a70" opacity=".18"/>
+
+  <!-- the glassy surface sheet, catching the sun -->
+  <rect class="surface" width="120" height="26" fill="url(#fa-eco-gar-glass)"
+        opacity=".38" rx="14"/>
+
+  <!-- a Legendary or Mythical gets a crown of light above it -->
+  <g class="ring">
+    <ellipse cx="58" cy="17" rx="26" ry="7" fill="none" stroke="#ffffff"
+             stroke-width="1.6" opacity=".5"/>
+    <ellipse cx="58" cy="17" rx="17" ry="4.6" fill="none" stroke="#fff9c4"
+             stroke-width="1.2" opacity=".65"/>
+  </g>
+</svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 120 80" width="120" height="80"
+     role="img" aria-label="A Glacier Char">
+  <defs>
+    <!-- the body: a lit dorsal surface falling to a deep belly -->
+    <linearGradient id="fa-glacier-char-body" x1="0.18" y1="0" x2="0.72" y2="1">
+      <stop offset="0" stop-color="hsl(275 92% 78%)"/>
+      <stop offset="0.34" stop-color="hsl(275 88% 62%)"/>
+      <stop offset="0.62" stop-color="hsl(275 78% 46%)"/>
+      <stop offset="1" stop-color="hsl(275 68% 17%)"/>
+    </linearGradient>
+    <linearGradient id="fa-glacier-char-fin" x1="0.3" y1="0" x2="0.8" y2="1">
+      <stop offset="0" stop-color="hsl(275 88% 62%)"/>
+      <stop offset="1" stop-color="hsl(275 72% 28%)"/>
+    </linearGradient>
+    <linearGradient id="fa-glacier-char-tail" x1="0" y1="0" x2="1" y2="0.6">
+      <stop offset="0" stop-color="hsl(275 72% 28%)"/>
+      <stop offset="1" stop-color="hsl(275 68% 17%)"/>
+    </linearGradient>
+    <!-- the specular sweep across the back -->
+    <radialGradient id="fa-glacier-char-sheen" cx="0.32" cy="0.22" r="0.6">
+      <stop offset="0" stop-color="#ffffff" stop-opacity=".85"/>
+      <stop offset="0.55" stop-color="#ffffff" stop-opacity=".18"/>
+      <stop offset="1" stop-color="#ffffff" stop-opacity="0"/>
+    </radialGradient>
+    <!-- light spilling out of the fish; stronger on rare ones -->
+    <radialGradient id="fa-glacier-char-bloom" cx="0.5" cy="0.5" r="0.5">
+      <stop offset="0" stop-color="hsl(275 100% 82%)" stop-opacity="0.74"/>
+      <stop offset="0.6" stop-color="hsl(275 100% 78%)" stop-opacity="0.36"/>
+      <stop offset="1" stop-color="hsl(275 100% 74%)" stop-opacity="0"/>
+    </radialGradient>
+    <!-- the pond, deep at the bottom and bright at the surface -->
+    <linearGradient id="fa-glacier-char-water" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#eaf9ff"/>
+      <stop offset="0.42" stop-color="#a9e2fb"/>
+      <stop offset="0.78" stop-color="#5cc0ee"/>
+      <stop offset="1" stop-color="#2b8fd0"/>
+    </linearGradient>
+    <!-- a glassy sheet of light lying on the water -->
+    <linearGradient id="fa-glacier-char-glass" x1="0" y1="0" x2="1" y2="0">
+      <stop offset="0" stop-color="#ffffff" stop-opacity="0"/>
+      <stop offset="0.45" stop-color="#ffffff" stop-opacity=".55"/>
+      <stop offset="0.55" stop-color="#ffffff" stop-opacity=".55"/>
+      <stop offset="1" stop-color="#ffffff" stop-opacity="0"/>
+    </linearGradient>
+    <filter id="fa-glacier-char-glow" x="-40%" y="-40%" width="180%" height="180%">
+      <feGaussianBlur stdDeviation="5.8" result="b"/>
+      <feMerge>
+        <feMergeNode in="b"/>
+        <feMergeNode in="b"/>
+        <feMergeNode in="SourceGraphic"/>
+      </feMerge>
+    </filter>
+  </defs>
+
+  <!-- the pond, deepest layer -->
+  <rect width="120" height="80" rx="14" fill="url(#fa-glacier-char-water)"/>
+
+  <!-- the sun burning through the surface, behind everything -->
+  <circle class="bloom" cx="100" cy="14" r="26" fill="url(#fa-glacier-char-bloom)"/>
+  <circle cx="100" cy="14" r="10" fill="#fffde7" opacity=".85"/>
+  <circle cx="100" cy="14" r="6" fill="#ffffff" opacity=".9"/>
+
+  <!-- caustics: the light ripples that say "underwater" -->
+  <g class="caustics" fill="none" stroke="#ffffff" stroke-linecap="round">
+    <path d="M8 22 C22 15 36 29 50 22 C64 15 78 29 92 22" stroke-width="2" opacity=".5"/>
+    <path d="M12 34 C26 27 40 41 54 34 C68 27 82 41 96 34" stroke-width="1.6" opacity=".38"/>
+    <path d="M6 46 C20 39 34 53 48 46 C62 39 76 53 90 46" stroke-width="1.4" opacity=".28"/>
+  </g>
+
+  <!-- bubbles rising through the water column -->
+  <g class="bubbles">
+    <circle class="bubbles" cx="14" cy="12" r="1.8"
+      fill="#ffffff" opacity="0.34"/>
+    <circle class="bubbles" cx="37" cy="43" r="2.5"
+      fill="#ffffff" opacity="0.46"/>
+    <circle class="bubbles" cx="60" cy="16" r="3.2"
+      fill="#ffffff" opacity="0.58"/>
+    <circle class="bubbles" cx="83" cy="47" r="3.9"
+      fill="#ffffff" opacity="0.34"/>
+    <circle class="bubbles" cx="106" cy="20" r="1.8"
+      fill="#ffffff" opacity="0.46"/>
+    <circle class="bubbles" cx="33" cy="51" r="2.5"
+      fill="#ffffff" opacity="0.58"/>
+    <circle class="bubbles" cx="56" cy="24" r="3.2"
+      fill="#ffffff" opacity="0.34"/>
+    <circle class="bubbles" cx="79" cy="55" r="3.9"
+      fill="#ffffff" opacity="0.46"/>
+  </g>
+
+  <!-- the fish's own halo, so it sits in the light rather than on top of it -->
+  <ellipse class="halo" cx="58" cy="40" rx="44" ry="26" fill="url(#fa-glacier-char-bloom)"
+           opacity="0.78" filter="url(#fa-glacier-char-glow)"/>
+
+  <!-- tail and fins first, so the body overlaps them -->
+  <g filter="url(#fa-glacier-char-glow)">
+    <path class="tail" d="M26 40 L4 18 L13 40 L4 64 Z" fill="url(#fa-glacier-char-tail)"/>
+    <path class="fin" d="M54 26 C62 12 74 10 82 16 C74 20 66 28 58 38 Z" fill="url(#fa-glacier-char-fin)"/>
+    <path class="body" d="M26 40 C38 22 74 18 90 30 C100 38 100 44 90 50 C74 62 38 58 26 40 Z" fill="url(#fa-glacier-char-body)" stroke="hsl(275 68% 17%)"
+          stroke-width="1.1" stroke-opacity=".35"/>
+
+    <!-- the belly, lit from below by the water -->
+    <path class="belly" d="M40 52 C56 60 76 58 88 48 C76 58 56 62 40 54 Z"
+          fill="#ffffff" opacity=".34"/>
+
+    <!-- lateral stripes, in the deep tone so they read as depth not decoration -->
+    <g class="stripe" stroke="hsl(275 68% 17%)" stroke-width="1.8" opacity=".42"
+       stroke-linecap="round" fill="none">
+      <path d="M40 28 L44 54 M52 25 L56 57 M64 24 L68 56 M76 26 L80 52"/>
+    </g>
+
+    <!-- the scale sheen: three offset arcs of light along the flank -->
+    <g class="scales" fill="none" stroke="#ffffff" stroke-linecap="round" opacity=".3">
+      <path d="M44 44 C52 40 60 40 68 43" stroke-width="1.2"/>
+      <path d="M48 48 C56 45 64 45 72 47" stroke-width="1"/>
+      <path d="M52 52 C60 50 68 50 76 51" stroke-width=".8"/>
+    </g>
+  </g>
+
+  <!-- the specular sweep: the gloss cap that makes it read as glassy -->
+  <ellipse class="specular" cx="50" cy="29" rx="19" ry="9" fill="url(#fa-glacier-char-sheen)"
+           transform="rotate(-16 50 29)"/>
+
+  <!-- the eye, with a highlight so it looks wet -->
+  <circle class="eye" cx="82" cy="36" r="4.2" fill="#ffffff"/>
+  <circle cx="82.8" cy="36" r="2.18" fill="#06334f"/>
+  <circle cx="83.26" cy="34.32" r="0.84"
+          fill="#ffffff"/>
+
+  <!-- sparkles, more the rarer the fish -->
+  <g class="sparkles">
+    <path class="sparkle" d="M86.3 43.2
+      L87.1 45.0
+      L86.3 48.4
+      L85.5 45.0 Z"
+      fill="#ffffff" opacity="0.86"/>
+    <path class="sparkle" d="M76.0 49.5
+      L77.1 51.7
+      L76.0 56.1
+      L74.9 51.7 Z"
+      fill="#ffffff" opacity="0.86"/>
+    <path class="sparkle" d="M57.1 52.3
+      L57.9 54.1
+      L57.1 57.5
+      L56.3 54.1 Z"
+      fill="#ffffff" opacity="0.86"/>
+    <path class="sparkle" d="M40.1 48.0
+      L41.2 50.2
+      L40.1 54.6
+      L39.0 50.2 Z"
+      fill="#ffffff" opacity="0.86"/>
+    <path class="sparkle" d="M28.0 40.8
+      L28.8 42.6
+      L28.0 46.0
+      L27.2 42.6 Z"
+      fill="#ffffff" opacity="0.86"/>
+    <path class="sparkle" d="M32.6 30.9
+      L33.7 33.1
+      L32.6 37.5
+      L31.5 33.1 Z"
+      fill="#ffffff" opacity="0.86"/>
+    <path class="sparkle" d="M43.4 24.6
+      L44.2 26.4
+      L43.4 29.8
+      L42.6 26.4 Z"
+      fill="#ffffff" opacity="0.86"/>
+    <path class="sparkle" d="M62.5 21.8
+      L63.6 24.0
+      L62.5 28.4
+      L61.4 24.0 Z"
+      fill="#ffffff" opacity="0.86"/>
+    <path class="sparkle" d="M80.7 26.1
+      L81.5 27.9
+      L80.7 31.3
+      L79.9 27.9 Z"
+      fill="#ffffff" opacity="0.86"/>
+    <path class="sparkle" d="M87.8 33.3
+      L88.9 35.5
+      L87.8 39.9
+      L86.7 35.5 Z"
+      fill="#ffffff" opacity="0.86"/>
+  </g>
+
+  <!-- a soft shadow on the water under the fish -->
+  <ellipse class="shadow" cx="56" cy="66" rx="34" ry="5"
+           fill="#0a4a70" opacity=".18"/>
+
+  <!-- the glassy surface sheet, catching the sun -->
+  <rect class="surface" width="120" height="26" fill="url(#fa-glacier-char-glass)"
+        opacity=".38" rx="14"/>
+
+  <!-- a Legendary or Mythical gets a crown of light above it -->
+  <g class="ring">
+    <ellipse cx="58" cy="17" rx="26" ry="7" fill="none" stroke="#ffffff"
+             stroke-width="1.6" opacity=".5"/>
+    <ellipse cx="58" cy="17" rx="17" ry="4.6" fill="none" stroke="#fff9c4"
+             stroke-width="1.2" opacity=".65"/>
+  </g>
+</svg>
+</div>

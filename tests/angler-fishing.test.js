@@ -357,3 +357,96 @@ test('the fish drawing carries the fish name for accessibility', () => {
   assert.match(svg, /role="img"/);
   assert.match(svg, /aria-label="[^"]*Metro Trout[^"]*"/, 'the name must be in the label');
 });
+
+
+/* ------------------------------------------------- maximalist Aero fish art */
+
+test('every fish is drawn with the full Aero treatment, not a flat body', () => {
+  // The old drawing was four flat shapes on a flat pond. Maximalist Aero means
+  // layered depth, bloom and specular, so assert the layers exist per fish.
+  for (const fish of FISH) {
+    const svg = fishSvg(fish);
+    const where = fish.name;
+
+    // A gradient body and at least two more for the fins and tail, so nothing
+    // reads as a flat fill.
+    const gradients = (svg.match(/<(linear|radial)Gradient/g) || []).length;
+    assert.ok(gradients >= 5,
+      `${where}: expected 5+ gradients for depth, found ${gradients}`);
+
+    // Bloom around the fish and a specular highlight on it.
+    assert.match(svg, /class="bloom"/, `${where} needs a bloom`);
+    assert.match(svg, /class="specular"/, `${where} needs a specular highlight`);
+    assert.match(svg, /filter=/, `${where} needs a glow filter`);
+
+    // Bubbles rising, the signature Aero motif.
+    assert.match(svg, /class="bubbles"/, `${where} needs bubbles`);
+
+    // Glassy overlay across the water, plus caustics.
+    assert.match(svg, /class="caustics"/, `${where} needs caustics`);
+    assert.match(svg, /class="surface"/, `${where} needs a glassy water surface`);
+  }
+});
+
+test('no two fish share SVG element ids', () => {
+  // Every drawing used id="fb" and id="fs". Six fish in the index therefore
+  // produced six copies of each id, so url(#fb) resolved to whichever came
+  // first in the document and the rest silently borrowed its gradient.
+  const ids = [];
+  for (const fish of FISH) {
+    for (const m of fishSvg(fish).matchAll(/\sid="([^"]+)"/g)) ids.push(m[1]);
+  }
+  assert.equal(new Set(ids).size, ids.length,
+    `duplicate SVG ids across the fish drawings: ` +
+    `${ids.filter((id, i) => ids.indexOf(id) !== i).join(', ')}`);
+});
+
+test('rarer fish are drawn more extravagantly than common ones', () => {
+  // A Mythical should look like an event. Count the extra decoration layers.
+  // Count the individual glints, not the wrapper group that holds them.
+  const layers = (fish) => (fishSvg(fish).match(/class="sparkle"/g) || []).length;
+  const common = FISH.filter((f) => f.rarity === 'Common');
+  const rare = FISH.filter((f) => f.rarity === 'Mythical' || f.rarity === 'Legendary');
+  assert.ok(rare.length > 0 && common.length > 0);
+
+  const maxCommon = Math.max(...common.map(layers));
+  const minRare = Math.min(...rare.map(layers));
+  assert.ok(minRare > maxCommon,
+    `the rarest fish should carry more sparkle than the commonest: ${minRare} vs ${maxCommon}`);
+});
+
+test('every fish drawing is well-formed and resolves its own references', () => {
+  // A malformed gradient is dropped by the browser with no error, so a broken
+  // drawing can pass every string assertion while rendering as a flat fish.
+  // Check the things a browser would silently discard: unbalanced quotes, and
+  // url(#x) where no id="x" exists in that same drawing.
+  for (const fish of FISH) {
+    const svg = fishSvg(fish);
+    const where = fish.name;
+
+    assert.equal((svg.match(/"/g) || []).length % 2, 0,
+      `${where}: unbalanced quotes, so attributes are being misparsed`);
+
+    const ids = new Set([...svg.matchAll(/\sid="([^"]+)"/g)].map((m) => m[1]));
+    const refs = [...new Set([...svg.matchAll(/url\(#([^)]+)\)/g)].map((m) => m[1]))];
+    for (const ref of refs) {
+      assert.ok(ids.has(ref), `${where}: url(#${ref}) has no matching id in this drawing`);
+    }
+
+    // Every opening tag must be closed or self-closing.
+    const open = (svg.match(/<[a-zA-Z][^>]*(?<![/\d])>/g) || []).filter((t) => !t.endsWith('/>'));
+    const closed = (svg.match(/<\/[a-zA-Z]+>/g) || []).length;
+    assert.equal(open.length, closed, `${where}: ${open.length} tags open, ${closed} closed`);
+  }
+});
+
+test('a drawn fish is still recognisable at index size', () => {
+  // Maximalism must not bury the silhouette. The body has to stay the dominant
+  // shape and the eye has to remain visible at 40px.
+  const svg = fishSvg(FISH[0]);
+  const body = svg.match(/class="body"[^>]*d="([^"]+)"/);
+  assert.ok(body, 'the body must be a single, addressable path');
+  assert.ok(body[1].length > 60, 'the body silhouette must be a real shape');
+  assert.match(svg, /class="eye"/, 'the eye must survive, or it is not a fish');
+  assert.match(svg, /viewBox="0 0 120 80"/, 'and the viewBox must be unchanged');
+});
