@@ -172,44 +172,170 @@ export const RODS = {/* ---- three more ordinary rods --------------------------
 };
 
 /**
- * How each rod is drawn in the scene: its length, thickness and colour, plus where
- * the lure ends up. Without this, buying a rod changed the numbers but not a single
- * pixel on screen. Coordinates are the scene's percentage space, running from the
- * angler's shoulder at (40.7, 52) up and to the right.
+ * How each rod is drawn in the scene: length, thickness and colour, plus the parts
+ * that make it read as TACKLE rather than a stick.
  *
- * Upgrades get longer and thicker, so the progression is legible at a glance.
+ * A rod is not a line. It is a tapered blank with a wrapped grip, a seat, a reel
+ * and a row of line guides running up to the tip. Getting those right is what makes
+ * a 20,000-rod look like a different object from the free bamboo stick -- width and
+ * colour alone did not, they only made the same silhouette fatter.
+ *
+ * `t` is a fraction along the rod, 0 at the butt and 1 at the tip, so the guides and
+ * the grip stay on the shaft no matter how a rod's path is drawn.
+ *
+ * Blank styles:
+ *   taper  - the blank thickens toward the butt, drawn as a filled wedge
+ *   split  - a second, lighter stripe up the blank (carbon fibre weave)
+ *   wrap   - cork or EVA grip bands with visible binding
+ *   gloss  - a specular highlight band along the top of the blank
+ *
+ * Reels: 0 none, 1 small, 2 medium, 3 large.
+ * Upgrades stay strictly longer and thicker, so the ladder reads at a glance.
  */
 const ROD_LOOKS = {
-  // In price order, and strictly monotone in length and thickness. The trait rods
-  // interleave with the ordinary ones, so the ladder has to be built as a whole --
-  // it was assembled a rod at a time and glacier and abyss both ended up
-  // configured backwards once the second rods arrived.
-  bamboo:      { path: 'M40.7 52 L52 40', width: 1.1, colour: '#c8a06a' },
-  willow:      { path: 'M40.7 52 L55 35', width: 1.5, colour: '#a9714a' },
-  carbon:      { path: 'M40.7 52 L58 31', width: 1.9, colour: '#4a6b7c' },
-  oak:         { path: 'M40.7 52 L61 27', width: 2.4, colour: '#7d4f2e' },
-  titan:       { path: 'M40.7 52 L64 23', width: 3.0, colour: '#8c9aa8' },
-  zephyr:      { path: 'M40.7 52 L66 22', width: 3.2, colour: '#7fb8d8' },
-  quicksilver: { path: 'M40.7 52 L67 21', width: 3.5, colour: '#c3d4e0' },
-  horizon:     { path: 'M40.7 52 L68 20', width: 3.8, colour: '#4c6b80' },
-  // Trait rods, tinted with the lake they open.
-  canopy:      { path: 'M40.7 52 L69 19', width: 3.9, colour: '#5f8f3f' },
-  channel:     { path: 'M40.7 52 L70 19', width: 4.0, colour: '#e07b2a' },
-  understory:  { path: 'M40.7 52 L71 18', width: 4.1, colour: '#7cb342' },
-  spillway:    { path: 'M40.7 52 L72 18', width: 4.2, colour: '#f0a35a' },
-  glacier:     { path: 'M40.7 52 L73 17', width: 4.3, colour: '#bfe4f5' },
-  glacierwall: { path: 'M40.7 52 L74 17', width: 4.4, colour: '#d8f0fb' },
-  abyss:       { path: 'M40.7 52 L75 16', width: 4.5, colour: '#1d4a63' },
-  trenchline:  { path: 'M40.7 52 L76 16', width: 4.6, colour: '#2b5f80' },
+  // ---- eight ordinary rods, no trait. These are the gate out of Aero Lake. ----
+  bamboo: {
+    path: 'M40.7 52 L52 40', width: 1.1, colour: '#c8a06a',
+    blank: ['taper'], grip: 'wrap', gripColour: '#e8d3a8', reel: 0,
+    guides: [0.42, 0.66, 0.88],
+  },
+  willow: {
+    path: 'M40.7 52 L55 35', width: 1.5, colour: '#a9714a',
+    blank: ['taper'], grip: 'wrap', gripColour: '#d9b483', reel: 1,
+    guides: [0.4, 0.62, 0.82, 0.96],
+  },
+  carbon: {
+    path: 'M40.7 52 L58 31', width: 1.9, colour: '#4a6b7c',
+    blank: ['taper', 'split'], grip: 'foam', gripColour: '#2f4552', reel: 1,
+    guides: [0.38, 0.6, 0.8, 0.95],
+  },
+  oak: {
+    path: 'M40.7 52 L61 27', width: 2.4, colour: '#7d4f2e',
+    blank: ['taper'], grip: 'wrap', gripColour: '#c99a5e', reel: 2,
+    guides: [0.36, 0.58, 0.78, 0.94],
+  },
+  titan: {
+    path: 'M40.7 52 L64 23', width: 3.0, colour: '#8c9aa8',
+    blank: ['taper', 'gloss'], grip: 'foam', gripColour: '#4c5865', reel: 2,
+    guides: [0.34, 0.56, 0.76, 0.93],
+  },
+  zephyr: {
+    path: 'M40.7 52 L66 22', width: 3.2, colour: '#7fb8d8',
+    blank: ['taper', 'gloss'], grip: 'foam', gripColour: '#3f6b86', reel: 2,
+    guides: [0.32, 0.54, 0.75, 0.92],
+  },
+  quicksilver: {
+    path: 'M40.7 52 L67 21', width: 3.5, colour: '#c3d4e0',
+    blank: ['taper', 'gloss', 'split'], grip: 'foam', gripColour: '#6d8494', reel: 3,
+    guides: [0.3, 0.52, 0.74, 0.91],
+  },
+  horizon: {
+    path: 'M40.7 52 L68 20', width: 3.8, colour: '#4c6b80',
+    blank: ['taper', 'gloss', 'split'], grip: 'foam', gripColour: '#263b49', reel: 3,
+    guides: [0.28, 0.5, 0.73, 0.9],
+  },
+
+  // ---- trait rods, tinted with the lake they open -------------------------
+  canopy: {
+    path: 'M40.7 52 L69 19', width: 3.9, colour: '#5f8f3f',
+    blank: ['taper', 'gloss'], grip: 'wrap', gripColour: '#4a6b30', reel: 3,
+    guides: [0.3, 0.52, 0.74, 0.91],
+  },
+  channel: {
+    path: 'M40.7 52 L70 19', width: 4.0, colour: '#e07b2a',
+    blank: ['taper', 'gloss', 'stripe'], grip: 'foam', gripColour: '#8f4310', reel: 3,
+    guides: [0.29, 0.51, 0.73, 0.9],
+  },
+  understory: {
+    path: 'M40.7 52 L71 18', width: 4.1, colour: '#7cb342',
+    blank: ['taper', 'gloss'], grip: 'wrap', gripColour: '#3f5c26', reel: 3,
+    guides: [0.28, 0.5, 0.72, 0.9],
+  },
+  spillway: {
+    path: 'M40.7 52 L72 18', width: 4.2, colour: '#f0a35a',
+    blank: ['taper', 'gloss', 'stripe'], grip: 'foam', gripColour: '#8a5320', reel: 3,
+    guides: [0.27, 0.49, 0.71, 0.89],
+  },
+  glacier: {
+    path: 'M40.7 52 L73 17', width: 4.3, colour: '#bfe4f5',
+    blank: ['taper', 'gloss', 'split'], grip: 'foam', gripColour: '#5d8fa8', reel: 3,
+    guides: [0.26, 0.48, 0.7, 0.88],
+  },
+  glacierwall: {
+    path: 'M40.7 52 L74 17', width: 4.4, colour: '#d8f0fb',
+    blank: ['taper', 'gloss', 'split'], grip: 'crystal', gripColour: '#7fb8d4', reel: 3,
+    guides: [0.25, 0.47, 0.69, 0.88],
+  },
+  abyss: {
+    path: 'M40.7 52 L75 16', width: 4.5, colour: '#1d4a63',
+    blank: ['taper', 'gloss', 'split'], grip: 'wrap', gripColour: '#0f2c3d', reel: 3,
+    guides: [0.24, 0.46, 0.68, 0.87],
+  },
+  trenchline: {
+    path: 'M40.7 52 L76 16', width: 4.6, colour: '#2b5f80',
+    blank: ['taper', 'gloss', 'stripe', 'split'], grip: 'crystal', gripColour: '#17455f', reel: 3,
+    guides: [0.23, 0.45, 0.67, 0.86],
+  },
 };
+
+/**
+ * How far along the rod the grip runs, as fractions of the whole blank. Shared so a
+ * rod is never drawn with a grip hanging off the end of its own shaft.
+ */
+const GRIP_FROM = 0.1;
+const GRIP_TO = 0.36;
 
 
 const LURE_OFFSET = 0.6;   // nudge the lure just past the tip so it sits on the end
 
 /** Tip coordinates are derived from the path, never typed twice. */
+/**
+ * Space the guides up the blank, clear of the grip and short of the tip. Derived
+ * rather than hand-typed: oak's first guide was hand-written at exactly 0.36, the
+ * grip's own end, so it sat on the cork instead of up the shaft.
+ */
+function guidePositions(look) {
+  const first = GRIP_TO + 0.06;
+  const last = 0.9;
+  const n = Math.max(2, (look.guides ?? []).length);
+  const out = [];
+  for (let k = 0; k < n; k += 1) {
+    // Guides bunch toward the tip, which is how a real blank is fitted.
+    const t = k / (n - 1);
+    out.push(Number((first + (last - first) * (t ** 0.72)).toFixed(3)));
+  }
+  return out;
+}
+
 function withTip(look) {
   const end = look.path.split('L')[1].trim().split(/\s+/).map(Number);
-  return { ...look, tipX: end[0] + LURE_OFFSET, tipY: end[1] - LURE_OFFSET };
+  const start = look.path.split('M')[1].split('L')[0].trim().split(/\s+/).map(Number);
+  // A point t of the way along the blank, so the grip and the guides sit ON the
+  // shaft instead of being hand-placed coordinates that drift the moment a rod's
+  // path changes.
+  const at = (t) => ({
+    x: start[0] + (end[0] - start[0]) * t,
+    y: start[1] + (end[1] - start[1]) * t,
+  });
+  return {
+    ...look,
+    buttX: start[0],
+    buttY: start[1],
+    tipX: end[0] + LURE_OFFSET,
+    tipY: end[1] - LURE_OFFSET,
+    gripFrom: GRIP_FROM,
+    gripTo: GRIP_TO,
+    // The widest part of the blank, at the butt, for the taper wedge.
+    heelWidth: look.width * 2.1,
+    reelR: [0, 1.1, 1.5, 1.9][look.reel] ?? 0,
+    guides: guidePositions(look),
+    guidePoints: guidePositions(look).map((t) => ({ t, ...at(t), r: 0.5 + look.width * 0.12 })),
+    gripPoints: { from: at(GRIP_FROM), to: at(GRIP_TO) },
+    reelAt: at(GRIP_TO + 0.05),
+    endX: end[0],
+    endY: end[1],
+    pointAt: at,
+  };
 }
 
 export const ROD_ART = Object.fromEntries(

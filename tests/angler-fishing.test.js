@@ -1536,3 +1536,57 @@ test('skyFor never returns undefined, whatever it is handed', () => {
     assert.ok(WEATHER.includes(sky.weather), `roll ${roll} produced ${sky.weather}`);
   }
 });
+
+test('a rod is more than a line: it has a blank, a grip, guides and a reel', () => {
+  // Every rod was one path, one colour, one tip dot -- so a £20,000 rod and the
+  // free bamboo stick were the same object with a different width. Real tackle has
+  // a shape, and that shape is what you actually recognise on the water.
+  for (const id of Object.keys(RODS)) {
+    const art = rodArt(id);
+    assert.ok(art.path && art.width > 0, `${id} needs a shaft`);
+    assert.match(art.colour, /^#[0-9a-f]{6}$/i, `${id} needs a colour`);
+
+    // The parts that make it read as a rod rather than a stick.
+    assert.ok(Array.isArray(art.guides) && art.guides.length >= 2,
+      `${id} needs at least two line guides, found ${art.guides?.length ?? 0}`);
+    assert.ok(Number.isFinite(art.gripFrom) && Number.isFinite(art.gripTo),
+      `${id} needs a grip section`);
+    assert.ok(Number.isFinite(art.reelR ?? 0), `${id} needs a reel`);
+    assert.ok(art.blank && art.blank.length,
+      `${id} needs a blank style -- taper, accent or wrap`);
+  }
+});
+
+test('rods stay in price order as they get longer and thicker', () => {
+  // The ladder is legible at a glance: better rods reach further. This has to be
+  // built as a whole, because glacier and abyss both got configured backwards when
+  // the second rods arrived.
+  const ordered = RODS_BY_PRICE;
+  let lastReach = -Infinity;
+  let lastWidth = -1;
+  for (const rod of ordered) {
+    const art = rodArt(rod.id);
+    const reach = art.tipX;
+    assert.ok(reach >= lastReach - 0.01,
+      `${rod.id} reaches ${reach.toFixed(1)}, less than the rod below it (${lastReach.toFixed(1)})`);
+    assert.ok(art.width >= lastWidth - 0.001,
+      `${rod.id} is ${art.width}, thinner than the rod below it (${lastWidth})`);
+    lastReach = reach;
+    lastWidth = art.width;
+  }
+});
+
+test('guides sit ON the shaft, between the grip and the tip', () => {
+  // A guide floating off the end of the rod looks like a bug, and it would break
+  // the moment a rod's path changed.
+  for (const id of Object.keys(RODS)) {
+    const art = rodArt(id);
+    const grip = Math.max(art.gripFrom, art.gripTo);
+    for (const g of art.guides) {
+      const t = typeof g === 'number' ? g : g.t;
+      assert.ok(t > grip && t < 1,
+        `${id} has a guide at ${t}, outside the blank (grip ends ${grip})`);
+      assert.ok(t >= 0 && t <= 1, `${id} guide ${t} is not a fraction along the rod`);
+    }
+  }
+});

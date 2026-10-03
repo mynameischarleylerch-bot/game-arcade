@@ -24,10 +24,10 @@ import {
  levelFrom, xpForCatch, xpForLevel, luckFor, luckFromLevel,
  rollLostItem, lostItemsFor, sellLostItems, lostItemById,
  buySeal, equipSeal, sealComment, sealDuplicates, sealIdleLine,
-} from './fishing.js?v=2026-10-03-o';
+} from './fishing.js?v=2026-10-03-p';
 import {
   reelConfig, stepReel as advance, reelOutcomeFor, isCaught, lineSnapped,
-} from './reel.js?v=2026-10-03-o';
+} from './reel.js?v=2026-10-03-p';
 
 /* ------------------------------------------------------------------ tuning */
 
@@ -83,6 +83,9 @@ const ui = {
   sealCoins: el('seal-shop-coins'),
   sealOpen: el('seal-shop-open'), sealClose: el('seal-shop-close'),
   rodShaft: el('rod-shaft'), rodTipDot: el('rod-tip'),
+  rodHeel: el('rod-heel'), rodGloss: el('rod-gloss'), rodStripe: el('rod-stripe'),
+  rodGrip: el('rod-grip'), rodGuides: el('rod-guides'), rodReel: el('rod-reel'),
+  rodReelBody: el('rod-reel-body'), rodReelHub: el('rod-reel-hub'), rodReelArm: el('rod-reel-arm'),
   rarity: el('catch-rarity'),
 };
 
@@ -203,9 +206,80 @@ function save() {
 /** Draw the equipped rod. This is what makes buying a rod visible. */
 function paintRod() {
   const art = rodArt(state.rodId);
+  const at = art.pointAt;
+  const pt = (t) => {
+    const p = at(t);
+    return `${p.x.toFixed(2)} ${p.y.toFixed(2)}`;
+  };
+  const seg = (from, to) => `M${pt(from)} L${pt(to)}`;
+
+  // A blank tapers; SVG cannot taper a single stroke, so the butt is a second,
+  // fatter round-capped stroke meeting the shaft. Same colour, so the join reads
+  // as one swelling piece of carbon rather than two shapes.
+  ui.rodHeel?.setAttribute('d', seg(0, 0.34));
+  ui.rodHeel?.setAttribute('stroke', art.colour);
+  ui.rodHeel?.setAttribute('stroke-width', String(art.heelWidth));
+
   ui.rodShaft?.setAttribute('d', art.path);
   ui.rodShaft?.setAttribute('stroke', art.colour);
   ui.rodShaft?.setAttribute('stroke-width', String(art.width));
+
+  // The wet gloss down the top of the blank, and the accent the rod is named for.
+  ui.rodGloss?.setAttribute('d', seg(0.18, 0.98));
+  ui.rodGloss?.setAttribute('stroke-width', String(Math.max(art.width * 0.3, 0.4)));
+
+  const styles = art.blank ?? [];
+  ui.rodStripe?.setAttribute('d', seg(0.2, 0.96));
+  ui.rodStripe?.setAttribute('stroke', styles.includes('stripe') ? '#ffd54f' : '#ffffff');
+  ui.rodStripe?.setAttribute('stroke-opacity', styles.includes('stripe') ? '.75' : '.3');
+  ui.rodStripe?.setAttribute('stroke-width', String(Math.max(art.width * 0.26, 0.35)));
+
+  // The grip, in cork, EVA or crystal -- the part your hand actually reads.
+  ui.rodGrip?.setAttribute('d', seg(art.gripFrom, art.gripTo));
+  ui.rodGrip?.setAttribute('stroke', art.gripColour);
+  ui.rodGrip?.setAttribute('stroke-width', String(art.width * 1.55));
+
+  // Line guides, bigger at the butt and finer toward the tip, as they are fitted.
+  if (ui.rodGuides) {
+    ui.rodGuides.textContent = '';
+    for (const g of art.guidePoints) {
+      const ring = document.createElementNS('http://www.w3.org/2000/svg', 'circle');
+      ring.setAttribute('cx', String(g.x));
+      ring.setAttribute('cy', String(g.y));
+      ring.setAttribute('r', String(g.r));
+      ring.setAttribute('fill', 'none');
+      ring.setAttribute('stroke', '#e8f6ff');
+      ring.setAttribute('stroke-opacity', '.85');
+      ring.setAttribute('stroke-width', String(Math.max(g.r * 0.4, 0.18)));
+      ui.rodGuides.appendChild(ring);
+    }
+  }
+
+  // The reel, for the rods that carry one. A bamboo stick has none, and showing
+  // furniture the rod does not have is what made them all look alike.
+  if (ui.rodReel) {
+    if (!art.reelR) {
+      ui.rodReel.setAttribute('hidden', '');
+    } else {
+      ui.rodReel.removeAttribute('hidden');
+      const { x, y } = art.reelAt;
+      ui.rodReelBody?.setAttribute('cx', String(x));
+      ui.rodReelBody?.setAttribute('cy', String(y));
+      ui.rodReelBody?.setAttribute('r', String(art.reelR));
+      ui.rodReelBody?.setAttribute('stroke', '#dfe9f2');
+      ui.rodReelBody?.setAttribute('stroke-width', String(Math.max(art.reelR * 0.3, 0.2)));
+      ui.rodReelHub?.setAttribute('cx', String(x));
+      ui.rodReelHub?.setAttribute('cy', String(y));
+      ui.rodReelHub?.setAttribute('r', String(art.reelR * 0.28));
+      ui.rodReelHub?.setAttribute('fill', art.colour);
+      // A crank arm, so the reel turns rather than sitting there as a ring.
+      ui.rodReelArm?.setAttribute('d',
+        `M${x} ${y} L${x + art.reelR * 0.9} ${y + art.reelR * 0.5}`);
+      ui.rodReelArm?.setAttribute('stroke', '#dfe9f2');
+      ui.rodReelArm?.setAttribute('stroke-width', String(Math.max(art.reelR * 0.24, 0.16)));
+    }
+  }
+
   ui.rodTipDot?.setAttribute('cx', String(art.tipX));
   ui.rodTipDot?.setAttribute('cy', String(art.tipY));
   ui.rodTipDot?.setAttribute('fill', art.colour);

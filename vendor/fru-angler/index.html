@@ -122,6 +122,10 @@
     --sky-depth: 0;           /* how far it dims */
     --veil: transparent;       /* the weather on top */
   }
+  /* `hidden` is an HTML attribute: it hides a <div> but does nothing to an SVG
+     <g>, so the reel was drawn on rods that have none. Same trap as the pet seal. */
+  #rod-reel[hidden] { display: none; }
+
   .lake__sky {
     position: absolute; inset: 0; z-index: 1; pointer-events: none;
     border-radius: inherit;
@@ -1081,11 +1085,34 @@
           <ellipse class="scene__shine" cx="36.4" cy="49.9" rx="1.2" ry=".9"
                    transform="rotate(20 36.4 49.9)"/>
 
-          <!-- the rod, angled up and to the right, with the lure at the tip.
-               The stroke and fill are written inline because paintRod() rewrites
-               them per equipped rod; a stylesheet rule would be overridden. -->
-          <path class="scene__rod" id="rod-shaft" d="M40.7 52 L58 31"
-                stroke="#4a6b7c" stroke-width="1.9"/>
+          <!-- The rod, angled up and to the right, with the lure at the tip.
+               A rod is not a line: it is a tapered blank with a wrapped grip, a
+               reel and a row of line guides running to the tip. Width and colour
+               alone made every rod the same stick, so buying one did not read as
+               buying an object. Every coordinate here is rewritten by paintRod()
+               per equipped rod, so it is all inline -- a stylesheet rule for any
+               of it would be lost. -->
+          <g id="rod-blank">
+            <path class="scene__rod" id="rod-heel" d="M40.7 52 L50.6 41.4" fill="none"
+                  stroke="#4a6b7c" stroke-width="4" stroke-linecap="round"/>
+            <path id="rod-gloss" d="M44.3 49.9 L56.6 32.7" fill="none" stroke="#ffffff"
+                  stroke-opacity=".38" stroke-width=".6" stroke-linecap="round"/>
+            <path id="rod-stripe" d="M45.6 48.5 L56.6 32.7" fill="none" stroke="#ffffff"
+                  stroke-opacity=".3" stroke-width=".5" stroke-linecap="round"
+                  stroke-dasharray="1.6 1.2"/>
+            <path id="rod-grip" d="M43.5 50.1 L49.4 43.2" stroke="#2f4552"
+                stroke-width="2.9" stroke-linecap="round"/>
+            <g id="rod-guides"></g>
+            <g id="rod-reel">
+              <circle id="rod-reel-body" cx="49.6" cy="42.9" r="1.5" fill="none"
+                      stroke="#dfe9f2" stroke-width=".45"/>
+              <circle id="rod-reel-hub" cx="49.6" cy="42.9" r=".42" fill="#4a6b7c"/>
+              <path id="rod-reel-arm" d="M49.6 42.9 L51.4 43.8" fill="none" stroke="#dfe9f2"
+                  stroke-width=".36" stroke-linecap="round"/>
+            </g>
+            <path class="scene__rod" id="rod-shaft" d="M40.7 52 L58 31" fill="none"
+                  stroke="#4a6b7c" stroke-width="1.9" stroke-linecap="round"/>
+          </g>
           <circle class="scene__lure" id="rod-tip" cx="58.6" cy="30.4" r="1.4"/>
         </g>
 
@@ -1297,6 +1324,6 @@
     </div>
   </div>
 
-  <script type="module" src="./angler.js?v=2026-10-03-o"></script>
+  <script type="module" src="./angler.js?v=2026-10-03-p"></script>
 </body>
 </html>

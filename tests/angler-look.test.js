@@ -124,9 +124,9 @@ test('the rod and lure are addressable so equipping can repaint them', () => {
   assert.match(PAGE, /id="rod-shaft"/, 'the rod needs an id angler.js can rewrite');
   assert.match(PAGE, /id="rod-tip"/, 'the lure needs an id too');
   // They ship as inline attributes so the rod is visible before any script runs.
-  assert.match(PAGE, /id="rod-shaft"[^>]*\bd="/, 'the rod must ship with a path');
-  assert.match(PAGE, /id="rod-shaft"[^>]*stroke="#[0-9a-f]{6}"/i, 'and a colour');
-  assert.match(PAGE, /id="rod-shaft"[^>]*stroke-width="[\d.]+"/, 'and a thickness');
+  assert.match(PAGE, /id="rod-shaft"[\s\S]{0,200}?\bd="/, 'the rod must ship with a path');
+  assert.match(PAGE, /id="rod-shaft"[\s\S]{0,200}?stroke="#[0-9a-f]{6}"/i, 'and a colour');
+  assert.match(PAGE, /id="rod-shaft"[\s\S]{0,200}?stroke-width="[\d.]+"/, 'and a thickness');
 });
 
 test('angler.js measures the rod tip instead of reading cx/cy', () => {
@@ -150,15 +150,30 @@ test('the scene is not stretched: the angler keeps its proportions', () => {
 
 test('the figure group is wrapped so it can be counter-scaled', () => {
   // One group holding the blob, its gloss, the rod and the lure, so a single
-  // transform can keep them proportioned without touching the scenery.
+  // transform can keep them proportioned without touching the scenery. Counting
+  // elements no longer says anything -- the rod is a rig of nested groups now --
+  // so this asserts what must NOT be inside: scenery.
   assert.match(PAGE, /<g id="angler-fit">/, 'the figure group must exist');
   const open = PAGE.indexOf('<g id="angler-fit">');
-  const close = PAGE.indexOf('</g>', open);
+  // Walk to this group's OWN closer by depth: the rod-blank group nested inside it
+  // also ends in </g>, and a plain indexOf found that one instead.
+  let depth = 0;
+  let close = -1;
+  for (let at = open; at < PAGE.length; at += 1) {
+    if (PAGE.startsWith('<g', at)) depth += 1;
+    else if (PAGE.startsWith('</g>', at)) {
+      depth -= 1;
+      if (depth === 0) { close = at; break; }
+    }
+  }
+  assert.ok(close > open, 'the figure group must be closed');
   const inside = PAGE.slice(open, close);
-  assert.equal((inside.match(/<path\b/g) || []).length, 2,
-    'the figure and the rod, and nothing else');
-  assert.equal((inside.match(/<circle\b/g) || []).length, 1, 'just the lure');
-  assert.equal((inside.match(/<ellipse\b/g) || []).length, 2, 'the two gloss highlights');
+  assert.ok(inside.includes('id="rod-blank"'), 'the rod rig travels with the figure');
+  assert.ok(inside.includes('id="rod-tip"'), 'and so does the lure');
+  for (const scenery of ['scene__water', 'scene__shore', 'scene__wood', 'id="fa-pet"']) {
+    assert.equal(inside.includes(scenery), false,
+      `${scenery} must not be counter-scaled with the figure`);
+  }
 });
 
 test('the fishing line sits outside the counter-scaled group', () => {
@@ -365,13 +380,18 @@ test('the scene has no orphaned text or unclosed fragments', () => {
 });
 
 test('the closing group and the line comment are indented with their block', () => {
-  // Both sat at 16 spaces where the surrounding block uses 8.
+  // Both sat at 16 spaces where the surrounding block uses 8. The first </g> in the
+  // scene used to be the figure group's own; now the rod-blank rig nests inside it,
+  // so this has to mean the LAST one before the line comment.
   const scene = PAGE.slice(PAGE.indexOf('<svg class="scene"'), PAGE.indexOf('</svg>'));
-  for (const marker of ['</g>', '<!-- The fishing line runs']) {
-    const line = scene.split('\n').find((l) => l.trim().startsWith(marker));
-    assert.ok(line, `${marker} not found`);
+  const figure = scene.slice(0, scene.indexOf('<!-- The fishing line runs'));
+  const closes = figure.split('\n').filter((l) => l.trim() === '</g>');
+  const commentLine = scene.split('\n')
+    .find((l) => l.trim().startsWith('<!-- The fishing line runs'));
+  for (const line of [closes[closes.length - 1], commentLine]) {
+    assert.ok(line, `marker not found in the scene`);
     assert.equal(line.length - line.trimStart().length, 8,
-      `${marker} is indented ${line.length - line.trimStart().length}, expected 8`);
+      `"${line.trim().slice(0, 30)}" is indented ${line.length - line.trimStart().length}, expected 8`);
   }
 });
 
@@ -485,7 +505,7 @@ test('the rod keeps its inline colour so equipping still repaints it', () => {
   // overridden by the inline attribute, which is correct, but it means the rod
   // must not be moved into CSS.
   const scene = PAGE.slice(PAGE.indexOf('<svg class="scene"'), PAGE.indexOf('</svg>'));
-  assert.match(scene, /id="rod-shaft"[^>]*stroke="#[0-9a-f]{6}"/i);
+  assert.match(scene, /id="rod-shaft"[\s\S]{0,200}?stroke="#[0-9a-f]{6}"/i);
   assert.match(scene, /id="rod-tip"[^>]*cx="/);
   assert.match(scene, /id="rod-tip"[^>]*cy="/);
 });
@@ -994,4 +1014,17 @@ test('the mutation badge is driven at runtime, not just declared', () => {
     'and a plain one must hide it again');
   assert.match(src, /mutation\.colour/,
     'using the mutation\'s own colour, or every badge is the same');
+});
+
+test('every SVG group the controller hides by attribute has a CSS rule', () => {
+  // `hidden` is an HTML attribute. It hides a <div> because the HTML user-agent
+  // sheet has a [hidden] rule; an SVG <g> gets nothing, so setting the attribute
+  // changes nothing on screen. The pet seal had this bug -- painted on the dock
+  // with no seal equipped -- and the reel inherited it: a bamboo stick drew a
+  // reel it does not have, because nothing ever turned display off.
+  for (const id of ['rod-reel']) {
+    assert.ok(PAGE.includes(`id="${id}"`), `${id} must exist`);
+    assert.match(PAGE, new RegExp(`#${id}\\[hidden\\]`),
+      `#${id} is toggled by attribute and needs a [hidden] rule to actually hide`);
+  }
 });

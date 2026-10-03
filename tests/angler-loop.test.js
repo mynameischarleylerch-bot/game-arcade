@@ -13,7 +13,7 @@ import { readFileSync } from 'node:fs';
 import { JSDOM } from 'jsdom';
 import { FISH, RARITY_ORDER, fishIndex, hookLineFor, AREAS,
          RODS, RODS_BY_PRICE, SEALS, startingLoadout, TIMES, WEATHER,
-} from '../vendor/fru-angler/fishing.js?v=2026-10-03-o';
+} from '../vendor/fru-angler/fishing.js?v=2026-10-03-p';
 
 const PAGE = readFileSync(
   new URL('../vendor/fru-angler/index.html', import.meta.url),
@@ -1553,12 +1553,12 @@ test('the sky is painted on load, and the HUD says what it is', async () => {
 
 test('travelling to a lake repaints the sky, not just keeps the old one', async () => {
   // Two earlier guards for this passed while paintSky was gone from the travel
-  // path. Both were checking that the sky was VALID, which it always is -- boot
-  // already painted one, and with Math.random pinned the new draw would be the
-  // same value anyway. So neither could tell "repainted" from "left alone".
+  // path. Both checked that the sky was VALID, which it always is -- boot already
+  // painted one, and with the randomness pinned the new draw would be the same
+  // value anyway. So neither could tell "repainted" from "left alone".
   //
-  // Count the draws instead: skyFor() consumes randomness twice, so the counter
-  // only moves if the sky is actually rolled again for the new lake.
+  // Count the draws instead: skyFor() consumes randomness, so the counter only
+  // moves if the sky is actually rolled again for the new lake.
   const here = AREAS.find((a) => a.id === 'aero-lake');
   const bestiary = Object.fromEntries(here.fish.map((id) => [id, 1]));
   const owned = [...here.requiredRods];
@@ -1567,28 +1567,131 @@ test('travelling to a lake repaints the sky, not just keeps the old one', async 
     coins: 0, rodId: 'willow', owned, bestiary, areaId: 'aero-lake',
     xp: 0, ownedSeals: [], equippedSeal: null, lost: [], giftedRods: [], sealCoins: 0,
   }, 86);
-  const lake = ctx.doc.getElementById('lake');
+  const d = ctx.doc;
+  const lake = d.getElementById('lake');
 
-  ctx.doc.getElementById('lake-picker').dispatchEvent(
-    new ctx.win.MouseEvent('click', { bubbles: true }));
-  const open = [...ctx.doc.querySelectorAll('.lake-row')]
+  d.getElementById('lake-picker').dispatchEvent(new ctx.win.MouseEvent('click', { bubbles: true }));
+  const open = [...d.querySelectorAll('.lake-row')]
     .filter((r) => r.getAttribute('aria-disabled') === 'false');
   assert.ok(open.length > 1, `the save must be able to travel, only ${open.length} open`);
 
-  // Count randomness from here on.
-  const real = ctx.win.Math.random;
+  // Count randomness -- and put it back. Leaving globalThis.Math.random pointing at
+  // this wrapper meant every test after this one ran on a different rng than
+  // boot() had pinned, which broke two unrelated rod tests.
+  const real = globalThis.Math.random;
   let draws = 0;
-  ctx.win.Math.random = () => { draws += 1; return real(); };
-  globalThis.Math.random = ctx.win.Math.random;
+  globalThis.Math.random = () => { draws += 1; return real(); };
 
-  const target = open.find((r) => !r.getAttribute('aria-current'));
-  target.dispatchEvent(new ctx.win.MouseEvent('click', { bubbles: true }));
+  try {
+    const target = open.find((r) => !r.getAttribute('aria-current'));
+    target.dispatchEvent(new ctx.win.MouseEvent('click', { bubbles: true }));
 
-  assert.notEqual(lake.dataset.area, 'aero-lake', 'we must actually have moved');
-  assert.ok(draws >= 2,
-    `the sky must be rolled again for the new lake, saw ${draws} random draws`);
-  assert.ok(TIMES.some((t) => t.id === lake.dataset.sky),
-    `and painted, got "${lake.dataset.sky}"`);
-  assert.ok(WEATHER.some((w) => w.id === lake.dataset.weather),
-    `both parts, got "${lake.dataset.weather}"`);
+    assert.notEqual(lake.dataset.area, 'aero-lake', 'we must actually have moved');
+    assert.ok(draws >= 2,
+      `the sky must be rolled again for the new lake, saw ${draws} random draws`);
+    assert.ok(TIMES.some((t) => t.id === lake.dataset.sky),
+      `and painted, got "${lake.dataset.sky}"`);
+    assert.ok(WEATHER.some((w) => w.id === lake.dataset.weather),
+      `both parts, got "${lake.dataset.weather}"`);
+  } finally {
+    globalThis.Math.random = real;
+  }
+});
+
+test('equipping a rod draws the whole rig, not just a thicker line', async () => {
+  // A rod is a blank, a grip, guides and a reel. paintRod() only ever wrote a
+  // path, a colour and a width, so every rod was the same stick at a different
+  // thickness -- which is exactly why buying one did not read as buying an object.
+  const ctx = await seedSave({
+    coins: 9000, rodId: 'trenchline',
+    owned: ['bamboo', 'trenchline'], bestiary: {}, areaId: 'aero-lake',
+    xp: 0, ownedSeals: [], equippedSeal: null, lost: [], giftedRods: [], sealCoins: 0,
+  }, 200);
+  const d = ctx.doc;
+
+  // The blank must taper: the heel is thicker than the shaft.
+  const heel = d.getElementById('rod-heel');
+  const shaft = d.getElementById('rod-shaft');
+  assert.ok(heel, 'the rod needs a heel so the blank tapers');
+  assert.ok(heel.getAttribute('d'), 'and the heel must be drawn along the blank');
+  const heelW = Number(heel.getAttribute('stroke-width'));
+  const shaftW = Number(shaft.getAttribute('stroke-width'));
+  assert.ok(heelW > shaftW,
+    `the heel (${heelW}) must be thicker than the tip (${shaftW}) or it is a stick`);
+
+  // The grip must be drawn in its own colour, not the blank's.
+  const grip = d.getElementById('rod-grip');
+  assert.ok(grip, 'the rod needs a grip');
+  assert.notEqual(grip.getAttribute('stroke'), shaft.getAttribute('stroke'),
+    'the grip must not be the same colour as the blank');
+
+  // Guides: one circle per guide, at real coordinates along the blank.
+  const guides = d.getElementById('rod-guides');
+  assert.ok(guides, 'the rod needs guides');
+  assert.ok(guides.children.length >= 2,
+    `a rod needs line guides, found ${guides.children.length}`);
+  for (const g of guides.children) {
+    assert.ok(Number(g.getAttribute('cx')) > 0, 'each guide needs an x');
+    assert.ok(Number(g.getAttribute('r')) > 0, 'and a size');
+  }
+
+  // The reel, for a rod that has one.
+  const reel = d.getElementById('rod-reel');
+  assert.ok(reel, 'the rod needs a reel group');
+  const body = d.getElementById('rod-reel-body');
+  assert.ok(Number(body.getAttribute('r')) > 0,
+    'trenchline has a reel, so it must actually be drawn');
+});
+
+test('the free bamboo stick has no reel, and shows none', async () => {
+  // Not every rod should carry the same furniture -- that is what makes them
+  // read as different tackle.
+  const ctx = await seedSave({
+    coins: 0, rodId: 'bamboo', owned: ['bamboo'], bestiary: {}, areaId: 'aero-lake',
+    xp: 0, ownedSeals: [], equippedSeal: null, lost: [], giftedRods: [], sealCoins: 0,
+  }, 201);
+  assert.equal(ctx.doc.getElementById('rod-reel').getAttribute('hidden'), '',
+    'bamboo carries no reel, so the reel must be hidden');
+});
+
+test('swapping rods actually changes the rig, not only the colour', async () => {
+  const ctx = await seedSave({
+    coins: 9000, rodId: 'bamboo',
+    owned: ['bamboo', 'titan'], bestiary: {}, areaId: 'aero-lake',
+    xp: 0, ownedSeals: [], equippedSeal: null, lost: [], giftedRods: [], sealCoins: 0,
+  }, 202);
+  const d = ctx.doc;
+  const before = {
+    guides: d.getElementById('rod-guides').children.length,
+    reel: d.getElementById('rod-reel').getAttribute('hidden'),
+    grip: d.getElementById('rod-grip').getAttribute('stroke'),
+  };
+  assert.equal(before.reel, '', 'bamboo: no reel');
+
+  d.getElementById('inventory-open').dispatchEvent(new ctx.win.MouseEvent('click', { bubbles: true }));
+  const row = [...d.querySelectorAll('.rod')]
+    .find((r) => !r.classList.contains('rod--equipped'));
+  assert.ok(row, 'the inventory must list the other owned rod');
+  row.dispatchEvent(new ctx.win.MouseEvent('click', { bubbles: true }));
+
+  assert.equal(d.getElementById('rod-reel').getAttribute('hidden'), null,
+    'titan has a reel, so equipping it must unhide one');
+  assert.notEqual(d.getElementById('rod-grip').getAttribute('stroke'), before.grip,
+    'and a different grip');
+});
+
+test('every seeded boot uses its own run number', () => {
+  // angler.js is imported as ?run=N, so the ES module cache is keyed on N. Two
+  // tests sharing a number get the SECOND one a fresh window with no controller in
+  // it -- ui stays bound to the first window -- so every getElementById returns null
+  // and the failure looks like missing markup rather than a duplicate seed.
+  // Three rod tests hit this and read as broken SVG that was working perfectly.
+  const source = readFileSync(new URL('./angler-loop.test.js', import.meta.url), 'utf8');
+  const runs = [...source.matchAll(/seedSave\(\{[\s\S]*?\}, (\d+)\)/g)].map((m) => Number(m[1]));
+  assert.ok(runs.length > 20, `sanity: found ${runs.length} seeded boots`);
+  const seen = new Map();
+  for (const n of runs) seen.set(n, (seen.get(n) ?? 0) + 1);
+  const dupes = [...seen.entries()].filter(([, c]) => c > 1).map(([n]) => n);
+  assert.deepEqual(dupes, [],
+    `run number(s) reused, so a later test gets a window with no controller: ${dupes.join(', ')}`);
 });
