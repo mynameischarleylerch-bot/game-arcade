@@ -19,10 +19,10 @@ import {
  rodWorksIn,
  rodCheckIn,
  fishEntry,
-} from './fishing.js?v=2026-10-01-s';
+} from './fishing.js?v=2026-10-02-a';
 import {
   reelConfig, stepReel as advance, reelOutcomeFor, isCaught, lineSnapped,
-} from './reel.js?v=2026-10-01-s';
+} from './reel.js?v=2026-10-02-a';
 
 /* ------------------------------------------------------------------ tuning */
 
