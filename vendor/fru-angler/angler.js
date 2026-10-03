@@ -26,10 +26,10 @@ import {
  addToCreel, fishEntrySpec, creelWorth, creelEntryValue,
  sellFromCreel, feedToBond, bondLuck, bondCount,
  buySeal, equipSeal, sealComment, sealDuplicates, sealIdleLine,
-} from './fishing.js?v=2026-10-03-x';
+} from './fishing.js?v=2026-10-03-y';
 import {
   reelConfig, stepReel as advance, reelOutcomeFor, isCaught, lineSnapped,
-} from './reel.js?v=2026-10-03-x';
+} from './reel.js?v=2026-10-03-y';
 
 /* ------------------------------------------------------------------ tuning */
 
@@ -1615,6 +1615,40 @@ function closeBag() {
 
 /* ------------------------------------------------------------------- input */
 
+/**
+ * Is this element part of the interface rather than the open water?
+ *
+ * The first attempt asked "is it a button, a panel or the HUD?" -- an allowlist --
+ * and it was wrong the way allowlists always are: it missed the boost stack,
+ * which lives inside the lake as `lake__boosts` and is none of those three.
+ * Clicking your own luck readout cast the rod.
+ *
+ * So the question is inverted: a press casts only when it reaches the water.
+ * `#lake` is the water, and every panel and overlay is a descendant of it, so
+ * walking up from the pressed element answers the question by itself. Anything
+ * that is not a descendant of the lake -- the HUD, the wallets -- is interface too,
+ * so the walk ends there as well.
+ *
+ * Two things deliberately do NOT need a rule, having measured it: `scene` and
+ * `BUTTON`. The scene is `inset: 0`, so it covers the lake entirely and every
+ * click on it already arrives via the lake; and a button is always inside a panel
+ * or the HUD, both of which are excluded on their own account. Listing them looked
+ * more careful and was untested decoration -- deleting either changed nothing.
+ */
+function isInterface(node) {
+  for (let el = node; el && el !== document.body; el = el.parentElement) {
+    if (el.id === 'lake') return false;      // reached the water: this is a cast
+    if (el.classList?.contains('shop')) return true;   // every panel, and its scrim
+    if (el.classList?.contains('hud')) return true;
+    if (el.tagName === 'BUTTON' || el.tagName === 'A' || el.tagName === 'INPUT'
+      || el.tagName === 'SELECT' || el.tagName === 'TEXTAREA' || el.tagName === 'LABEL') {
+      return true;
+    }
+  }
+  return true;   // never reached the water, so not a cast
+}
+
+
 function press(event) {
   if (event.type === 'mousedown' || event.type === 'touchstart') event.preventDefault();
   // Pressing while idle is what starts a cast. 'result' is deliberately ignored:
@@ -1641,9 +1675,26 @@ addEventListener('keydown', (event) => {
 addEventListener('keyup', (event) => {
   if (event.code === 'Space') release();
 });
-ui.lake.addEventListener('mousedown', press);
+// Casting is a press on the open water. Every panel -- the rod shop, the seals,
+// the creel, the index, the lakes -- is a CHILD of #lake, so binding press()
+// straight to the lake meant clicking a button in the shop cast the rod. The
+// shake prompts are the only things inside the lake that used to stop
+// propagation, which is exactly why this went unnoticed: nothing else was tested.
+//
+// A press that lands on a control, a panel, or a piece of text is not a cast.
+// Scoped by what was hit rather than by what was clicked, so it also covers the
+// panels' own padding and headings.
+ui.lake.addEventListener('mousedown', (event) => {
+  if (isInterface(event.target)) return;
+  press(event);
+});
 addEventListener('mouseup', release);
-ui.lake.addEventListener('touchstart', press, { passive: false });
+// Touch had the same bug as the mouse: press() was bound straight to the lake, so
+// tapping a shop button on a phone cast the rod. Same guard, same reason.
+ui.lake.addEventListener('touchstart', (event) => {
+  if (isInterface(event.target)) return;
+  press(event);
+}, { passive: false });
 addEventListener('touchend', release);
 addEventListener('touchcancel', release);
 // Losing focus mid-hold would otherwise strand the player mid-reel.

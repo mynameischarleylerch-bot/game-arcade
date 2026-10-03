@@ -13,7 +13,7 @@ import { readFileSync } from 'node:fs';
 import { JSDOM } from 'jsdom';
 import { FISH, RARITY_ORDER, fishIndex, hookLineFor, AREAS,
          RODS, RODS_BY_PRICE, SEALS, startingLoadout, TIMES, WEATHER, LOST_ITEMS,
-} from '../vendor/fru-angler/fishing.js?v=2026-10-03-x';
+} from '../vendor/fru-angler/fishing.js?v=2026-10-03-y';
 
 const PAGE = readFileSync(
   new URL('../vendor/fru-angler/index.html', import.meta.url),
@@ -2154,4 +2154,176 @@ test('the silhouette element exists and is sized to fit', async () => {
   assert.ok(svg, `the reel must contain a silhouette svg, got "${el.innerHTML.slice(0, 80)}"`);
   assert.match(svg.getAttribute('viewBox') ?? '', /104 80/, 'and use the fish viewBox');
   assert.ok(!svg.innerHTML.includes('Mythical'), 'and must not name the catch');
+});
+
+test('clicking a button in a panel must not start a cast', async () => {
+  // Every panel -- rod shop, seals, creel, index, lakes -- is a child of #lake,
+  // and press() was bound to #lake's mousedown. So opening the shop and clicking
+  // anything inside it cast the rod. The shake buttons were the only thing with
+  // stopPropagation, which is why the bug survived: it was never tested anywhere
+  // else.
+  const ctx = await boot(1000);
+  const doc = ctx.doc;
+
+  // Every interactive control in every panel.
+  const panels = ['shop-panel', 'inventory-panel', 'index-panel', 'lake-panel',
+    'seal-shop-panel', 'creel-panel'];
+  for (const id of panels) {
+    const panel = doc.getElementById(id);
+    assert.ok(panel, `${id} must exist`);
+    // Prove the panels really are inside the lake -- the reason this bug exists.
+    assert.ok(panel.closest('#lake'),
+      `${id} is no longer inside #lake, so this test is no longer testing the fix`);
+  }
+
+  const buttons = [];
+  for (const id of panels) {
+    for (const b of doc.getElementById(id).querySelectorAll('button')) {
+      buttons.push(b);
+    }
+  }
+  assert.ok(buttons.length > 5, `expected many panel buttons, found ${buttons.length}`);
+
+  for (const b of buttons) {
+    doc.body.dispatchEvent(new ctx.win.MouseEvent('mousedown', { bubbles: true }));
+    b.dispatchEvent(new ctx.win.MouseEvent('mousedown', { bubbles: true }));
+    b.dispatchEvent(new ctx.win.MouseEvent('mouseup', { bubbles: true }));
+    ctx.win.dispatchEvent(new ctx.win.MouseEvent('mouseup', { bubbles: true }));
+  }
+  assert.equal(ctx.doc.getElementById('lake').dataset.phase, 'idle',
+    `a panel button started a cast (phase is now ${ctx.doc.getElementById('lake').dataset.phase})`);
+});
+
+test('pressing on the open water still casts', async () => {
+  // The fix must not be "stop casting". Clicking the lake itself is the game.
+  const ctx = await boot(1001);
+  const lake = ctx.doc.getElementById('lake');
+  lake.dispatchEvent(new ctx.win.MouseEvent('mousedown', { bubbles: true }));
+  assert.equal(lake.dataset.phase, 'casting',
+    'pressing the water must still start a cast');
+});
+
+test('touching a panel button must not cast either', async () => {
+  // The mouse fix did not cover touch: touchstart was still bound straight to the
+  // lake, so on a phone every tap in the shop cast the rod.
+  const ctx = await boot(1002);
+  const lake = ctx.doc.getElementById('lake');
+  for (const id of ['shop-panel', 'seal-shop-panel', 'creel-panel']) {
+    for (const b of ctx.doc.getElementById(id).querySelectorAll('button')) {
+      b.dispatchEvent(new ctx.win.Event('touchstart', { bubbles: true, cancelable: true }));
+    }
+  }
+  assert.equal(lake.dataset.phase, 'idle',
+    `tapping a panel button cast the rod (phase ${lake.dataset.phase})`);
+
+  // And touching the water still casts.
+  lake.dispatchEvent(new ctx.win.Event('touchstart', { bubbles: true, cancelable: true }));
+  assert.equal(lake.dataset.phase, 'casting', 'touching the water must still cast');
+});
+
+test('a cast is a press on the water, and only on the water', async () => {
+  // The predicate is the whole fix, and nothing pinned WHICH things it excludes.
+  // Deleting its .shop test, its BUTTON test or its .hud test each passed: the
+  // guard was only ever exercised through real buttons, which are covered three
+  // times over by the BUTTON branch alone. Name the surface instead.
+  const ctx = await boot(1003);
+  const doc = ctx.doc;
+  const lake = doc.getElementById('lake');
+
+  // Things drawn over the water that must NOT cast, and the reason each matters.
+  const targets = [
+    ['shop panel', doc.getElementById('shop-panel'), 'a panel background, not a button'],
+    ['panel padding', doc.querySelector('#shop-panel .shop__title'), 'text inside a panel'],
+    ['a button', doc.querySelector('#shop-panel button'), 'the ordinary case'],
+    ['the HUD', doc.querySelector('.hud'), 'the bar of buttons along the bottom'],
+  ];
+
+  for (const [what, node, why] of targets) {
+    assert.ok(node, `${what} must exist`);
+    node.dispatchEvent(new ctx.win.MouseEvent('mousedown', { bubbles: true }));
+    ctx.win.dispatchEvent(new ctx.win.MouseEvent('mouseup', { bubbles: true }));
+    assert.equal(lake.dataset.phase, 'idle',
+      `${what} started a cast (${why}); phase is ${lake.dataset.phase}`);
+  }
+
+  // The boost stack is pointer-events: none, so a real click never reaches it.
+  // Dispatching straight at it bypasses that and is not a scenario a player
+  // can produce -- assert the CSS instead, which is the actual mechanism.
+  for (const sel of ['.lake__boosts', '.lake__sky']) {
+    const rule = PAGE.match(new RegExp(sel.replace('.', '\\.') + '\\s*\\{([^}]*)\\}'));
+    assert.ok(rule, `${sel} must have a rule`);
+    assert.match(rule[1], /pointer-events:\s*none/,
+      `${sel} must be unclickable, or a click on it reaches the lake`);
+  }
+  // The scene is the exception and must stay clickable: it IS the water.
+  assert.doesNotMatch(PAGE.match(/\.scene\s*\{([^}]*)\}/)[1], /pointer-events:\s*none/,
+    'the scene is the water and must receive the cast');
+
+  // And the water itself does cast -- this is not "disable casting".
+  lake.dispatchEvent(new ctx.win.MouseEvent('mousedown', { bubbles: true }));
+  assert.equal(lake.dataset.phase, 'casting', 'the water must still cast');
+});
+
+test('pressing the scene casts, and pressing a bare control does not', async () => {
+  // Two branches of the predicate nothing pinned on their own: remove `scene`
+  // from WATER and remove the BUTTON check, and the suite still passed -- because
+  // the lake element also counts as water, and every button is inside a panel.
+  // Pin each independently.
+  const ctx = await boot(1004);
+  const doc = ctx.doc;
+  const lake = doc.getElementById('lake');
+
+  // The scene svg is the water, and most of what you aim at.
+  const scene = doc.querySelector('svg.scene');
+  assert.ok(scene, 'the scene must exist');
+  scene.dispatchEvent(new ctx.win.MouseEvent('mousedown', { bubbles: true }));
+  assert.equal(lake.dataset.phase, 'casting',
+    `pressing the scene must cast, phase is ${lake.dataset.phase}`);
+
+  // A button that is NOT inside a panel: the HUD. It is the only BUTTON that
+  // relies on the tag check rather than the .hud class check.
+  const hudButton = doc.querySelector('.hud button');
+  assert.ok(hudButton, 'the HUD has buttons');
+  hudButton.dispatchEvent(new ctx.win.MouseEvent('mousedown', { bubbles: true }));
+  assert.equal(lake.dataset.phase, 'casting',
+    'the cast is already running; the point is it did not cancel or re-cast');
+  // A button outside any panel AND outside the HUD must still be inert.
+  const stray = doc.createElement('button');
+  lake.appendChild(stray);
+  lake.dataset.phase = 'idle';
+  stray.dispatchEvent(new ctx.win.MouseEvent('mousedown', { bubbles: true }));
+  assert.equal(lake.dataset.phase, 'idle',
+    'a button inside the lake must not cast, whatever it is');
+});
+
+test('only reaching the lake counts as a cast', () => {
+  // Every branch of the predicate, pinned by what it decides rather than by the
+  // elements that happen to pass through it. Deleting the .hud check, the
+  // interactive-tag check or the final `return true` each passed before, because
+  // the HUD sits OUTSIDE the lake and so falls out on the walk, and a button is
+  // always inside a panel.
+  const src = readFileSync(new URL('../vendor/fru-angler/angler.js', import.meta.url), 'utf8');
+  const body = src.slice(src.indexOf('function isInterface'));
+  const fn = body.slice(0, body.indexOf('\n}\n'));
+
+  // The decision itself: the lake is water, so reaching it means cast.
+  assert.match(fn, /id === 'lake'\)\s*return false/,
+    'reaching #lake must mean a cast, or nothing casts at all');
+  // Panels and the HUD are interface, and are what stop the walk before the
+  // lake. [\s\S] between the check and the return: the source carries an inline
+  // comment there ("// every panel, and its scrim"), so \s* alone never matched.
+  assert.match(fn, /contains\('shop'\)[\s\S]{0,60}return true/,
+    'a panel must stop the walk');
+  assert.match(fn, /contains\('hud'\)[\s\S]{0,60}return true/,
+    'the HUD must stop the walk');
+  // Anything else -- the wallets, the messages, anything new -- is not water.
+  assert.match(fn, /return true;\s*\/\/ never reached the water/,
+    'everything that is not the water must be inert by default');
+
+  // And the guard must be on BOTH input paths. Fixing only the mouse leaves
+  // every tap in the shop casting on a touch screen.
+  assert.match(src, /addEventListener\('mousedown',[\s\S]{0,120}isInterface/,
+    'the mouse path needs the guard');
+  assert.match(src, /addEventListener\('touchstart',[\s\S]{0,120}isInterface/,
+    'and so does the touch path');
 });
