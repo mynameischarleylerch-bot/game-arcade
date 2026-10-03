@@ -13,7 +13,7 @@ import { readFileSync } from 'node:fs';
 import { JSDOM } from 'jsdom';
 import { FISH, RARITY_ORDER, fishIndex, hookLineFor, AREAS,
          RODS, RODS_BY_PRICE, SEALS, startingLoadout, TIMES, WEATHER, LOST_ITEMS,
-} from '../vendor/fru-angler/fishing.js?v=2026-10-03-r';
+} from '../vendor/fru-angler/fishing.js?v=2026-10-03-s';
 
 const PAGE = readFileSync(
   new URL('../vendor/fru-angler/index.html', import.meta.url),
@@ -1789,4 +1789,68 @@ test('a notice never wipes the one before it', async () => {
   assert.equal(cards.filter((c) => c.classList.contains('notice--find')).length,
     cards.filter((c) => /seal coins/i.test(c.textContent)).length,
     'a find notice must survive a duplicate notice raised on the same catch');
+});
+
+test('the boost panel lists every source and the total adds up', async () => {
+  const ctx = await seedSave({
+    coins: 5000, rodId: 'trenchline', owned: ['bamboo', 'trenchline'],
+    bestiary: {}, areaId: 'aero-lake', xp: 900,
+    ownedSeals: [SEALS[4].id], equippedSeal: SEALS[4].id, lost: [], giftedRods: [],
+    sealCoins: 0,
+  }, 215);
+  const d = ctx.doc;
+  const rows = [...d.querySelectorAll('.lake__boost')];
+  assert.ok(rows.length >= 4,
+    `the panel must name every source of a boost, found ${rows.length}`);
+
+  // Keyed by SOURCE, not by label: the seal row is titled with the seal's own
+  // name, so asserting the text contains "seal" can only pass with no seal fitted.
+  for (const source of ['rod', 'rank', 'seal', 'weather']) {
+    assert.ok(rows.some((r) => r.dataset.key === source),
+      `the panel is missing the ${source} row: ${rows.map((r) => r.dataset.key).join(',')}`);
+  }
+
+  const total = Number(d.getElementById('boost-total').textContent);
+  const sum = rows.reduce((s, r) => s + Number(r.querySelector('.lake__boost-value').textContent), 0);
+  assert.equal(total, Math.round(sum * 100) / 100,
+    `total ${total} does not match the rows summing to ${sum}`);
+});
+
+test('a boost you have not earned is shown as zero, not hidden', async () => {
+  // A missing row reads as a bug. A row reading zero reads as "not yet", which is
+  // true and tells the player what to go and get.
+  const ctx = await seedSave({
+    coins: 0, rodId: 'bamboo', owned: ['bamboo'], bestiary: {},
+    areaId: 'aero-lake', xp: 0,
+    ownedSeals: [], equippedSeal: null, lost: [], giftedRods: [], sealCoins: 0,
+  }, 216);
+  const rows = [...ctx.doc.querySelectorAll('.lake__boost')];
+  const seal = rows.find((r) => r.dataset.key === 'seal');
+  assert.ok(seal, 'the seal row must exist with no seal equipped');
+  assert.ok(seal.classList.contains('lake__boost--none'),
+    'and be marked as not earned rather than dropped');
+  assert.equal(seal.querySelector('.lake__boost-value').textContent, '0');
+});
+
+test('the panel follows the rod, rank and seal you actually have', async () => {
+  const ctx = await seedSave({
+    coins: 0, rodId: 'bamboo', owned: ['bamboo', 'titan'], bestiary: {},
+    areaId: 'aero-lake', xp: 0,
+    ownedSeals: [], equippedSeal: null, lost: [], giftedRods: [], sealCoins: 0,
+  }, 217);
+  const value = (key) => Number(
+    ctx.doc.querySelector(`.lake__boost[data-key="${key}"] .lake__boost-value`).textContent);
+  const before = value('rod');
+
+  ctx.doc.getElementById('inventory-open').click();
+  [...ctx.doc.querySelectorAll('.rod')]
+    .find((r) => !r.classList.contains('rod--equipped'))
+    .dispatchEvent(new ctx.win.MouseEvent('click', { bubbles: true }));
+
+  assert.ok(value('rod') > before,
+    `equipping a better rod must move the rod row: ${before} -> ${value('rod')}`);
+  const sum = ['rod', 'rank', 'seal', 'weather'].reduce((s, k) => s + value(k), 0);
+  assert.equal(Number(ctx.doc.getElementById('boost-total').textContent),
+    Math.round(sum * 100) / 100,
+    'and the total must still add up');
 });

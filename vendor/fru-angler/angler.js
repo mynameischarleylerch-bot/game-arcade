@@ -24,10 +24,10 @@ import {
  levelFrom, xpForCatch, xpForLevel, luckFor, luckFromLevel,
  rollLostItem, lostItemsFor, sellLostItems, lostItemById,
  buySeal, equipSeal, sealComment, sealDuplicates, sealIdleLine,
-} from './fishing.js?v=2026-10-03-r';
+} from './fishing.js?v=2026-10-03-s';
 import {
   reelConfig, stepReel as advance, reelOutcomeFor, isCaught, lineSnapped,
-} from './reel.js?v=2026-10-03-r';
+} from './reel.js?v=2026-10-03-s';
 
 /* ------------------------------------------------------------------ tuning */
 
@@ -48,6 +48,7 @@ const IDLE_HINT = 'Hold Space or press and hold, then release in the green band.
 const el = (id) => document.getElementById(id);
 const ui = {
   lake: el('lake'), bobber: el('bobber'), splash: el('splash'),
+  boostList: el('boost-list'), boostTotal: el('boost-total'),
   cast: el('cast'), castFill: el('cast-fill'),
   bite: el('bite'), hookSet: el('hook-set'),
   reel: el('reel'), reelPlayer: el('reel-player'), reelFish: el('reel-fish'),
@@ -288,6 +289,55 @@ function paintRod() {
   placeBobber(parseFloat(ui.bobber.style.left) || 60, parseFloat(ui.bobber.style.top) || 70);
 }
 
+/**
+ * Every boost the player is carrying, always visible.
+ *
+ * Luck is rod + rank + seal + weather and it decides which fish you meet, but
+ * nothing on screen ever showed it. You could own the best rod in the game and
+ * have no way to tell it did anything. Every row is always present: a row reading
+ * zero says "not earned yet", where a missing row reads as a bug.
+ */
+function paintBoosts() {
+  if (!ui.boostList || !ui.boostTotal) return;
+  const current = rod();
+  const rank = levelFrom({ xp: state.xp }).level;
+  const seal = SEALS.find((item) => item.id === state.equippedSeal) ?? null;
+  const sky = state.sky ?? skyFor(state.areaId);
+
+  const rows = [
+    { key: 'rod', name: 'Rod', value: Number(current?.luck) || 0 },
+    { key: 'rank', name: `Rank ${rank}`, value: luckFromLevel(rank) },
+    { key: 'seal', name: seal ? seal.name : 'Seal', value: Number(seal?.luck) || 0 },
+    // Weather's own contribution only. The seal is a row of its own, so folding
+    // it in here too would show every boost twice.
+    {
+      key: 'weather',
+      name: `${sky.weather.name}, ${sky.time.name}`,
+      value: Math.round((luckFromSky(sky.time, sky.weather) - 1) * 100) / 100,
+    },
+  ];
+
+  ui.boostList.textContent = '';
+  for (const row of rows) {
+    const el = document.createElement('span');
+    el.className = 'lake__boost' + (row.value > 0 ? '' : ' lake__boost--none');
+    // Keyed by source, not label: the seal row is titled with the seal's own name.
+    el.dataset.key = row.key;
+    const name = document.createElement('span');
+    name.className = 'lake__boost-name';
+    name.textContent = row.name;
+    const value = document.createElement('span');
+    value.className = 'lake__boost-value';
+    value.textContent = String(row.value);
+    el.append(name, value);
+    ui.boostList.appendChild(el);
+  }
+
+  const total = rows.reduce((sum, row) => sum + row.value, 0);
+  ui.boostTotal.textContent = String(Math.round(total * 100) / 100);
+  ui.boostTotal.dataset.luck = String(total);
+}
+
 /** What is in the bag, and what selling it would pay. */
 function paintFinds() {
   if (!ui.findsList || !ui.sellFinds) return;
@@ -468,6 +518,7 @@ function paintChrome() {
     ui.levelBar.dataset.level = String(rank.level);
   }
   paintPet();
+  paintBoosts();
   paintFinds();
 
   // The button says how many rods you carry, so the inventory is findable at a glance.
@@ -950,6 +1001,9 @@ function renderInventory() {
 function paintSky(sky) {
   if (!ui.lake || !sky) return;
   const { time, weather } = sky;
+  // Kept, so the boost panel and the fish roll read the same weather
+  // rather than each rolling their own.
+  state.sky = { time, weather };
   ui.lake.style.setProperty('--sky-wash', time.tint);
   ui.lake.style.setProperty('--sky-depth', String(time.depth));
   ui.lake.style.setProperty('--veil', weather.tint);
@@ -1420,11 +1474,14 @@ function frame(now) {
   if (state.phase === 'waiting' && now >= state.biteAt) {
     // Luck is rod + rank + equipped seal, so all three have a visible pull.
   const sealNow = SEALS.find((item) => item.id === state.equippedSeal) ?? null;
+  // Weather counts toward luck. luckFromSky() was computed and then never
+  // used, so every sky looked different and fished identically.
+  const skyNow = state.sky ?? skyFor(state.areaId);
   const luck = luckFor({
     rod: rod(),
     level: levelFrom({ xp: state.xp }).level,
     seal: sealNow,
-  });
+  }) + (luckFromSky(skyNow.time, skyNow.weather) - 1);
   hookSet(rollFish(Math.random(), rod(), state.areaId, luck));
   }
 

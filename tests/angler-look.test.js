@@ -1028,3 +1028,46 @@ test('every SVG group the controller hides by attribute has a CSS rule', () => {
       `#${id} is toggled by attribute and needs a [hidden] rule to actually hide`);
   }
 });
+
+test('there is a boost panel in the bottom-left corner of the lake', () => {
+  // Luck is rod + rank + seal, and it decides which fish you meet -- but nothing
+  // on screen ever showed it. You can own the best rod in the game and be unable
+  // to tell that it does anything. This puts the whole breakdown where the eye
+  // already is, in the corner, always visible.
+  const panel = PAGE.slice(PAGE.indexOf('id="lake"'), PAGE.indexOf('</svg>'));
+  assert.match(panel, /class="lake__boosts"/,
+    'the lake needs a boost panel');
+  const css = rule('.lake__boosts');
+  assert.ok(css, 'the boost panel must be styled');
+  assert.match(css, /position:\s*absolute/);
+  assert.match(css, /bottom:\s*[\d.]+(rem|px|%)/,
+    'and it must sit at the BOTTOM');
+  assert.match(css, /left:\s*[\d.]+(rem|px|%)/,
+    'and on the LEFT, not centred or right');
+  assert.match(css, /pointer-events:\s*none/,
+    'and never swallow a cast');
+});
+
+test('the boost panel is behind the reel and the catch card, not over them', () => {
+  // The reel fills the middle of the lake and the catch card covers it. A readout
+  // stacked over either is a readout nobody reads at the moment it matters.
+  const z = Number(/z-index:\s*(\d+)/.exec(rule('.lake__boosts'))?.[1] ?? 0);
+  const reel = Number(/z-index:\s*(\d+)/.exec(rule('.reel'))?.[1] ?? 0);
+  const card = Number(/z-index:\s*(\d+)/.exec(rule('.catch__card'))?.[1] ?? 0);
+  assert.ok(z < reel, `boosts (z ${z}) must not cover the reel (z ${reel})`);
+  assert.ok(z < card, `boosts (z ${z}) must not cover the catch card (z ${card})`);
+});
+
+test('the boost panel names every source, and the zero ones honestly', () => {
+  // A panel that hides the rows you do not currently benefit from is worse than
+  // none: it implies the boost is missing rather than not yet earned. Every row
+  // is always present; the ones at zero say so.
+  assert.match(PAGE, /id="boost-list"/, 'the rows need somewhere to render');
+  assert.match(PAGE, /lake__boost/,
+    'and a row class to style them');
+});
+
+test('the panel does not need a click to be useful', () => {
+  assert.match(PAGE, /aria-live="off"|aria-hidden="true"/,
+    'a constantly-changing readout should not announce itself to a screen reader');
+});

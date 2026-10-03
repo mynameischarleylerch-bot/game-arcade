@@ -126,6 +126,44 @@
      <g>, so the reel was drawn on rods that have none. Same trap as the pet seal. */
   #rod-reel[hidden] { display: none; }
 
+  /* The boost readout. Bottom-left, always on, and BEHIND the reel and the catch
+     card -- z-index 1 puts it under both, because a number you cannot read at the
+     moment you are reeling is a number that is not doing its job. */
+  .lake__boosts {
+    position: absolute; left: .8rem; bottom: .8rem; z-index: 1;
+    display: grid; gap: .2rem; justify-items: start;
+    padding: .5rem .6rem .55rem; max-width: 12rem;
+    border-radius: var(--pill);
+    background: linear-gradient(180deg, rgba(255,255,255,.82), rgba(255,255,255,.62));
+    border: 1px solid rgba(255, 255, 255, .8);
+    box-shadow: inset 0 1px 0 #fff;
+    pointer-events: none;
+  }
+  .lake__boosts-title {
+    font-size: .66rem; font-weight: 800; letter-spacing: .1em;
+    text-transform: uppercase; color: var(--ink-soft, #0e6ea8);
+  }
+  .lake__boost-list { display: grid; gap: .1rem; }
+  .lake__boost {
+    display: flex; align-items: baseline; gap: .4rem;
+    font-size: .74rem; line-height: 1.25; color: var(--ink, #013a63);
+  }
+  .lake__boost-name { opacity: .82; }
+  /* A boost you do not have yet says so rather than disappearing: a missing row
+     reads as a bug, a zero reads as "not earned yet". */
+  .lake__boost--none { opacity: .55; }
+  .lake__boost--none .lake__boost-value::after { content: ' \2014'; }
+  .lake__boost-value {
+    margin-left: auto; font-weight: 800; font-variant-numeric: tabular-nums;
+  }
+  .lake__boost-value::before { content: '+'; opacity: .55; }
+  .lake__boost--none .lake__boost-value::before { content: ''; }
+  .lake__boosts-total {
+    margin-top: .15rem; padding-top: .2rem;
+    border-top: 1px solid rgba(1, 87, 155, .14);
+    font-size: .72rem; font-weight: 700; color: #1c5678;
+  }
+  .lake__boosts-total b { font-variant-numeric: tabular-nums; }
   .lake__sky {
     position: absolute; inset: 0; z-index: 1; pointer-events: none;
     border-radius: inherit;
@@ -1022,6 +1060,16 @@
      visit looked identical; this is the light on top of it, driven by
      --sky-wash and --sky-depth from the controller. -->
         <div class="lake__sky" aria-hidden="true"></div>
+        <!-- Every boost you are carrying, always on. Luck is rod + rank + seal and
+             it decides which fish you meet, but nothing on screen ever showed it --
+             you can own the best rod in the game and be unable to tell it does
+             anything. Bottom-left, under the reel and the catch card, never over
+             either. -->
+        <div class="lake__boosts" aria-hidden="true">
+          <span class="lake__boosts-title">Boosts</span>
+          <div class="lake__boost-list" id="boost-list"></div>
+          <span class="lake__boosts-total">luck <b id="boost-total">0</b></span>
+        </div>
         <svg class="scene" viewBox="0 0 100 100" preserveAspectRatio="none" aria-hidden="true" focusable="false">
         <defs>
           <linearGradient id="fa-water" x1="0" y1="0" x2="0" y2="1">
@@ -1333,6 +1381,6 @@
     </div>
   </div>
 
-  <script type="module" src="./angler.js?v=2026-10-03-r"></script>
+  <script type="module" src="./angler.js?v=2026-10-03-s"></script>
 </body>
 </html>
