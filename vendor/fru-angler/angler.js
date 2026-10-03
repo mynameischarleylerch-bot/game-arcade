@@ -24,10 +24,10 @@ import {
  levelFrom, xpForCatch, xpForLevel, luckFor, luckFromLevel,
  rollLostItem, lostItemsFor, sellLostItems, lostItemById,
  buySeal, equipSeal, sealComment, sealDuplicates, sealIdleLine,
-} from './fishing.js?v=2026-10-03-q';
+} from './fishing.js?v=2026-10-03-r';
 import {
   reelConfig, stepReel as advance, reelOutcomeFor, isCaught, lineSnapped,
-} from './reel.js?v=2026-10-03-q';
+} from './reel.js?v=2026-10-03-r';
 
 /* ------------------------------------------------------------------ tuning */
 
@@ -807,7 +807,13 @@ function landFish() {
   }
 
   // The seal speaks into its own bubble, so a notice cannot overwrite its opinion.
-  sealSays(sealComment(seal, fish, { bestiary: state.bestiary }));
+  // It gets told what actually happened: junk came up with the catch, or this beat
+  // the player's personal best. Both used to fall through to the generic line.
+  sealSays(sealComment(seal, fish, {
+    bestiary: state.bestiary,
+    personalBest: kg > wasBest,
+    junk: Boolean(found),
+  }));
 
   save();
   paintChrome();

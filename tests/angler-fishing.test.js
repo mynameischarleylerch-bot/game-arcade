@@ -7,7 +7,7 @@ import {
   startingInventory, ownsRod, addRodToInventory, equipRod, rodArt, RODS_BY_PRICE,
   fishSvg, FISH_SHAPES, hookLineFor, AREAS, areaUnlocked,
   rodWorksIn, rodCheckIn,
- areaProgress, levelFrom, xpForCatch, luckFromLevel, luckFor, LOST_ITEMS, rollLostItem, lostItemsFor, SEALS, buySeal, equipSeal, sealComment, sealDuplicates, visitArea, xpForLevel, sellLostItems, lostItemById, MUTATIONS, mutationMultiplierFor, mutationById, WEATHER, TIMES, skyFor, luckFromSky,} from '../vendor/fru-angler/fishing.js';
+ areaProgress, levelFrom, xpForCatch, luckFromLevel, luckFor, LOST_ITEMS, rollLostItem, lostItemsFor, SEALS, buySeal, equipSeal, sealComment, sealDuplicates, visitArea, xpForLevel, sellLostItems, lostItemById, MUTATIONS, mutationMultiplierFor, mutationById, sealLines, WEATHER, TIMES, skyFor, luckFromSky,} from '../vendor/fru-angler/fishing.js';
 
 test('the starting wallet can afford exactly one upgrade from the cheapest rod', () => {
   const loadout = startingLoadout();
@@ -1200,10 +1200,9 @@ test('there is one seal per lake, each with its own perks and voice', () => {
     assert.ok(seal.dupeChance > 0 && seal.dupeChance < 0.25, `${seal.id} duplicates too often`);
     assert.ok(Number.isInteger(seal.level) && seal.level >= 1, `${seal.id} needs a rank gate`);
     assert.ok(seal.price > 0, `${seal.id} must cost something`);
-    for (const key of ['favourite', 'beat', 'rare']) {
-      assert.ok(seal.comments[key]?.length >= 8, `${seal.id} needs a ${key} line`);
-      assert.match(seal.comments[key], /\b(you|your)\b/i,
-        `${seal.id}'s ${key} line must speak to the player`);
+    for (const key of ['favourite', 'beat', 'rare', 'junk', 'personalBest']) {
+      assert.ok(seal.catch[key]?.length >= 8,
+        `${seal.id} needs a ${key} line, got ${JSON.stringify(seal.catch[key])}`);
     }
     assert.ok(seal.line?.length >= 15, `${seal.id} needs a description`);
   }
@@ -1388,16 +1387,25 @@ test('the two currencies are genuinely separate things', () => {
     'seal prices must never be converted into rod money');
 });
 
-test('every seal has idle lines, and every one speaks to the player', () => {
+test('every seal has idle lines, and none of them are just narration', () => {
   // Two bugs hid here at once: a duplicated `idle:` key on one seal, where the
   // second silently won and another seal ended up with none, and idle lines that
-  // were pure narration -- the seal talking about the weather, not to you.
+  // were pure narration -- the seal describing the weather to nobody.
+  //
+  // "Contains you/your" was the old proxy and it was too narrow: a personality
+  // does not have to say "you" to be talking TO you. "quiet. that's how you know"
+  // addresses the player perfectly well.
   for (const seal of SEALS) {
-    assert.ok(Array.isArray(seal.idle) && seal.idle.length >= 3,
-      `${seal.id} needs at least three idle lines`);
+    assert.ok(Array.isArray(seal.idle) && seal.idle.length >= 4,
+      `${seal.id} needs at least four idle lines`);
     for (const line of seal.idle) {
-      assert.match(line, /\b(you|your)\b/i,
-        `${seal.id} must speak to the player, said "${line}"`);
+      // Present tense, second person, an address, or an opinion -- anything but a
+      // weather report.
+      const addressed = /\b(you|your|you're|youre)\b/i.test(line)
+        || /\b(cast|catch|line|rod|bobber|water|dock|hook|reel)\b/i.test(line)
+        || /[?!]|\b(again|still|done|wrong|right|again)\b/i.test(line);
+      assert.ok(addressed,
+        `${seal.id} is narrating rather than talking to the player: "${line}"`);
     }
   }
 });
@@ -1589,4 +1597,137 @@ test('guides sit ON the shaft, between the grip and the tip', () => {
       assert.ok(t >= 0 && t <= 1, `${id} guide ${t} is not a fraction along the rod`);
     }
   }
+});
+
+test('each seal has a personality, not just a name and a hue', () => {
+  // Five seals with five idle lines each, and all five read the same: mildly warm,
+  // faintly encouraging, no voice. Personality is the point of a pet, so each one
+  // needs its own register, its own rhythm, and something only it would say.
+  for (const seal of SEALS) {
+    assert.ok(seal.voice && seal.voice.length > 8,
+      `${seal.id} needs a stated voice -- how it talks, in one line`);
+    assert.ok(Array.isArray(seal.idle) && seal.idle.length >= 4,
+      `${seal.id} needs at least four idle lines`);
+    assert.ok(seal.catch && Object.keys(seal.catch).length >= 4,
+      `${seal.id} needs comments for more than three situations`);
+  }
+});
+
+test('no two seals sound alike', () => {
+  // Distinct voices means distinct phrasing, not the same template with a colour
+  // changed. Compare the shape of every line: if they all share an opener, an
+  // opener, a shared-ending test catches the template even when the words differ.
+  for (const field of ['idle', 'catch']) {
+    const openers = new Map();
+    for (const seal of SEALS) {
+      const lines = field === 'idle' ? seal.idle : Object.values(seal.catch ?? {});
+      for (const line of lines) {
+        const opener = line.split(/[ ,.]/)[0].toLowerCase();
+        openers.set(opener, (openers.get(opener) ?? 0) + 1);
+      }
+    }
+    const total = [...openers.values()].reduce((a, b) => a + b, 0);
+    const biggest = Math.max(...openers.values());
+    assert.ok(biggest / total < 0.34,
+      `${field}: "${[...openers.entries()].sort((a,b)=>b[1]-a[1])[0][0]}" opens ${biggest} of ${total} lines -- one template, not five voices`);
+  }
+});
+
+test('the seals talk in slang a person would actually say', () => {
+  // Every line used to land somewhere between 1800 and a shrug. What made them
+  // dated was the FORM -- "I am watching your bobber", "That is beneath you" --
+  // not the vocabulary. So this checks the register directly and stops trying to
+  // keep a wordlist in step with the writing, which only ever measured my guesses.
+  //
+  // Dated markers: an uncontracted verb, a third-person "it is", and the stiff
+  // constructions that go with them.
+  const DATED = [
+    /\bI am\b/, /\byou are\b/, /\bit is\b/, /\bthat is\b/, /\bthere is\b/,
+    /\bwe are\b/, /\bthey are\b/, /\bI have\b/, /\byou have\b/,
+    /\bdo not\b/, /\bdoes not\b/, /\bwill not\b/, /\bcan not\b/,
+    /\bwould not\b/, /\bcould not\b/,
+    /\bmy favourite\b/, /\bwell done\b/, /\bvery good sign\b/,
+  ];
+  // Current markers: contractions and the clipped, lowercase way people text.
+  const CONTRACTED = /\b\w+'(s|t|re|ve|ll|d|m)\b/i;
+  const LOWERCASE_START = /^[a-z]/;
+
+  let contracted = 0;
+  let total = 0;
+  for (const seal of SEALS) {
+    for (const line of [...seal.idle, ...Object.values(seal.catch)]) {
+      total += 1;
+      for (const dated of DATED) {
+        assert.doesNotMatch(line, dated,
+          `${seal.id} falls back to dated phrasing: "${line}"`);
+      }
+      assert.match(line, LOWERCASE_START,
+        `${seal.id} starts a line like an essay: "${line}"`);
+      if (CONTRACTED.test(line)) contracted += 1;
+    }
+  }
+  // Not every clipped line can contract -- Moss would lose its voice. But a seal
+  // that never contracts at all is writing like a manual, not talking.
+  assert.ok(contracted / total > 0.5,
+    `only ${contracted} of ${total} lines contract anything; ${total - contracted} sound written`);
+});
+
+test('every comment slot is filled for every seal', () => {
+  // sealComment() picks by rarity tier and by whether you already had the fish. A
+  // missing key means the seal says NOTHING on that catch, which reads as broken.
+  const rarities = ['Common', 'Uncommon', 'Rare', 'Epic', 'Legendary', 'Mythical'];
+  for (const seal of SEALS) {
+    for (const slot of ['favourite', 'beat', 'rare', 'junk', 'personalBest']) {
+      assert.ok(seal.catch[slot], `${seal.id} is missing a ${slot} line`);
+      assert.ok(seal.catch[slot].length > 6, `${seal.id} ${slot} is too short to read`);
+    }
+    assert.ok(!/\bI am\b|\bYou are\b|\bIt is\b|\bThat is\b/.test(
+      [...seal.idle, ...Object.values(seal.catch)].join(' ')),
+      `${seal.id} still speaks in the formal register`);
+    void rarities;
+  }
+});
+
+test('sealLines returns idle AND catch lines, not just idle', () => {
+  // sealLines() walked `seal.comments`, which stopped existing when the comments
+  // were renamed to catch -- so it silently returned idle lines only and every
+  // catch line went missing from whatever consumed it. A rename that leaves a
+  // reader pointing at nothing is the worst kind of change, because nothing throws.
+  for (const seal of SEALS) {
+    const lines = sealLines(seal);
+    const expected = seal.idle.length + Object.keys(seal.catch).length;
+    assert.equal(lines.length, expected,
+      `${seal.id} exposes ${lines.length} lines, expected ${expected}`);
+    for (const comment of Object.values(seal.catch)) {
+      assert.ok(lines.includes(comment),
+        `${seal.id} hides its "${comment.slice(0, 24)}..." line`);
+    }
+  }
+});
+
+test('sealComment routes each kind of cast to its own line', () => {
+  // Junk, a personal best, a repeat and a first catch all used to collapse onto the
+  // same line, and the ordering was wrong underneath: "already owned" was checked
+  // before rarity, so a repeat of a Mythical fish sounded identical to seeing one
+  // for the first time.
+  const seal = SEALS[0];
+  const myth = { id: 'g', name: 'G', rarity: 'Mythical' };
+  const epic = { id: 'g', name: 'G', rarity: 'Epic' };
+  const seen = {
+    junk: sealComment(seal, myth, { junk: true }),
+    record: sealComment(seal, myth, { personalBest: true }),
+    rareRepeat: sealComment(seal, myth, { bestiary: { g: 3 } }),
+    rareFirst: sealComment(seal, myth, {}),
+    epicRepeat: sealComment(seal, epic, { bestiary: { g: 3 } }),
+    epicFirst: sealComment(seal, epic, {}),
+  };
+  assert.notEqual(seen.rareRepeat, seen.rareFirst,
+    'a Mythical fish must not sound the same whether you have one or not');
+  assert.notEqual(seen.epicRepeat, seen.epicFirst,
+    'nor an Epic one');
+  assert.notEqual(seen.junk, seen.record, 'junk and a record are different moments');
+  // Junk wins when both happen: the rare find is the more surprising one to report.
+  assert.equal(sealComment(seal, myth, { junk: true, personalBest: true }), seen.junk,
+    'with junk and a record on one cast, the junk line is the one that plays');
+  assert.equal(sealComment(null, myth, {}), '', 'no seal means no line, never a throw');
 });

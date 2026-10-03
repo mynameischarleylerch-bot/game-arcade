@@ -1012,76 +1012,112 @@ export const SEALS = [
   {
     id: 'bubbles', name: 'Bubbles', home: 'aero-lake',
     luck: 0.8, dupeChance: 0.06, level: 1, price: 900, hue: 195,
+    // The new one. Cheerful, nosy, permanently mid-thought. Talks in short bursts
+    // and asks questions it does not wait for the answer to.
+    voice: 'Cheerful and nosy. Short bursts, asks questions, never waits.',
     idle: [
-      'Hello. The water is nice today, is it not. Enjoy your cast.',
-      'I am watching your bobber. It is not moving.',
-      'You are the one doing all the work.',
+      "oh hi, it's Bubbles! your bobber's doing that thing again",
+      "hey — cast. seriously, cast. i'm bored",
+      "no but like, do you ever just sit here? it's nice",
+      "watching a line not move is 90% of fishing and i'm so okay with it",
+      "you've got the face. you're thinking about lunch. i KNOW that face",
     ],
     line: 'Watches your line like it is a very slow television.',
-    comments: {
-      favourite: 'That is my favourite, and you found it. Do not tell the others.',
-      beat: 'You could fish something better than that. I have seen what is down there.',
-      rare: 'Oh. You found one of those. That is a very good sign.',
+    catch: {
+      favourite: "okay THAT one, i love that one. don't tell the others, obviously",
+      beat: "you've already got one of those! get a weirder one, trust me",
+      rare: "whoa. okay that's rare. i'm not saying i'm hyped but i kind of am",
+      rareRepeat: "okay you ALREADY have one of those?? fine. i'm allowed to be smug",
+      junk: "oh nice, junk! that's still seal coins though so, you know, nice",
+      personalBest: "that's the biggest one yet?? i'm claiming emotional credit",
     },
   },
   {
     id: 'tangerine', name: 'Tangerine', home: 'doric-delta',
     luck: 1.0, dupeChance: 0.07, level: 4, price: 2600, hue: 24,
+    // The critic. Dry, exact, quietly competitive. Never shouts, always lands it.
+    voice: 'Dry and exact. Devastating in one line, then goes quiet.',
     idle: [
-      'Warm water. Terrible organisation, but you will manage.',
-      'Aim at the straight part. There is always one, if you look.',
-      'You are holding that rod like a shopping bag.',
+      "left. no, left. okay there. you're welcome",
+      "you're holding that rod like it's a shopping bag",
+      "better. don't get comfortable. your cast, not mine",
+      "miss the next one and i'm gonna be so annoying about YOUR casts",
+      "straight lines only. water here doesn't do curves. neither do i",
     ],
     line: 'Lies on the warmest plank and judges your casting.',
-    comments: {
-      favourite: 'That is the one. You found the exact one.',
-      beat: 'That is beneath you, honestly.',
-      rare: 'Straight lines, and you still found that.',
+    catch: {
+      favourite: "the one. called it. literally called it",
+      beat: "that's beneath you. genuinely",
+      rare: "straight lines and you still pulled that? okay. OKAY.",
+      rareRepeat: "again. you had that already. show off",
+      junk: "junk. so impressive. genuinely",
+      personalBest: "bigger. okay. i'm not impressed, i'm just noting it",
     },
   },
   {
     id: 'moss', name: 'Moss', home: 'eco-marsh',
     luck: 1.1, dupeChance: 0.08, level: 8, price: 5400, hue: 110,
+    // The deadpan zen. Says almost nothing, and what's there is very dry.
+    voice: 'Deadpan zen. Very few words. Extremely dry.',
     idle: [
-      'Quiet now. Good. You are doing well.',
-      'The reeds are doing most of the work. You are welcome.',
-      'I like it here. Do not tell the ice you brought me.',
+      "reeds did most of that. you're welcome",
+      "quiet now. good. you're doing fine",
+      "don't fix anything. marsh is fine. you too",
+      "you keep checking. it's fine. i'm literally watching it",
+      "one eye's enough. i checked your line. relax",
     ],
     line: 'Mostly water and entirely opinion.',
-    comments: {
-      favourite: 'You found it in the good water. I knew you would.',
-      beat: 'The reeds have better. You could try the reeds.',
-      rare: 'Quiet now. That is how you know it is rare.',
+    catch: {
+      favourite: "that one belongs here. it knows that too",
+      beat: "reeds had better. go try the reeds",
+      rare: "quiet. that's how you know",
+      rareRepeat: "quiet. you already had one of those. no matter",
+      junk: "something found you. it wasn't looking",
+      personalBest: "bigger than last time. i noticed. i don't care though",
     },
   },
   {
     id: 'frost', name: 'Frost', home: 'glacier-fjord',
     luck: 1.2, dupeChance: 0.09, level: 13, price: 9800, hue: 198,
+    // The drill sergeant. Encouraging, but entirely through pressure.
+    voice: 'Drill sergeant. Encourages by piling on. Way too intense.',
     idle: [
-      'Cold enough to keep your line honest.',
-      'I have one eye open for you. The other is for the weather.',
-      'Bore through it. That is all this lake asks of you.',
+      "bore through it. that's the whole lake and you keep waiting",
+      "cold enough to keep your line honest — and you honest, so push",
+      "one eye open. other one's for the weather. stop looking at me and cast",
+      "again. again. again. that's literally the whole method",
+      "you're soft rn. ice doesn't care. push",
     ],
     line: 'Keeps one eye open, which is more than the ice does.',
-    comments: {
-      favourite: 'Colder than me. You will not find colder.',
-      beat: 'The ice has better, if you dare.',
-      rare: 'You bored through the ice and found that. Well done.',
+    catch: {
+      favourite: "colder than me. you won't beat that, don't bother",
+      beat: "ice had better and you went for THAT? dig. dig!",
+      rare: "bored through the ice and found that? that's actual discipline",
+      rareRepeat: "you already had that. twice. keep pushing",
+      junk: "junk. even your junk pulled up badly. again. harder",
+      personalBest: "new record. don't celebrate, cast. next one bigger",
     },
   },
   {
     id: 'abyss', name: 'Abyss', home: 'dark-aero-deep',
-    idle: [
-      'Down here the light stops first, and you will not miss it.',
-      'I have been down longer than your dock has existed.',
-      'Something moved just past your hook. It was probably me.',
-    ],
     luck: 1.4, dupeChance: 0.11, level: 19, price: 19000, hue: 232,
+    // The eldritch one. Speaks like it knows things it shouldn't. Beats are mild.
+    voice: 'Knows things it should not. Half the time it is not talking to you.',
+    idle: [
+      "down here the light gives up first. your line still works though",
+      "been down longer than your dock. longer than your dock's whole deal",
+      "something moved past your hook. probs me. probs",
+      "i counted. you've cast like four hundred times. i counted every one",
+      "dark's not empty. your bobber's fine. for now",
+    ],
     line: 'Sits where the light gives up and says nothing for a while.',
-    comments: {
-      favourite: 'You pulled it up from the same dark I sleep in.',
-      beat: 'Down here, that was kind of you.',
-      rare: 'You should be afraid. You are not, so take it.',
+    catch: {
+      favourite: "you pulled that out of the same dark i sleep in. weirdly proud",
+      beat: "that was almost nice of you. i clocked it",
+      rare: "you should be way more careful. you're not, so. take it",
+      rareRepeat: "got another one. the dark remembers the first",
+      junk: "something came up. it brought a gift, technically",
+      personalBest: "bigger. the water remembers the last one too. it's watching",
     },
   },
 ];
@@ -1103,7 +1139,7 @@ export function sealIdleLine(seal, { areaId = null, count = 0 } = {}) {
 /** Every line a seal can say, idle included. Used by the index and the tests. */
 export function sealLines(seal) {
   if (!seal) return [];
-  return [...(seal.idle ?? []), ...Object.values(seal.comments ?? {})];
+  return [...(seal.idle ?? []), ...Object.values(seal.catch ?? {})];
 }
 
 /**
@@ -1112,17 +1148,28 @@ export function sealLines(seal) {
  * Always returns a string when there is a seal: a pet that says nothing when you
  * land something good is worse than no pet at all.
  */
-export function sealComment(seal, fish, { bestiary = {} } = {}) {
-  if (!seal?.comments) return '';
+export function sealComment(seal, fish, { bestiary = {}, personalBest = false, junk = false } = {}) {
+  const lines = seal?.catch;
+  if (!lines) return '';
   const tier = Math.max(0, RARITY_ORDER.indexOf(fish?.rarity));
   const alreadyKnown = Number(bestiary?.[fish?.id]) > 0;
-  // A repeat of something you already hold is the "you could do better" beat.
-  if (alreadyKnown && tier < 3) return seal.comments.beat;
-  if (tier >= 4) return seal.comments.rare;
-  if (tier >= 3) return seal.comments.favourite;
-  return seal.comments.beat;
-}
 
+  // Junk and a personal best are worth a word of their own: both are moments, and
+  // before this every catch got one of three lines regardless.
+  if (junk) return lines.junk ?? lines.beat;
+  if (personalBest) return lines.personalBest ?? lines.favourite;
+
+  // Rarity first. A Mythical fish reads as a big deal whether or not you have one
+  // already -- the old ordering checked "already owned" first, so a repeat of a
+  // Mythical got the same line as seeing one for the first time.
+  // A Mythical or Legendary you ALREADY hold is its own moment, distinct from
+  // seeing one for the first time -- so it gets its own line, not `rare`.
+  if (tier >= 4) return alreadyKnown ? (lines.rareRepeat ?? lines.rare) : lines.rare;
+  if (tier >= 3) return alreadyKnown ? lines.beat : lines.favourite;
+
+  // Below Epic, a fish you already hold is the "you could do better" beat.
+  return alreadyKnown ? lines.beat : lines.favourite;
+}
 /**
  * Buy a seal. Never mutates the wallet: on failure the caller gets the same coins
  * back plus a reason a player can read.

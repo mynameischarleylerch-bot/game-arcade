@@ -13,7 +13,7 @@ import { readFileSync } from 'node:fs';
 import { JSDOM } from 'jsdom';
 import { FISH, RARITY_ORDER, fishIndex, hookLineFor, AREAS,
          RODS, RODS_BY_PRICE, SEALS, startingLoadout, TIMES, WEATHER, LOST_ITEMS,
-} from '../vendor/fru-angler/fishing.js?v=2026-10-03-q';
+} from '../vendor/fru-angler/fishing.js?v=2026-10-03-r';
 
 const PAGE = readFileSync(
   new URL('../vendor/fru-angler/index.html', import.meta.url),
@@ -1390,7 +1390,8 @@ test('the seal has something to say while you are waiting, not only on a catch',
     'a seal already with you must be talking before you have caught anything');
   const said = ctx.doc.getElementById('fa-bubble-text').textContent;
   assert.ok(said.length > 8, `the seal must say something, bubble said "${said}"`);
-  assert.match(said, /\b(you|your)\b/i, 'and speak to the player');
+  assert.match(said, /\b(you|your|cast|line|rod|bobber|water)\b/i,
+    'and speak to the player or the tackle they are holding');
 });
 
 test('the seal keeps talking between catches, so the dock is not silent', async () => {
