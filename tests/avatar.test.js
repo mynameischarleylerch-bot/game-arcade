@@ -157,100 +157,76 @@ test('every avatar file is a complete, self-contained SVG', () => {
   }
 });
 
-/* --------------------------------------------------- the figure itself */
+/* --------------------------------------------------- the Aero orb itself */
 
+/**
+ * The avatars are the first version: a glossy Aero orb with a simple line glyph
+ * (bubble, wave, leaf, sun, droplet, star, crystal, fish). Each is a round clip
+ * of a gradient with one symbol, not a figure.
+ */
 const avatarFile = (n) => readFileSync(
   new URL(`../assets/avatars/avatar-${String(n).padStart(2, '0')}.svg`, import.meta.url), 'utf8',
 );
 
-/** The silhouette path, with its numbers. */
-function figureOf(svg) {
-  const d = svg.match(/<clipPath id="figure">\s*<path d="([^"]+)"/)[1];
-  const nums = [...d.matchAll(/-?\d*\.?\d+/g)].map((m) => Number(m[0]));
-  const xs = nums.filter((_, i) => i % 2 === 0);
-  const ys = nums.filter((_, i) => i % 2 === 1);
-  return {
-    d,
-    closed: d.trim().endsWith('Z'),
-    body: svg.slice(svg.indexOf('<g clip-path')),
-    width: Math.max(...xs) - Math.min(...xs),
-    height: Math.max(...ys) - Math.min(...ys),
-  };
-}
-
-test('the avatar is one closed silhouette', () => {
-  const { d, closed, body } = figureOf(avatarFile(1));
-  assert.ok(closed, 'the figure path must be closed');
-  // The whole figure is a single clip path: nothing inside is a separate part.
-  const shapesInBody = body.match(/<(path|polygon)\b/g) || [];
-  assert.deepEqual(shapesInBody, [],
-    `the body must contain no separate shapes, found: ${shapesInBody.join(', ')}`);
-  assert.equal(d.startsWith('M48'), true, 'the figure should start at the head');
-});
-
-test('the avatar has no legs, arms or hands', () => {
-  const svg = avatarFile(1);
-  const { body } = figureOf(svg);
-  // Only the figure fill, the two specular highlights and one ambient shadow.
-  const ellipses = (body.match(/<ellipse\b/g) || []).length;
-  assert.equal(ellipses, 3, `expected 3 highlight ellipses, found ${ellipses}`);
-  assert.equal(/(r|cy|cx)="(1[0-9]|[2-9])\b/.test(body.replace(/<ellipse[^>]*>/g, '')), false);
-  for (const word of ['leg', 'hand', 'arm', 'finger', 'foot']) {
-    assert.equal(new RegExp(word, 'i').test(svg), false, `"${word}" appears in the avatar`);
+test('every avatar is a round Aero orb, not a figure', () => {
+  for (let n = 1; n <= 16; n += 1) {
+    const svg = avatarFile(n);
+    assert.match(svg, /<clipPath id="round"><circle cx="48" cy="48" r="48"\/><\/clipPath>/,
+      `avatar-${n}: the clip must be the 48px round orb`);
+    assert.match(svg, /<rect width="96" height="96" fill="url\(#sky\)"\/>/,
+      `avatar-${n}: the sky gradient must fill the orb`);
+    // Glyphs are drawn as strokes inside one <g fill="none">. A figure would be a
+    // big *filled* path; nothing here may be filled, or it is a body again.
+    const glyph = svg.match(/<g fill="none"[\s\S]*?<\/g>/);
+    assert.ok(glyph, `avatar-${n}: no stroked glyph group`);
+    const outside = svg.replace(glyph[0], '');
+    assert.equal(/<path[^>]*fill="(?!none)/.test(outside), false,
+      `avatar-${n}: a filled path outside the glyph group means a figure crept back`);
   }
 });
 
-test('the avatar is not stretched: taller than wide, but only slightly', () => {
-  for (const n of [1, 5, 9, 16]) {
-    const { width, height } = figureOf(avatarFile(n));
-    const ratio = height / width;
-    assert.ok(ratio > 0.95, `avatar-${n} is too squat: h/w ${ratio.toFixed(2)}`);
-    assert.ok(ratio < 1.45, `avatar-${n} is too tall: h/w ${ratio.toFixed(2)}`);
+test('every avatar carries an Aero gradient and a gloss highlight', () => {
+  for (let n = 1; n <= 16; n += 1) {
+    const svg = avatarFile(n);
+    assert.match(svg, /<linearGradient id="sky"/, `avatar-${n}: missing the sky gradient`);
+    assert.match(svg, /hsl\(\d+ 88% 78%\)/, `avatar-${n}: missing the Aero sky ramp`);
+    assert.match(svg, /<radialGradient id="orb"/, `avatar-${n}: missing the glossy sphere`);
+    // The specular highlight is the Aero signature.
+    assert.match(svg, /<ellipse cx="34" cy="26" rx="15" ry="9"/,
+      `avatar-${n}: missing the gloss highlight`);
+    assert.match(svg, /#fff9c4/, `avatar-${n}: missing the sun bloom`);
   }
 });
 
-test('the silhouette has shoulder lobes: it pinches at the neck and below the arms', () => {
-  const svg = avatarFile(1);
-  const d = svg.match(/<clipPath id="figure">\s*<path d="([^"]+)"/)[1];
-  const nums = [...d.matchAll(/-?\d*\.?\d+/g)].map((m) => Number(m[0]));
-  const rows = {};
-  // Sample the cubic endpoints in document order; each segment is one row band.
-  for (let i = 0; i + 1 < nums.length; i += 2) {
-    const y = nums[i + 1];
-    (rows[Math.round(y / 4) * 4] ||= []).push(nums[i]);
+test('the sixteen glyphs vary, so the grid is not sixteen identical tiles', () => {
+  const bodies = [];
+  for (let n = 1; n <= 16; n += 1) {
+    const svg = avatarFile(n);
+    // The glyph is the stroked group; its d-data is what distinguishes them.
+    const glyph = svg.match(/<g fill="none"[\s\S]*?<\/g>/);
+    assert.ok(glyph, `avatar-${n}: no glyph group`);
+    bodies.push(glyph[0]);
   }
-  const widths = Object.entries(rows)
-    .map(([y, xs]) => [Number(y), Math.max(...xs) - Math.min(...xs)])
-    .sort((a, b) => a[0] - b[0]);
-
-  const neck = widths.find(([y]) => y >= 40 && y <= 46);
-  const arms = widths.find(([y]) => y >= 64 && y <= 68);
-  assert.ok(neck && arms, 'expected a neck row and an arm row');
-  assert.ok(arms[1] > neck[1] * 1.8,
-    `the arms (${arms[1].toFixed(1)}) should bulge far wider than the neck (${neck[1].toFixed(1)})`);
+  assert.ok(new Set(bodies).size >= 8,
+    `expected varied glyphs, found only ${new Set(bodies).size} distinct`);
 });
 
-test('the avatar background is transparent, so it sits on the site chrome', () => {
-  const svg = avatarFile(1);
-  const body = svg.slice(svg.indexOf('<g clip-path'));
-  // No full-bleed painted rect: only the fill that is clipped to the figure.
-  const rects = [...svg.matchAll(/<rect[^>]*>/g)].map((m) => m[0]);
-  for (const rect of rects) {
-    assert.match(rect, /fill="url\(#body\)"/, `unexpected background rect: ${rect}`);
+test('no avatar has limbs or a head-and-body figure', () => {
+  for (let n = 1; n <= 16; n += 1) {
+    const svg = avatarFile(n).toLowerCase();
+    for (const word of ['leg', 'hand', 'arm', 'figure', 'head']) {
+      assert.equal(svg.includes(word), false, `avatar-${n} contains "${word}"`);
+    }
   }
-  assert.match(body, /clip-path="url\(#figure\)"/);
 });
 
-test('all sixteen share one silhouette and differ only in colour', () => {
-  const first = figureOf(avatarFile(1)).d;
-  for (let n = 2; n <= 16; n += 1) {
-    assert.equal(figureOf(avatarFile(n)).d, first,
-      `avatar-${n} has a different silhouette; they must all be the same shape`);
-  }
+test('all sixteen are distinct colours', () => {
   const hues = new Set();
   for (let n = 1; n <= 16; n += 1) {
-    const stops = avatarFile(n).match(/stop-color="hsl\(([\d.]+)/g) || [];
-    hues.add(stops[0]);
+    // The sky ramp's first stop carries the hue, so that is the avatar's colour.
+    const first = avatarFile(n).match(/stop-color="(hsl\(\d+ [^)]+\))"/);
+    assert.ok(first, `avatar-${n}: no hsl stop found`);
+    hues.add(first[1]);
   }
-  assert.equal(hues.size, 16, 'the sixteen should be sixteen distinct colours');
+  assert.equal(hues.size, 16, `expected 16 distinct ramps, found ${hues.size}`);
 });

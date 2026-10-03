@@ -9,10 +9,10 @@ import {
   RODS, FISH, RARITY_ORDER, RARITY_COLOURS,
   castQuality, castDistance, biteDelayFor, rollFish, rollMutation,
   fishWeight, canCatch, catchValue, startingLoadout, buyRod, recordCatch,
-} from './fishing.js?v=2026-10-01-a';
+} from './fishing.js?v=2026-10-01-f';
 import {
   reelConfig, stepReel as advance, reelOutcomeFor, isCaught, lineSnapped,
-} from './reel.js?v=2026-10-01-a';
+} from './reel.js?v=2026-10-01-f';
 
 /* ------------------------------------------------------------------ tuning */
 
@@ -143,16 +143,31 @@ function clearShake() {
   for (const node of ui.lake.querySelectorAll('.shake')) node.remove();
 }
 
+/**
+ * Where the rod tip is, in the scene's percentage coordinates. Taken from the
+ * lure's own position so the line always starts exactly where the rod ends.
+ */
+function rodTip() {
+  const lure = ui.lake.querySelector('.scene__lure');
+  const cx = parseFloat(lure?.getAttribute('cx') ?? 58);
+  const cy = parseFloat(lure?.getAttribute('cy') ?? 31);
+  return { x: cx + 1.4, y: cy + 2 };   // nudge onto the line itself
+}
+
 /** Move the bobber, its splash and the fishing line together. */
 function placeBobber(left, top) {
   ui.bobber.style.left = `${left}%`;
   ui.bobber.style.top = `${top}%`;
   ui.splash.style.left = `${left}%`;
   ui.splash.style.top = `${top}%`;
-  // The line runs from the rod tip (fixed at 56,32 in the scene) to the bobber.
-  const x = 56 + (left / 100) * 44;
-  const y = 32 + (top / 100) * 68;
-  ui.line?.setAttribute('d', `M56 32 Q${(56 + x) / 2} ${(32 + y) / 2 + 6} ${x.toFixed(2)} ${y.toFixed(2)}`);
+  // The line runs from the rod tip to the bobber. The tip is read from the scene
+  // rather than hardcoded here, so moving the rod can never desync the line.
+  const tip = rodTip();
+  const x = tip.x + (left / 100) * (100 - tip.x);
+  const y = tip.y + (top / 100) * (100 - tip.y);
+  ui.line?.setAttribute('d',
+    `M${tip.x} ${tip.y} Q${((tip.x + x) / 2).toFixed(2)} ${((tip.y + y) / 2 + 6).toFixed(2)} `
+    + `${x.toFixed(2)} ${y.toFixed(2)}`);
 }
 
 /* -------------------------------------------------------------------- cast */

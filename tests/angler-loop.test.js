@@ -269,11 +269,18 @@ test('the scene draws the fishing line from the rod tip to the bobber', async ()
   key(ctx, 'keyup');
 
   assert.notEqual(line.getAttribute('d'), start, 'the line follows the cast');
+
+  // The end point must track the bobber. The start is read from the lure in the
+  // scene, so derive it here the same way rather than hardcoding it.
   const d = line.getAttribute('d');
   const [, x, y] = d.match(/([\d.]+)\s+([\d.]+)$/).map(Number);
+  const lure = ctx.doc.querySelector('.scene__lure');
+  const tipX = parseFloat(lure.getAttribute('cx')) + 1.4;
   const left = parseFloat(ctx.doc.getElementById('bobber').style.left);
-  assert.ok(Math.abs(x - (56 + (left / 100) * 44)) < 0.5,
-    `line end ${x} should match the bobber at ${left}%`);
+  const expectedX = tipX + (left / 100) * (100 - tipX);
+  assert.ok(Math.abs(x - expectedX) < 0.5,
+    `line end ${x} should match the bobber at ${left}% (expected ${expectedX.toFixed(2)})`);
+  assert.ok(Number.isFinite(y), 'the line end must have a y');
 });
 
 test('the lake reports its phase so the bobber can restyle itself', async () => {

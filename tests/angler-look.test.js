@@ -57,16 +57,62 @@ test('the pier has a deck and two legs, as sketched', () => {
     'the deck runs in from the left edge');
 });
 
-test('the angler has a body, a head and a hat', () => {
-  assert.match(PAGE, /class="scene__figure" cx="33\.2" cy="43" r="2\.6"/, 'the head');
-  assert.match(PAGE, /class="scene__figure" x="31\.6" y="50"/, 'the body');
-  assert.match(PAGE, /class="scene__hat"/, 'the hat');
+test('the angler is the Messenger blob, with no limbs', () => {
+  const d = PAGE.match(/<path class="scene__figure" d="([^"]+)"/)[1];
+  assert.ok(d.startsWith('M33.2'), 'the figure should be the blob path');
+  assert.ok(d.trim().endsWith('Z'), 'one closed silhouette');
+  // No legs, arms or hands. Check the figure's own markup and count shapes
+  // rather than searching words: the pier legitimately has legs, in a comment.
+  // The figure alone: from its path up to the first gloss ellipse.
+  const figure = PAGE.slice(
+    PAGE.indexOf('<path class="scene__figure"'),
+    PAGE.indexOf('<ellipse class="scene__shine"'),
+  );
+  assert.equal((figure.match(/<path\b/g) || []).length, 1,
+    'the figure must be one path, not several parts');
+  assert.equal(/<(rect|circle|polygon|ellipse)\b/.test(figure), false,
+    'the figure is a bare silhouette: no head circle, limbs or shapes of its own');
+
+  // The gloss sits over it: exactly two highlights, nothing else.
+  const gloss = PAGE.slice(
+    PAGE.indexOf('<ellipse class="scene__shine"'),
+    PAGE.lastIndexOf('<path', PAGE.indexOf('class="scene__rod"')),
+  );
+  assert.equal((gloss.match(/<ellipse\b/g) || []).length, 2,
+    'exactly two gloss highlights');
+  assert.equal(/<(rect|circle|path|polygon)\b/.test(gloss), false,
+    'nothing but the two ellipses may sit over the figure');
 });
 
-test('the fishing line starts at the rod tip', () => {
-  const d = PAGE.match(/id="line" d="([^"]+)"/);
-  assert.ok(d, 'the line path must ship with an initial d');
-  assert.match(d[1], /^M56 32/, 'the line should start at the rod tip in scene coords');
+test('the blob stands on the pier deck, not floating above it', () => {
+  const d = PAGE.match(/<path class="scene__figure" d="([^"]+)"/)[1];
+  const nums = [...d.matchAll(/-?\d*\.?\d+/g)].map((m) => Number(m[0]));
+  const ys = nums.filter((_, i) => i % 2 === 1);
+  const deck = Number(PAGE.match(/<rect class="scene__wood" x="0" y="(\d+)"/)[1]);
+  // It stands ON the deck: the blob's base meets the deck's top edge.
+  assert.ok(Math.abs(Math.max(...ys) - deck) < 0.6,
+    `blob base ${Math.max(...ys)} should meet the deck at ${deck}`);
+});
+
+test('the fishing line starts at the rod tip the lure marks', () => {
+  const start = PAGE.match(/id="line" d="M([\d.]+) ([\d.]+)/);
+  const lure = PAGE.match(/class="scene__lure" cx="([\d.]+)" cy="([\d.]+)"/);
+  assert.ok(start && lure, 'the line and the lure must both be in the scene');
+
+  // angler.js reads the tip from the lure at runtime, so the shipped initial path
+  // only has to be close to it. A big drift here is what desyncs the line.
+  assert.ok(Math.abs(Number(start[1]) - (Number(lure[1]) + 1.4)) <= 1,
+    `line starts at x=${start[1]}, lure at ${lure[1]}`);
+  assert.equal(Number(start[2]), Number(lure[2]) + 2,
+    `line should start at y=${Number(lure[2]) + 2}`);
+});
+
+test('angler.js derives the rod tip from the scene instead of hardcoding it', () => {
+  const src = readFileSync(new URL('../vendor/fru-angler/angler.js', import.meta.url), 'utf8');
+  assert.match(src, /function rodTip\(/, 'rodTip() must exist');
+  assert.match(src, /scene__lure/, 'rodTip() must read the lure from the scene');
+  assert.equal(/const x = 56 \+/.test(src), false,
+    'the tip must not be a hardcoded number that can drift from the rod');
 });
 
 test('the perfect band is lime, the Aero "go" colour', () => {
