@@ -10,6 +10,9 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { PIECES, PIECE_KEYS, weightedPick } from '../vendor/block-blast/pieces.js';
+import {
+  SIZE, emptyBoard, inBounds, canPlace, place, cellAt, widthOf, heightOf,
+} from '../vendor/block-blast/blast.js';
 
 test('every block is a list of distinct in-range cells', () => {
   for (const key of PIECE_KEYS) {
@@ -67,4 +70,51 @@ test('weightedPick respects the weights over many rolls', () => {
   }
   assert.ok(counts.big < counts.dot * 0.25,
     `the 3x3 (${counts.big}) should be far rarer than the single cell (${counts.dot})`);
+});
+
+test('the board is 8x8 and starts empty', () => {
+  assert.equal(SIZE, 8);
+  const board = emptyBoard();
+  assert.equal(board.length, 8);
+  for (const row of board) {
+    assert.equal(row.length, 8);
+    assert.deepEqual(row, Array(8).fill(0));
+  }
+});
+
+test('a block lands only when every cell is in bounds and empty', () => {
+  const cells = [[0, 0], [1, 0]];
+  assert.equal(canPlace(emptyBoard(), cells, 0, 0), true);
+  assert.equal(canPlace(emptyBoard(), cells, 6, 0), true, 'a domino fits flush right at x=6');
+  assert.equal(canPlace(emptyBoard(), cells, 7, 0), false,
+    'a domino cannot start at x=7: its second cell would be at x=8');
+  assert.equal(canPlace(emptyBoard(), cells, 8, 0), false, 'hanging off the right edge');
+  assert.equal(canPlace(emptyBoard(), cells, 0, 8), false, 'hanging off the bottom');
+  assert.equal(canPlace(emptyBoard(), cells, -1, 0), false, 'hanging off the left edge');
+
+  const blocked = emptyBoard();
+  blocked[0][1] = 'x';
+  assert.equal(canPlace(blocked, cells, 0, 0), false, 'a domino needs two empty cells');
+});
+
+test('placing writes a hue and returns a new board', () => {
+  const before = emptyBoard();
+  const after = place(before, [[0, 0], [1, 0]], 3, 4, 195);
+  assert.equal(cellAt(after, 3, 4), 195);
+  assert.equal(cellAt(after, 4, 4), 195);
+  assert.equal(cellAt(before, 3, 4), 0, 'the original board must not be mutated');
+});
+
+test('placing is refused rather than corrupting the board', () => {
+  const board = emptyBoard();
+  board[2][2] = 'x';
+  assert.equal(place(board, [[0, 0]], 2, 2, 195), board,
+    'an illegal place returns the board unchanged');
+});
+
+test('inBounds and the block extents agree', () => {
+  assert.equal(inBounds(emptyBoard(), [[0, 0], [1, 1]], 7, 7), false);
+  assert.equal(inBounds(emptyBoard(), [[0, 0], [1, 1]], 6, 6), true);
+  assert.equal(widthOf([[0, 0], [2, 1]]), 3);
+  assert.equal(heightOf([[0, 0], [2, 1]]), 2);
 });
