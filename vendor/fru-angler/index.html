@@ -447,10 +447,95 @@
     to   { transform: translateY(-140px) scale(1.25); opacity: 0; }
   }
 
+  /* The bite: a prompt that demands a click before the fight starts. */
+  .bite {
+    position: absolute; inset: 0; z-index: 7;
+    display: grid; place-items: center;
+  }
+  .bite[hidden] { display: none; }
+
+  .bite__card {
+    display: grid; gap: .5rem; justify-items: center; text-align: center;
+    padding: 1.1rem 1.4rem; border-radius: var(--radius-lg);
+    background: linear-gradient(180deg, rgba(255,255,255,.96), var(--glass-mid));
+    border: 1px solid var(--hairline-strong);
+    box-shadow: var(--shadow-panel), var(--shadow-lift);
+    animation: bite-pop 220ms var(--ease);
+  }
+  /* The lake shimmers behind the prompt so it reads as urgent. */
+  .bite__kicker {
+    margin: 0; font-size: 1rem; font-weight: 700; color: var(--deep);
+  }
+  .bite__set {
+    padding: .7rem 1.6rem; border-radius: 999px;
+    border: 1px solid var(--hairline-strong);
+    background: linear-gradient(180deg, var(--lime), #7fbf12);
+    color: #123000; font: inherit; font-size: 1.05rem; font-weight: 800;
+    letter-spacing: .08em; cursor: pointer;
+    box-shadow: 0 6px 0 #5f9109, 0 10px 20px rgba(0,0,0,.35), inset 0 1px 0 rgba(255,255,255,.7);
+    transition: transform 90ms ease, box-shadow 90ms ease;
+  }
+  /* Pressed down like a physical button. */
+  .bite__set:active {
+    transform: translateY(4px);
+    box-shadow: 0 2px 0 #5f9109, 0 4px 10px rgba(0,0,0,.3), inset 0 1px 0 rgba(255,255,255,.7);
+  }
+  .bite__set:focus-visible { outline: 3px solid var(--deep); outline-offset: 3px; }
+  .bite__hint { margin: 0; font-size: .78rem; color: var(--ink-soft); }
+
+  @keyframes bite-pop {
+    from { transform: scale(.86); opacity: 0; }
+    to   { transform: scale(1); opacity: 1; }
+  }
+
+  /* The fish index: one block per rarity tier. */
+  .index { display: grid; gap: 1rem; }
+
+  .index__tier { display: grid; gap: .45rem; }
+
+  .index__head {
+    display: flex; align-items: baseline; gap: .5rem;
+    padding-bottom: .3rem; border-bottom: 1px solid rgba(1,87,155,.16);
+  }
+  .index__swatch {
+    width: 12px; height: 12px; border-radius: 50%;
+    box-shadow: inset 0 1px 0 rgba(255,255,255,.8), 0 1px 3px rgba(0,0,0,.3);
+  }
+  .index__name { font-weight: 700; color: var(--deep); }
+  .index__chance {
+    margin-left: auto; font-size: .78rem; font-weight: 700; color: var(--ink-soft);
+  }
+
+  .index__fish {
+    display: grid; grid-template-columns: 40px 1fr auto; align-items: center;
+    gap: .6rem; padding: .4rem .5rem; border-radius: 10px;
+    background: var(--shine);
+    box-shadow: inset 0 1px 0 #fff, 0 1px 3px rgba(1,87,155,.1);
+  }
+  .index__art {
+    width: 40px; height: 40px; border-radius: 10px; overflow: hidden;
+    background: var(--sky-floor);
+    box-shadow: inset 0 1px 0 rgba(255,255,255,.7);
+  }
+  .index__art svg { width: 100%; height: 100%; display: block; }
+  .index__label { display: grid; gap: .1rem; min-width: 0; }
+  .index__fishName { font-weight: 600; color: var(--deep); }
+  .index__detail { font-size: .74rem; color: var(--ink-soft); }
+  .index__odds {
+    font-size: .74rem; font-weight: 700; color: var(--ink-soft);
+    white-space: nowrap;
+  }
+  /* An unlanded species is listed but dimmed, so the index doubles as a target. */
+  .index__fish--new .index__fishName::after {
+    content: " · not landed";
+    font-size: .68rem; font-weight: 400; opacity: .75;
+  }
+
   @media (prefers-reduced-motion: reduce) {
     *, *::before, *::after { animation: none !important; transition: none !important; }
     .lake::after { animation: none; opacity: .7; }
     .lake__bubble { animation: none; opacity: .5; }
+    .bite__card { animation: none; }
   }
 </style>
 </head>
@@ -461,6 +546,9 @@
       <span>Rod <b id="rod">—</b></span>
       <button id="inventory-open" class="btn btn--small" type="button" aria-haspopup="dialog">
         Inventory <b id="inventory-count" class="hud__badge">1 rod</b>
+      </button>
+      <button id="index-open" class="btn btn--small" type="button" aria-haspopup="dialog">
+        Fish index
       </button>
       <span class="hud__spacer"></span>
       <span class="hud__dim" id="rod-stats"></span>
@@ -564,6 +652,16 @@
         <div class="cast__fill" id="cast-fill"></div>
       </div>
 
+      <!-- The bite. The player must click SET HOOK to start the reel minigame;
+           let the window lapse and the fish is gone. -->
+      <div class="bite" id="bite" hidden>
+        <div class="bite__card">
+          <p class="bite__kicker">Something took it!</p>
+          <button class="bite__set" id="hook-set" type="button">SET HOOK</button>
+          <p class="bite__hint">Click to set the hook</p>
+        </div>
+      </div>
+
       <div class="reel" id="reel" hidden>
         <div class="reel__track" id="reel-track">
           <div class="reel__player" id="reel-player"></div>
@@ -606,6 +704,21 @@
 
           <p style="margin:.9rem 0 0">
             <button class="btn" id="inventory-close" type="button">Close</button>
+          </p>
+        </div>
+      </div>
+
+      <!-- The fish index: every species grouped by rarity, with the real odds. -->
+      <div class="shop" id="index-panel" hidden>
+        <div class="shop__panel" role="dialog" aria-modal="true" aria-labelledby="index-title">
+          <h2 class="shop__title" id="index-title">Fish index</h2>
+          <p class="shop__wallet">
+            Every species in the lake, rarest tier last. The percentage is the
+            chance of any cast landing a fish of that rarity.
+          </p>
+          <div class="index" id="index-list"></div>
+          <p style="margin:.9rem 0 0">
+            <button class="btn" id="index-close" type="button">Close</button>
           </p>
         </div>
       </div>

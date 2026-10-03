@@ -274,7 +274,14 @@ test('the inventory fish rows do not reuse the catch-overlay class', () => {
  * pseudo-element (`.rod:disabled`, `.lake::before`) is a different selector and
  * legitimately separate, so those are excluded.
  */
-const CSS_RULES = [...PAGE.matchAll(/([^{}]+)\{([^{}]*)\}/g)];
+/*
+ * Rules outside any @media block. A rule inside one — a prefers-reduced-motion
+ * override, say — is the same class deliberately restated, so counting it as a
+ * duplicate declaration is a false positive.
+ */
+const CSS_RULES = [...PAGE
+  .replace(/@media[^{]*\{(?:[^{}]*\{[^{}]*\}[^{}]*)*\}/g, '')   // drop @media blocks
+  .matchAll(/([^{}]+)\{([^{}]*)\}/g)];
 
 test('no class is declared twice as a plain selector', () => {
   const counts = new Map();

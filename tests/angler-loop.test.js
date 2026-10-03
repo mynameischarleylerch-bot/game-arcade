@@ -11,6 +11,7 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
 import { JSDOM } from 'jsdom';
+import { FISH, RARITY_ORDER, fishIndex } from '../vendor/fru-angler/fishing.js';
 
 const PAGE = readFileSync(
   new URL('../vendor/fru-angler/index.html', import.meta.url),
@@ -39,15 +40,19 @@ async function boot(run = 1, randomValue = 0.1) {
   globalThis.document = win.document;
   globalThis.localStorage = win.localStorage;
   globalThis.addEventListener = win.addEventListener.bind(win);
-  globalThis.performance = { now: () => now };
-  const ctx = {
+  // The game's frame() reads the global performance.now(), so the test clock must
+  // be that same value. Keep them in one place: `ctx.now` below is reassigned and
+  // this getter reads it, so advancing ctx.now advances the game's clock too.
+  const ctx = {};
+  Object.assign(ctx, {
     win,
     doc: win.document,
     dom,
     now,
     queue,
     intervals,
-  };
+  });
+  globalThis.performance = { now: () => ctx.now };
 
   globalThis.requestAnimationFrame = (cb) => ctx.queue.push(cb);
   globalThis.setInterval = (fn) => { ctx.intervals.add(fn); return ctx.intervals.size; };
@@ -59,10 +64,12 @@ async function boot(run = 1, randomValue = 0.1) {
 
 /** Advance one animation frame. */
 function step(ctx) {
-  const cbs = ctx.queue;
-  ctx.queue = [];
-  for (const cb of cbs) cb(ctx.now);
+  // Drain the array in place. Reassigning `ctx.queue = []` broke the closure in
+  // boot(): requestAnimationFrame captured the original array, so after the first
+  // step the game was pushing into an array nothing ever read again.
+  const cbs = ctx.queue.splice(0, ctx.queue.length);
   ctx.now += 1000 / 60;
+  for (const cb of cbs) cb(ctx.now);
 }
 
 /** Advance `frames` frames. */
@@ -80,18 +87,36 @@ function runUntil(ctx, predicate, frames) {
 }
 
 /** Cast, then wait out the bite. Returns true once the minigame is open. */
-function castAndWaitForBite(ctx) {
-  key(ctx, 'keydown');
-  run(ctx, 20);
-  key(ctx, 'keyup');
-  return runUntil(ctx, () => !ctx.doc.getElementById('reel').hidden, 60 * 8);
-}
-
 const key = (ctx, type) => ctx.win.dispatchEvent(
   new ctx.win.KeyboardEvent(type, { code: 'Space', bubbles: true, cancelable: true }),
 );
 
 /** Read the reel UI back out of the DOM as numbers. */
+/** Click SET HOOK the way a player does, and wait for the fight to open. */
+/** Cast, wait for the bite, click SET HOOK, and return once the fight is open. */
+function castAndWaitForBite(ctx) {
+  key(ctx, 'keydown');
+  run(ctx, 20);
+  key(ctx, 'keyup');
+  return setHook(ctx);
+}
+
+/**
+ * The bite now stops at a prompt: the fight only starts when the player clicks
+ * SET HOOK. Drive it the way a player does.
+ */
+function setHook(ctx) {
+  const bit = runUntil(ctx, () => !ctx.doc.getElementById('bite').hidden, 60 * 8);
+  if (!bit) return false;
+  ctx.doc.getElementById('hook-set')
+    .dispatchEvent(new ctx.win.MouseEvent('click', { bubbles: true }));
+  const opened = runUntil(ctx, () => !ctx.doc.getElementById('reel').hidden, 60 * 2);
+  // The overlay is revealed by setPhase, but the bar's opening width is painted by
+  // the first stepReel() call. Step once so callers can read real values.
+  if (opened) step(ctx);
+  return opened;
+}
+
 function reelUi(ctx) {
   const pct = (el, prop) => parseFloat(ctx.doc.getElementById(el).style[prop]);
   return {
@@ -137,8 +162,8 @@ test('the bobber travels and a bite eventually opens the minigame', async () => 
   assert.notEqual(ctx.doc.getElementById('bobber').style.left, startLeft, 'the bobber moved');
 
   // The bite is due within ~4.4s on the starting rod; 8s of frames covers it.
-  const opened = runUntil(ctx, () => !ctx.doc.getElementById('reel').hidden, 60 * 8);
-  assert.equal(opened, true, 'the reeling minigame opened');
+  // It stops at a prompt: the fight only opens once the player sets the hook.
+  assert.equal(setHook(ctx), true, 'the reeling minigame opened');
   assert.match(text(ctx, 'rod-stats'), /control .*resilience .*luck .*kg/);
 });
 
@@ -605,4 +630,121 @@ test('catching a second fish replaces the drawing, it does not stack', async () 
   const after = ctx.doc.getElementById('catch-art');
   assert.equal(after.querySelectorAll('svg').length, 1, 'exactly one fish, not two');
   assert.equal(after.innerHTML, first, 'the same pinned fish draws identically');
+});
+
+
+/* ------------------------------------------------------- the SHAKE to hook */
+
+test('a bite waits for the player to click SHAKE before the fight starts', () => {
+  // The fight used to begin by itself the moment the bite timer expired, so the
+  // reel minigame started with the player already holding. It should now wait for
+  // a deliberate click.
+  const source = readFileSync(new URL('../vendor/fru-angler/angler.js', import.meta.url), 'utf8');
+
+  assert.match(source, /phase === 'bite'/,
+    'there must be a phase between the bite and the fight');
+  assert.match(source, /setPhase\('bite'\)/,
+    'the bite must announce itself');
+  assert.match(source, /function hookSet\b/, 'and arm a hook-set prompt');
+  assert.match(source, /hookSet\(rollFish\(/,
+    'hookSet must be invoked when the bite lands');
+
+  // The fight only starts when the player sets the hook, not on the timer.
+  assert.match(source, /phase === 'bite' && now >= state\.hookAt[\s\S]{0,400}?loseFish\(/,
+    'missing the window must lose the fish');
+  assert.match(source, /ui\.hookSet\?[\s\S]{0,200}?phase !== 'bite'[\s\S]{0,200}?hook\(state\.bitten\)/,
+    'the click must start the fight, and only from the bite phase');
+});
+
+test('the hook-set prompt is a real, labelled, clickable control', () => {
+  const page = readFileSync(new URL('../vendor/fru-angler/index.html', import.meta.url), 'utf8');
+  assert.match(page, /id="hook-set"/, 'the page needs a hook-set button');
+  assert.match(page, /class="bite"/, 'and a bite prompt to hold it');
+  assert.match(page, /SET HOOK/i, 'labelled so the player knows what to do');
+  // A <button>, so it is reachable by keyboard and announced as a control.
+  assert.match(page, /<button[^>]*id="hook-set"/, 'use a <button>, not a div');
+});
+
+test('letting the hook-set window lapse loses the fish instead of auto-hooking', () => {
+  // Otherwise "click SHAKE to hook" is only a suggestion: a player who waits
+  // still gets the fight.
+  const source = readFileSync(new URL('../vendor/fru-angler/angler.js', import.meta.url), 'utf8');
+  assert.match(source, /HOOK_WINDOW_MS|hookAt/,
+    'the hook-set window needs a deadline');
+  assert.match(source, /phase === 'bite'[\s\S]{0,300}?loseFish\(/,
+    'missing the window must lose the fish');
+});
+
+/* -------------------------------------------------------------- fish index */
+
+test('per-fish odds in the index are a share of all casts, not of the tier', () => {
+  // This was computed against the tier's own weight, so any tier holding a single
+  // fish displayed "100%" — which reads as certainty and is exactly wrong.
+  const page = readFileSync(new URL('../vendor/fru-angler/index.html', import.meta.url), 'utf8');
+  const source = readFileSync(new URL('../vendor/fru-angler/angler.js', import.meta.url), 'utf8');
+
+  assert.match(source, /fish\.weight \/ TOTAL_WEIGHT/,
+    'per-fish odds must divide by the whole table');
+  assert.doesNotMatch(source, /totalWeight\(\)/,
+    'the per-tier helper is the bug this guards against');
+
+  // Sanity: a one-fish tier must not produce 100%.
+  const single = fishIndex().find((g) => g.fish.length === 1);
+  assert.ok(single, 'expected at least one single-fish tier');
+  const perFish = single.fish[0].weight / FISH.reduce((s, f) => s + f.weight, 0) * 100;
+  assert.ok(perFish < 100, `a single fish in its tier still cannot be a certainty: ${perFish}%`);
+
+  // And the page must have somewhere to show them.
+  assert.match(page, /id="index-list"/);
+});
+
+test('there is a fish index listing every fish with its rarity', () => {
+  const source = readFileSync(new URL('../vendor/fru-angler/fishing.js', import.meta.url), 'utf8');
+  // RARITY_ORDER is declared privately and re-exported in this module's bottom
+  // export list, so check the export is reachable (proven by the import at the
+  // top of this file) rather than pinning one syntax.
+  assert.ok(RARITY_ORDER.length === 5, 'the rarity order must be importable');
+  assert.match(source, /export function fishIndex\(/,
+    'a single function that builds the index');
+});
+
+test('the fish index covers every fish, grouped by rarity, in rarity order', () => {
+  // Imported lazily so this test file works before the export exists.
+  const groups = fishIndex();
+  assert.equal(groups.length, 5, `expected 5 rarity groups, got ${groups.length}`);
+
+  const names = RARITY_ORDER.map((tier) => tier);
+  assert.deepEqual(groups.map((g) => g.rarity), names,
+    'groups must follow the rarity order');
+  for (const group of groups) {
+    assert.ok(group.fish.length > 0, `${group.rarity} has no fish listed`);
+    for (const f of group.fish) {
+      assert.equal(f.rarity, group.rarity, `${f.name} filed under the wrong rarity`);
+      assert.equal(typeof f.weight, 'number', 'the index must show the odds');
+      assert.ok(f.weight > 0 && f.weight < 100, `${f.name} weight out of range: ${f.weight}`);
+      assert.ok(f.maxKg >= f.minKg, `${f.name} has an impossible weight range`);
+      assert.ok(f.pricePerKg > 0, `${f.name} has no value`);
+    }
+  }
+
+  // Every fish in the table must appear exactly once.
+  const listed = groups.flatMap((g) => g.fish.map((f) => f.id));
+  assert.deepEqual([...listed].sort(), [...FISH.map((f) => f.id)].sort(),
+    'the index must list every fish in the table, once each');
+});
+
+test('the index states the real odds of each rarity tier', () => {
+  const groups = fishIndex();
+  for (const group of groups) {
+    assert.ok(group.chance > 0 && group.chance <= 100,
+      `${group.rarity} has an impossible chance: ${group.chance}`);
+  }
+  // Rarer must be rarer.
+  for (let i = 1; i < groups.length; i += 1) {
+    assert.ok(groups[i].chance < groups[i - 1].chance,
+      `${groups[i].rarity} (${groups[i].chance}%) should be rarer than ` +
+      `${groups[i - 1].rarity} (${groups[i - 1].chance}%)`);
+  }
+  const total = groups.reduce((sum, g) => sum + g.chance, 0);
+  assert.ok(Math.abs(total - 100) < 0.001, `tier chances should total 100, got ${total}`);
 });

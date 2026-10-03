@@ -127,7 +127,13 @@ export const RARITY_COLOURS = {
   Mythical: '#8b5cf6',
 };
 
+/* Rare first, so an index or a guide can walk the tiers in order without
+   re-declaring them. Exported at the bottom of this file. */
 const RARITY_ORDER = ['Common', 'Uncommon', 'Rare', 'Legendary', 'Mythical'];
+
+/* The share of casts each tier accounts for, as a percentage. rollFish() picks a
+   fish by weight within the whole table, so these are derived from the weights
+   rather than declared separately — see fishIndex(), which computes them. */
 
 /* ------------------------------------------------------------------ casts */
 
@@ -376,3 +382,39 @@ export function fishById(id) {
 }
 
 export { RARITY_ORDER };
+
+
+/* -------------------------------------------------------------- fish index */
+
+/**
+ * The in-game fish index: every fish grouped by rarity, with the real odds.
+ *
+ * The chance per tier is derived from the weights in FISH rather than hardcoded,
+ * so it cannot drift out of step with what rollFish() actually does. Each group's
+ * chance is the share of the total weight that falls in that rarity.
+ */
+export function fishIndex() {
+  const total = FISH.reduce((sum, f) => sum + f.weight, 0);
+  return RARITY_ORDER.map((rarity) => {
+    const fish = FISH.filter((f) => f.rarity === rarity);
+    const chance = fish.reduce((sum, f) => sum + f.weight, 0) / total * 100;
+    return {
+      rarity,
+      colour: RARITY_COLOURS[rarity],
+      chance,
+      fish,
+      // A short label for the index row: the cheapest to the heaviest member.
+      from: Math.min(...fish.map((f) => f.minKg)),
+      to: Math.max(...fish.map((f) => f.maxKg)),
+    };
+  });
+}
+
+/** One fish's row, with everything the index needs to display it. */
+export function fishEntry(fish) {
+  return {
+    ...fish,
+    colour: RARITY_COLOURS[fish.rarity],
+    valueRange: [Math.round(fish.minKg * fish.pricePerKg), Math.round(fish.maxKg * fish.pricePerKg)],
+  };
+}

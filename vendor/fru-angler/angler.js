@@ -11,6 +11,8 @@ import {
   fishWeight, canCatch, catchValue, startingLoadout, buyRod, recordCatch,
   startingInventory, ownsRod, addRodToInventory, equipRod, rodArt, RODS_BY_PRICE,
   fishById, fishSvg,
+ fishIndex,
+ fishEntry,
 } from './fishing.js?v=2026-10-01-o';
 import {
   reelConfig, stepReel as advance, reelOutcomeFor, isCaught, lineSnapped,
@@ -24,6 +26,10 @@ const SHAKE_BONUS_MS = 420;   // bite delay removed per shake pressed
 const SHAKE_MAX_ON_SCREEN = 3;
 const REEL_DT = 1 / 60;
 const SAVE_KEY = 'fru-angler-save';
+/* How long the player has to set the hook after a bite. Generous, because this
+ * is the first time they see the prompt, but finite: without a deadline the
+ * "click to hook" rule is only a suggestion. */
+const HOOK_WINDOW_MS = 2600;
 const IDLE_HINT = 'Hold Space or press and hold, then release in the green band.';
 
 /* --------------------------------------------------------------------- dom */
@@ -32,6 +38,7 @@ const el = (id) => document.getElementById(id);
 const ui = {
   lake: el('lake'), bobber: el('bobber'), splash: el('splash'),
   cast: el('cast'), castFill: el('cast-fill'),
+  bite: el('bite'), hookSet: el('hook-set'),
   reel: el('reel'), reelPlayer: el('reel-player'), reelFish: el('reel-fish'),
   reelFill: el('reel-fill'),
   catch: el('catch'), catchName: el('catch-name'), catchMeta: el('catch-meta'),
@@ -42,6 +49,8 @@ const ui = {
   bag: el('inventory-panel'), bagRods: el('inventory-rods'), bagFish: el('inventory-fish'),
   bagEmpty: el('inventory-empty'), bagCount: el('inventory-count'),
   bagOpen: el('inventory-open'), bagClose: el('inventory-close'),
+  indexPanel: el('index-panel'), indexList: el('index-list'),
+  indexOpen: el('index-open'), indexClose: el('index-close'),
   coins: el('coins'), rod: el('rod'), rodStats: el('rod-stats'), bestiary: el('bestiary'),
   message: el('message'),
   line: el('line'),
@@ -63,6 +72,8 @@ const state = {
   shakeTimer: null,
   biteAt: 0,
   bestiary: {},         // fishId -> heaviest weight landed
+  hookAt: 0,            // when the bite window closes
+  bitten: null,         // the fish on the line, waiting to be hooked
 };
 
 const rod = () => RODS[state.rodId];
@@ -143,6 +154,7 @@ function setPhase(phase) {
   ui.cast.hidden = phase !== 'casting';
   ui.reel.hidden = phase !== 'reeling';
   ui.catch.hidden = phase !== 'result';
+  if (ui.bite) ui.bite.hidden = phase !== 'bite';
   if (phase !== 'waiting') clearShake();
 }
 
@@ -259,8 +271,24 @@ function releaseCast() {
   state.shakeTimer = setInterval(throwShake, SHAKE_INTERVAL_MS);
 }
 
+/**
+ * Something took the bait. Wait for the player to click SET HOOK before the reel
+ * minigame starts — the fight used to begin on its own, with the player already
+ * holding, which meant the hook was never really theirs to set.
+ */
+function hookSet(fish) {
+  clearShake();
+  state.bitten = fish;
+  state.hookAt = performance.now() + HOOK_WINDOW_MS;
+  setPhase('bite');
+  say('Click SET HOOK');
+  if (ui.bite) ui.bite.hidden = false;
+}
+
 function hook(fish) {
   clearShake();
+  if (ui.bite) ui.bite.hidden = true;
+  state.bitten = null;
   state.hooked = fish;
   const cfg = reelConfig({
     fight: fish.fight,
@@ -476,6 +504,96 @@ function renderInventory() {
 }
 
 /** The shop is for buying; what you own lives in the inventory. */
+/* ------------------------------------------------------------- fish index */
+
+/** Every weight in the table, so per-fish odds can be a share of all casts. */
+const TOTAL_WEIGHT = FISH.reduce((sum, f) => sum + f.weight, 0);
+
+/**
+ * The fish index: every species grouped by rarity, with the odds for each.
+ *
+ * Built from fishIndex() so the percentages are derived from the same weights
+ * rollFish() uses, and cannot drift out of step with the real odds. Species the
+ * player has not landed are dimmed, so the index doubles as a list of targets.
+ */
+function renderIndex() {
+  ui.indexList.textContent = '';
+
+  for (const group of fishIndex()) {
+    const tier = document.createElement('div');
+    tier.className = 'index__tier';
+
+    const head = document.createElement('div');
+    head.className = 'index__head';
+
+    const swatch = document.createElement('span');
+    swatch.className = 'index__swatch';
+    swatch.style.background = group.colour;
+
+    const name = document.createElement('span');
+    name.className = 'index__name';
+    name.textContent = group.rarity;
+
+    const chance = document.createElement('span');
+    chance.className = 'index__chance';
+    chance.textContent = `${formatChance(group.chance)} of casts`;
+
+    head.append(swatch, name, chance);
+    tier.appendChild(head);
+
+    for (const raw of group.fish) {
+      const fish = fishEntry(raw);
+      const row = document.createElement('div');
+      row.className = 'index__fish';
+      if (!state.bestiary[fish.id]) row.classList.add('index__fish--new');
+
+      // The fish itself, drawn by hue and body shape, same as the catch card.
+      const art = document.createElement('div');
+      art.className = 'index__art';
+      art.setAttribute('aria-hidden', 'true');
+      art.innerHTML = fishSvg(fish);
+
+      const label = document.createElement('div');
+      label.className = 'index__label';
+      const fishName = document.createElement('span');
+      fishName.className = 'index__fishName';
+      fishName.textContent = fish.name;
+      const detail = document.createElement('span');
+      detail.className = 'index__detail';
+      detail.textContent = `${fish.minKg}–${fish.maxKg} kg · ¤${fish.pricePerKg}/kg`;
+      label.append(fishName, detail);
+
+      // A share of every cast, not of the tier, so a one-fish tier does not read
+      // as 100%.
+      const odds = document.createElement('span');
+      odds.className = 'index__odds';
+      odds.textContent = formatChance((fish.weight / TOTAL_WEIGHT) * 100);
+
+      row.append(art, label, odds);
+      tier.appendChild(row);
+    }
+
+    ui.indexList.appendChild(tier);
+  }
+}
+
+/** Odds read better rounded: "1 in 90" beats "1.1%". */
+function formatChance(percent) {
+  if (percent >= 10) return `${Math.round(percent)}%`;
+  const oneIn = Math.round(1 / (percent / 100));
+  if (oneIn >= 100) return `1 in ${oneIn}`;
+  return `${percent.toFixed(1)}%`;
+}
+
+function openIndex() {
+  renderIndex();
+  ui.indexPanel.hidden = false;
+}
+
+function closeIndex() {
+  ui.indexPanel.hidden = true;
+}
+
 function renderShop() {
   ui.shopCoins.textContent = state.coins;
   ui.shopList.textContent = '';
@@ -557,10 +675,20 @@ addEventListener('touchcancel', release);
 // Losing focus mid-hold would otherwise strand the player mid-reel.
 addEventListener('blur', release);
 
+ui.hookSet?.addEventListener('click', () => {
+  if (state.phase !== 'bite' || !state.bitten) return;
+  hook(state.bitten);
+});
 ui.catchAgain.addEventListener('click', () => { setPhase('idle'); say(IDLE_HINT); });
 ui.shopOpen.addEventListener('click', openShop);
 ui.shopClose.addEventListener('click', closeShop);
 ui.bagOpen?.addEventListener('click', openBag);
+ui.indexOpen?.addEventListener('click', openIndex);
+ui.indexClose?.addEventListener('click', closeIndex);
+// Clicking the scrim outside the panel closes it, same as the others.
+ui.indexPanel?.addEventListener('click', (event) => {
+  if (event.target === ui.indexPanel) closeIndex();
+});
 ui.bagClose?.addEventListener('click', closeBag);
 // Clicking the scrim outside the panel closes it, same as the shop.
 ui.bag?.addEventListener('click', (event) => {
@@ -586,7 +714,14 @@ function frame(now) {
   }
 
   if (state.phase === 'waiting' && now >= state.biteAt) {
-    hook(rollFish(Math.random(), rod()));
+    hookSet(rollFish(Math.random(), rod()));
+  }
+
+  // Miss the window and the fish is gone. Otherwise "click to hook" is optional.
+  if (state.phase === 'bite' && now >= state.hookAt) {
+    if (ui.bite) ui.bite.hidden = true;
+    state.bitten = null;
+    loseFish('Too slow — the fish threw the hook.');
   }
 
   if (state.phase === 'reeling') stepReel();
