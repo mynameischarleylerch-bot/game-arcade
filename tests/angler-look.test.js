@@ -477,3 +477,36 @@ test('the fish drawing itself keeps its gloss layers', () => {
   assert.match(block, /class="belly"/, 'and a belly highlight');
   assert.match(block, /class="sheen"/, 'and a gloss overlay');
 });
+
+
+test('the water carries Aero bubbles above the lake', () => {
+  assert.match(PAGE, /\.lake__bubble\s*\{/, 'decorative bubbles must be styled');
+  assert.match(PAGE, /class="lake__bubble lake__bubble--1"/, 'and present in the markup');
+  const bubble = PAGE.match(/\.lake__bubble\s*\{([\s\S]*?)\n  \}/)[1];
+  assert.match(bubble, /gradient/, 'bubbles need a gradient to read as glass');
+  assert.match(bubble, /box-shadow/, 'and a rim to catch the light');
+});
+
+test('the bubbles are decorative only', () => {
+  // Count across the whole document: the bubbles sit inside the lake, after the
+  // scene SVG, and must not reach assistive tech.
+  const bubbles = [...PAGE.matchAll(/<div class="lake__bubble[^"]*"([^>]*)>/g)];
+  assert.equal(bubbles.length, 5, `expected 5 bubbles, found ${bubbles.length}`);
+  for (const [, attrs] of bubbles) {
+    assert.match(attrs, /aria-hidden="true"/, 'a bubble must not reach the screen reader');
+  }
+  // They must live inside the lake, not after it.
+  // The bubbles sit after the scene SVG and before the cast meter, all inside the
+  // lake. Use the cast meter's opening tag as the far boundary.
+  const lakeStart = PAGE.indexOf('<div class="lake" id="lake"');
+  const lakeEnd = PAGE.indexOf('<div class="cast"');
+  for (const m of bubbles) {
+    assert.ok(m.index > lakeStart && m.index < lakeEnd,
+      'the bubbles must be children of the lake');
+  }
+});
+
+test('the bubbles respect reduced motion', () => {
+  const reduced = PAGE.slice(PAGE.indexOf('@media (prefers-reduced-motion: reduce)'));
+  assert.match(reduced, /\.lake__bubble\s*\{[^}]*animation:\s*none/);
+});
