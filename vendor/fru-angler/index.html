@@ -244,6 +244,21 @@
     backdrop-filter: blur(12px); -webkit-backdrop-filter: blur(12px);
   }
   .reel[hidden] { display: none; }
+  /* The hook line: what the fish tells you when it takes the bait. */
+  .reel__line {
+    margin: 0 0 .5rem; padding: .45rem .8rem;
+    border-radius: 999px; text-align: center;
+    font-size: .92rem; font-style: italic; font-weight: 600;
+    color: var(--deep);
+    /* Translucent, so it floats over the lake like a caption rather than a box. */
+    background: linear-gradient(180deg, rgba(255,255,255,.82), rgba(255,255,255,.5));
+    border: 1px solid var(--hairline);
+    box-shadow: inset 0 1px 0 #fff, 0 2px 8px rgba(1,87,155,.2);
+    text-shadow: 0 1px 0 rgba(255,255,255,.7);
+  }
+  /* Empty until a fish is hooked, so it takes no space at the moment of the bite. */
+  .reel__line:empty { display: none; }
+
   .reel__track {
     position: relative; height: 54px; border-radius: 10px;
     background: linear-gradient(180deg, var(--deepest), #1d5b80);
@@ -663,6 +678,8 @@
       </div>
 
       <div class="reel" id="reel" hidden>
+        <!-- What you feel the moment the hook goes in, in the fish's own words. -->
+        <p class="reel__line" id="reel-line"></p>
         <div class="reel__track" id="reel-track">
           <div class="reel__player" id="reel-player"></div>
           <div class="reel__fish" id="reel-fish"></div>

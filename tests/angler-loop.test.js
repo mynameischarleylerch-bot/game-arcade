@@ -11,7 +11,7 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
 import { JSDOM } from 'jsdom';
-import { FISH, RARITY_ORDER, fishIndex } from '../vendor/fru-angler/fishing.js';
+import { FISH, RARITY_ORDER, fishIndex, hookLineFor } from '../vendor/fru-angler/fishing.js';
 
 const PAGE = readFileSync(
   new URL('../vendor/fru-angler/index.html', import.meta.url),
@@ -675,6 +675,23 @@ test('letting the hook-set window lapse loses the fish instead of auto-hooking',
     'missing the window must lose the fish');
 });
 
+/* --------------------------------------------------------- the hook line */
+
+const source = readFileSync(new URL('../tests/angler-loop.test.js', import.meta.url), 'utf8');
+
+test('every loop test uses its own boot run', () => {
+  // boot() keys localStorage by run number, so two tests sharing one inherit each
+  // other's save. That surfaced as a test failing because a *different* test had
+  // spent the wallet, which is very hard to see from the failure alone.
+  const runs = [...source.matchAll(/\bboot\((\d+)/g)].map((m) => Number(m[1]));
+  const seen = new Map();
+  for (const n of runs) seen.set(n, (seen.get(n) ?? 0) + 1);
+  const dupes = [...seen.entries()].filter(([, c]) => c > 1).map(([n]) => n);
+  assert.deepEqual(dupes, [],
+    `these boot run numbers are used more than once: ${dupes.join(', ')}`);
+  assert.ok(runs.length >= 20, `expected the full suite of loop tests, saw ${runs.length}`);
+});
+
 /* -------------------------------------------------------------- fish index */
 
 test('per-fish odds in the index are a share of all casts, not of the tier', () => {
@@ -747,4 +764,34 @@ test('the index states the real odds of each rarity tier', () => {
   }
   const total = groups.reduce((sum, g) => sum + g.chance, 0);
   assert.ok(Math.abs(total - 100) < 0.001, `tier chances should total 100, got ${total}`);
+});
+
+
+test('hooking a fish announces it in its own words', () => {
+  // The bite used to say only "Click SET HOOK", so the reel started with no
+  // sense of what had been caught. The fish should speak for itself on the hook.
+  const source = readFileSync(new URL('../vendor/fru-angler/angler.js', import.meta.url), 'utf8');
+  assert.match(source, /hookLineFor/, 'the game must use the per-fish line');
+  assert.match(source, /function hook\([\s\S]{0,600}?hookLineFor\(/,
+    'hook() is where the line should be set');
+
+  const page = readFileSync(new URL('../vendor/fru-angler/index.html', import.meta.url), 'utf8');
+  assert.match(page, /id="reel-line"|class="reel__line"/,
+    'the reel needs somewhere to show the line');
+});
+
+test('the hook line names the fish and is shown while reeling', async () => {
+  // Each test needs its own boot run: boot() shares localStorage per run number,
+  // so reusing one inherits the previous test's save.
+  const ctx = await boot(33);
+  assert.equal(castAndWaitForBite(ctx), true, 'hooked');
+
+  const shown = ctx.doc.getElementById('reel-line').textContent.trim();
+  assert.ok(shown.length > 0, 'the reel must show a hook line');
+  // It must be that fish's own line. Math.random is pinned to 0.1, which lands on
+  // a Glidefin — check against the fish table rather than hard-coding the wording.
+  assert.equal(shown, hookLineFor(FISH[0]),
+    `expected the Glidefin's line, got: "${shown}"`);
+  assert.doesNotMatch(shown, /undefined|Click SET HOOK/,
+    'it must be the flavour line, not the prompt or a missing value');
 });

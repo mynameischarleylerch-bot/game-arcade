@@ -12,6 +12,7 @@ import {
   startingInventory, ownsRod, addRodToInventory, equipRod, rodArt, RODS_BY_PRICE,
   fishById, fishSvg,
  fishIndex,
+ hookLineFor,
  fishEntry,
 } from './fishing.js?v=2026-10-01-q';
 import {
@@ -40,6 +41,7 @@ const ui = {
   cast: el('cast'), castFill: el('cast-fill'),
   bite: el('bite'), hookSet: el('hook-set'),
   reel: el('reel'), reelPlayer: el('reel-player'), reelFish: el('reel-fish'),
+  reelLine: el('reel-line'),
   reelFill: el('reel-fill'),
   catch: el('catch'), catchName: el('catch-name'), catchMeta: el('catch-meta'),
   catchValue: el('catch-value'), catchAgain: el('catch-again'),
@@ -290,6 +292,9 @@ function hook(fish) {
   if (ui.bite) ui.bite.hidden = true;
   state.bitten = null;
   state.hooked = fish;
+  // The fish gets a say the moment the hook goes in, so the fight starts with a
+  // sense of what you have on the line rather than a bare bar.
+  ui.reelLine.textContent = hookLineFor(fish);
   const cfg = reelConfig({
     fight: fish.fight,
     control: rod().control,

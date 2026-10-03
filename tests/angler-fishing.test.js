@@ -4,7 +4,7 @@ import {
   RODS, FISH, castQuality, castDistance, biteDelayFor, rollFish, rollMutation,
   fishWeight, catchValue, canCatch, buyRod, startingLoadout,
   startingInventory, ownsRod, addRodToInventory, equipRod, rodArt, RODS_BY_PRICE,
-  fishSvg, FISH_SHAPES,
+  fishSvg, FISH_SHAPES, hookLineFor,
 } from '../vendor/fru-angler/fishing.js';
 
 test('the starting wallet can afford exactly one upgrade from the cheapest rod', () => {
@@ -449,4 +449,35 @@ test('a drawn fish is still recognisable at index size', () => {
   assert.ok(body[1].length > 60, 'the body silhouette must be a real shape');
   assert.match(svg, /class="eye"/, 'the eye must survive, or it is not a fish');
   assert.match(svg, /viewBox="0 0 120 80"/, 'and the viewBox must be unchanged');
+});
+
+
+/* ------------------------------------------------------- the hook flavour */
+
+test('every fish has its own line for the moment you hook it', () => {
+  for (const fish of FISH) {
+    assert.equal(typeof fish.hook, 'string', `${fish.name} needs a hook line`);
+    assert.ok(fish.hook.trim().length > 0, `${fish.name} has an empty hook line`);
+    assert.ok(fish.hook.length < 90, `${fish.name} has a very long line`);
+  }
+
+  // Each must be distinct: six fish sharing one line defeats the point.
+  const lines = FISH.map((f) => f.hook);
+  assert.equal(new Set(lines).size, lines.length,
+    'hook lines must be unique per fish');
+});
+
+test('the hook line speaks in second person, like the player is there', () => {
+  // The example the request gave: "You feel the power of the environment".
+  for (const fish of FISH) {
+    assert.match(fish.hook, /\b(You|your|You')\b/,
+      `${fish.name} should address the player: "${fish.hook}"`);
+  }
+});
+
+test('a hook line is offered for an unknown fish rather than undefined', () => {
+  assert.equal(typeof hookLineFor({ id: 'nope' }), 'string');
+  assert.ok(hookLineFor({ id: 'nope' }).length > 0);
+  // And a real fish gets its own, not the fallback.
+  assert.equal(hookLineFor(FISH[0]), FISH[0].hook);
 });

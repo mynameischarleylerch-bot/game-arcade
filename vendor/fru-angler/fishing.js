@@ -111,12 +111,18 @@ export const RODS_BY_PRICE = Object.keys(RODS)
  * Fisch's. Rarity order matches Fisch's so the difficulty curve reads the same.
  */
 export const FISH = [
-  { id: 'glidefin', name: 'Glidefin', rarity: 'Common', pricePerKg: 4, minKg: 0.4, maxKg: 2.0, fight: 0.35, hue: 195, draw: 'slim', weight: 30 },
-  { id: 'aero-minnow', name: 'Aero Minnow', rarity: 'Common', pricePerKg: 6, minKg: 0.3, maxKg: 1.2, fight: 0.45, hue: 210, draw: 'slim', weight: 26 },
-  { id: 'metro-trout', name: 'Metro Trout', rarity: 'Uncommon', pricePerKg: 18, minKg: 1.5, maxKg: 5.5, fight: 0.60, hue: 150, draw: 'deep', weight: 20 },
-  { id: 'doric-dab', name: 'DORFic Dab', rarity: 'Rare', pricePerKg: 55, minKg: 0.8, maxKg: 3.4, fight: 0.75, hue: 45, draw: 'flat', weight: 12 },
-  { id: 'eco-gar', name: 'Eco Gar', rarity: 'Legendary', pricePerKg: 140, minKg: 12, maxKg: 40, fight: 0.88, hue: 110, draw: 'long', weight: 8 },
-  { id: 'glacier-char', name: 'Glacier Char', rarity: 'Mythical', pricePerKg: 320, minKg: 30, maxKg: 110, fight: 1.0, hue: 275, draw: 'long', weight: 4 },
+  { id: 'glidefin', name: 'Glidefin', rarity: 'Common', pricePerKg: 4, minKg: 0.4, maxKg: 2.0, fight: 0.35, hue: 195, draw: 'slim', weight: 30,
+    hook: 'The wind picks up. You feel something small skimming across the top.' },
+  { id: 'aero-minnow', name: 'Aero Minnow', rarity: 'Common', pricePerKg: 6, minKg: 0.3, maxKg: 1.2, fight: 0.45, hue: 210, draw: 'slim', weight: 26,
+    hook: 'A flicker of silver. You feel the line go slack, then taut again.' },
+  { id: 'metro-trout', name: 'Metro Trout', rarity: 'Uncommon', pricePerKg: 18, minKg: 1.5, maxKg: 5.5, fight: 0.60, hue: 150, draw: 'deep', weight: 20,
+    hook: 'You feel it darting under the surface, quick and stubborn.' },
+  { id: 'doric-dab', name: 'DORFic Dab', rarity: 'Rare', pricePerKg: 55, minKg: 0.8, maxKg: 3.4, fight: 0.75, hue: 45, draw: 'flat', weight: 12,
+    hook: 'The line drags low. You feel whatever this is hugging the bottom.' },
+  { id: 'eco-gar', name: 'Eco Gar', rarity: 'Legendary', pricePerKg: 140, minKg: 12, maxKg: 40, fight: 0.88, hue: 110, draw: 'long', weight: 8,
+    hook: 'You feel the power of the environment surge up the line.' },
+  { id: 'glacier-char', name: 'Glacier Char', rarity: 'Mythical', pricePerKg: 320, minKg: 30, maxKg: 110, fight: 1.0, hue: 275, draw: 'long', weight: 4,
+    hook: 'The cold runs up your arm. This one is older than the ice.' },
 ];
 
 export const RARITY_COLOURS = {
@@ -540,6 +546,22 @@ export { RARITY_ORDER };
  * so it cannot drift out of step with what rollFish() actually does. Each group's
  * chance is the share of the total weight that falls in that rarity.
  */
+/**
+ * What you feel the moment the hook goes in.
+ *
+ * One line per species, so a bite has a voice before the reeling starts. Unknown
+ * fish fall back to a rarity-flavoured line, so an old save naming a fish that no
+ * longer exists still says something rather than showing "undefined".
+ */
+export function hookLineFor(fish) {
+  const spec = FISH.find((f) => f && f.id === (fish && fish.id));
+  if (spec && spec.hook) return spec.hook;
+  const idx = RARITY_ORDER.indexOf(fish?.rarity);
+  const tier = idx >= 0 ? RARITY_ORDER[idx] : 'Common';
+  const extra = tier === 'Common' ? '' : `, and ${tier.toLowerCase()}`;
+  return `Something takes the bait. You feel it move${extra}.`;
+}
+
 export function fishIndex() {
   const total = FISH.reduce((sum, f) => sum + f.weight, 0);
   return RARITY_ORDER.map((rarity) => {
