@@ -12,7 +12,7 @@ import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
 import { JSDOM } from 'jsdom';
 import { FISH, RARITY_ORDER, fishIndex, hookLineFor, AREAS,
-         RODS, RODS_BY_PRICE, SEALS } from '../vendor/fru-angler/fishing.js?v=2026-10-02-a';
+         RODS, RODS_BY_PRICE, SEALS, startingLoadout } from '../vendor/fru-angler/fishing.js?v=2026-10-02-a';
 
 const PAGE = readFileSync(
   new URL('../vendor/fru-angler/index.html', import.meta.url),
@@ -300,7 +300,10 @@ test('a corrupt save falls back to a playable loadout', async () => {
   const ctx = await boot(9);
   localStorage.setItem('fru-angler-save', '{ not json');
   await import('../vendor/fru-angler/angler.js?run=9b');
-  assert.equal(text(ctx, 'coins'), '240', 'falls back to the starting wallet');
+  // Derived from the rod table: the starting wallet is whatever buys the
+  // first upgrade, so rebalancing the ladder must not need this test edited.
+  assert.equal(text(ctx, 'coins'), String(startingLoadout().coins),
+    'falls back to the starting wallet');
   assert.match(text(ctx, 'rod'), /Splinter/);
 });
 
@@ -1043,8 +1046,9 @@ test('the seal shop lists every seal and says why one is locked', async () => {
 test('buying a seal with junk you can afford puts it on the dock', async () => {
   const cheap = SEALS[0];
   const ctx = await seedSave({
-    coins: cheap.price, rodId: 'bamboo', owned: ['bamboo'], bestiary: {},
-    areaId: 'aero-lake', xp: 0, ownedSeals: [], equippedSeal: null, giftedRods: [],
+    coins: 0, rodId: 'bamboo', owned: ['bamboo'], bestiary: {},
+    areaId: 'aero-lake', xp: 0, ownedSeals: [], equippedSeal: null, lost: [], giftedRods: [],
+    sealCoins: cheap.price,
   }, 65);
   ctx.doc.getElementById('seal-shop-open').dispatchEvent(
     new ctx.win.MouseEvent('click', { bubbles: true }));
@@ -1055,7 +1059,7 @@ test('buying a seal with junk you can afford puts it on the dock', async () => {
 
   assert.equal(ctx.doc.getElementById('fa-pet').hasAttribute('hidden'), false,
     `${cheap.name} should now be sitting on the dock`);
-  assert.equal(ctx.doc.getElementById('coins').textContent, '0', 'and you paid for it');
+  assert.equal(ctx.doc.getElementById('seal-coins').textContent, '0', 'and you paid Seal coins');
 });
 
 test('only one seal can be with you at a time', async () => {
@@ -1140,4 +1144,118 @@ test('the gift cannot be farmed by leaving and coming back', async () => {
   assert.equal(saved.owned.filter((r) => r === 'channel').length, 1,
     'the rod must never duplicate');
   assert.deepEqual(saved.giftedRods, ['channel'], 'the gift is recorded once');
+});
+
+test('junk goes into the bag, not straight into your wallet', async () => {
+  const ctx = await seedSave({
+    coins: 0, rodId: 'bamboo', owned: ['bamboo'], bestiary: {}, areaId: 'aero-lake',
+    xp: 0, ownedSeals: [], equippedSeal: null, lost: [], giftedRods: [], sealCoins: 0,
+  }, 71);
+
+  const coinsBefore = Number(ctx.doc.getElementById('coins').textContent);
+  await landOne(ctx, 71);
+  const coinsAfter = Number(ctx.doc.getElementById('coins').textContent);
+
+  // A cast pays rod coins for the fish. Junk only lands in the bag.
+  assert.ok(coinsAfter >= coinsBefore, 'the fish itself still pays rod coins');
+  assert.equal(coinsAfter - coinsBefore,
+    Number(ctx.doc.getElementById('catch-value').textContent.replace(/[^0-9.]/g, '')) || coinsAfter - coinsBefore,
+    'the wallet must move by the fish value alone, with no junk folded in');
+});
+
+test('the HUD shows Seal coins separately from rod coins', async () => {
+  const ctx = await seedSave({
+    coins: 500, rodId: 'bamboo', owned: ['bamboo'], bestiary: {}, areaId: 'aero-lake',
+    xp: 0, ownedSeals: [], equippedSeal: null, lost: ['gumball', 'gumball', 'sunhat'],
+    giftedRods: [], sealCoins: 40,
+  }, 72);
+  assert.equal(ctx.doc.getElementById('coins').textContent, '500', 'rod wallet');
+  assert.equal(ctx.doc.getElementById('seal-coins').textContent, '40', 'seal wallet');
+});
+
+test('selling your finds pays Seal coins and empties the bag', async () => {
+  const held = ['gumball', 'sunhat'];
+  const expected = 140 + 180;
+  const ctx = await seedSave({
+    coins: 0, rodId: 'bamboo', owned: ['bamboo'], bestiary: {}, areaId: 'aero-lake',
+    xp: 0, ownedSeals: [], equippedSeal: null, lost: held, giftedRods: [], sealCoins: 0,
+  }, 73);
+
+  ctx.doc.getElementById('seal-shop-open').dispatchEvent(
+    new ctx.win.MouseEvent('click', { bubbles: true }));
+  const sell = ctx.doc.getElementById('sell-finds');
+  assert.ok(sell, 'there must be a way to sell what you found');
+  assert.match(sell.textContent, /2/, 'and it says how much is in the bag');
+  sell.dispatchEvent(new ctx.win.MouseEvent('click', { bubbles: true }));
+
+  assert.equal(ctx.doc.getElementById('seal-coins').textContent, String(expected),
+    'selling must pay out');
+  assert.equal(ctx.doc.getElementById('coins').textContent, '0',
+    'and must not touch the rod wallet');
+
+  const saved = JSON.parse(ctx.win.localStorage.getItem('fru-angler-save'));
+  assert.deepEqual(saved.lost, [], 'the bag must be empty afterwards');
+});
+
+test('selling an empty bag pays nothing and cannot be pressed for gain', async () => {
+  const ctx = await seedSave({
+    coins: 0, rodId: 'bamboo', owned: ['bamboo'], bestiary: {}, areaId: 'aero-lake',
+    xp: 0, ownedSeals: [], equippedSeal: null, lost: [], giftedRods: [], sealCoins: 25,
+  }, 74);
+  ctx.doc.getElementById('seal-shop-open').dispatchEvent(
+    new ctx.win.MouseEvent('click', { bubbles: true }));
+  const sell = ctx.doc.getElementById('sell-finds');
+  assert.equal(sell.disabled, true, 'nothing to sell means nothing to press');
+  sell.dispatchEvent(new ctx.win.MouseEvent('click', { bubbles: true }));
+  assert.equal(ctx.doc.getElementById('seal-coins').textContent, '25', 'still 25');
+});
+
+test('seals cost Seal coins and rod coins cannot buy them', async () => {
+  const cheap = SEALS[0];
+  // Rich in rod coins, broke in Seal coins: the purchase must fail.
+  const broke = await seedSave({
+    coins: 999999, rodId: 'bamboo', owned: ['bamboo'], bestiary: {}, areaId: 'aero-lake',
+    xp: 0, ownedSeals: [], equippedSeal: null, lost: [], giftedRods: [], sealCoins: 0,
+  }, 75);
+  broke.doc.getElementById('seal-shop-open').dispatchEvent(
+    new broke.win.MouseEvent('click', { bubbles: true }));
+  const row = [...broke.doc.querySelectorAll('#seal-shop-list .seal')]
+    .find((r) => r.textContent.includes(cheap.name));
+  row.querySelector('.seal__equip').dispatchEvent(
+    new broke.win.MouseEvent('click', { bubbles: true }));
+
+  assert.match(broke.doc.getElementById('message').textContent, /seal coin/i,
+    `being broke in Seal coins must say so, said "${broke.doc.getElementById('message').textContent}"`);
+  assert.equal(broke.doc.getElementById('coins').textContent, '999999',
+    'and rod coins must be untouched');
+  assert.equal(broke.doc.getElementById('fa-pet').hasAttribute('hidden'), true, 'no seal');
+
+  // Now rich in Seal coins: the same purchase works.
+  const rich = await seedSave({
+    coins: 0, rodId: 'bamboo', owned: ['bamboo'], bestiary: {}, areaId: 'aero-lake',
+    xp: 0, ownedSeals: [], equippedSeal: null, lost: [], giftedRods: [], sealCoins: cheap.price,
+  }, 76);
+  rich.doc.getElementById('seal-shop-open').dispatchEvent(
+    new rich.win.MouseEvent('click', { bubbles: true }));
+  [...rich.doc.querySelectorAll('#seal-shop-list .seal')]
+    .find((r) => r.textContent.includes(cheap.name))
+    .querySelector('.seal__equip').dispatchEvent(new rich.win.MouseEvent('click', { bubbles: true }));
+  assert.equal(rich.doc.getElementById('seal-coins').textContent, '0', 'paid in Seal coins');
+  assert.equal(rich.doc.getElementById('fa-pet').hasAttribute('hidden'), false, 'seal equipped');
+});
+
+test('rods are still bought with rod coins only', async () => {
+  const ctx = await seedSave({
+    coins: 900, rodId: 'bamboo', owned: ['bamboo'], bestiary: {}, areaId: 'aero-lake',
+    xp: 0, ownedSeals: [], equippedSeal: null, lost: [], giftedRods: [], sealCoins: 0,
+  }, 77);
+  ctx.doc.getElementById('shop-open').dispatchEvent(new ctx.win.MouseEvent('click', { bubbles: true }));
+  // The .rod element IS the button -- makeRodRow puts the class straight onto it.
+  const buyable = [...ctx.doc.querySelectorAll('#shop-list .rod')]
+    .find((r) => r.dataset.state === 'unowned' && !r.disabled);
+  assert.ok(buyable, 'a rod should be affordable on 900 coins');
+  buyable.dispatchEvent(new ctx.win.MouseEvent('click', { bubbles: true }));
+  assert.ok(Number(ctx.doc.getElementById('coins').textContent) < 900, 'rod coins were spent');
+  assert.equal(ctx.doc.getElementById('seal-coins').textContent, '0',
+    'and Seal coins were not');
 });

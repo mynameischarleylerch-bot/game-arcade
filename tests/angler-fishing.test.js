@@ -1,12 +1,13 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
+import { readFileSync } from 'node:fs';
 import {
   RODS, FISH, RARITY_ORDER, RARITY_COLOURS, castQuality, castDistance, biteDelayFor, rollFish, rollMutation,
   fishWeight, catchValue, canCatch, buyRod, startingLoadout,
   startingInventory, ownsRod, addRodToInventory, equipRod, rodArt, RODS_BY_PRICE,
   fishSvg, FISH_SHAPES, hookLineFor, AREAS, areaUnlocked,
   rodWorksIn, rodCheckIn,
- areaProgress, levelFrom, xpForCatch, luckFromLevel, luckFor, LOST_ITEMS, rollLostItem, lostItemsFor, SEALS, buySeal, equipSeal, sealComment, sealDuplicates, visitArea, xpForLevel,} from '../vendor/fru-angler/fishing.js';
+ areaProgress, levelFrom, xpForCatch, luckFromLevel, luckFor, LOST_ITEMS, rollLostItem, lostItemsFor, SEALS, buySeal, equipSeal, sealComment, sealDuplicates, visitArea, xpForLevel, sellLostItems, lostItemById,} from '../vendor/fru-angler/fishing.js';
 
 test('the starting wallet can afford exactly one upgrade from the cheapest rod', () => {
   const loadout = startingLoadout();
@@ -1339,4 +1340,50 @@ test('every trait lake has exactly one gift rod, and it is the first listed', ()
     assert.equal(rodWorksIn(gift, area.id), true,
       `the gift must actually fish ${area.name}`);
   }
+});
+
+test('lost items are sold for Seal coins, and selling clears them', () => {
+  const held = ['gumball', 'sunhat', 'gumball'];
+  const sold = sellLostItems(held);
+  const expected = held.reduce((sum, id) => sum + (lostItemById(id)?.value ?? 0), 0);
+
+  assert.ok(expected > 0, 'a bag of junk must be worth something');
+  assert.equal(sold.sealCoins, expected, 'every held item pays out');
+  assert.deepEqual(sold.held, [], 'selling empties the bag');
+  assert.equal(sold.count, 3, 'and says how many went');
+});
+
+test('selling nothing costs nothing and claims nothing', () => {
+  const sold = sellLostItems([]);
+  assert.equal(sold.sealCoins, 0);
+  assert.deepEqual(sold.held, []);
+  assert.equal(sellLostItems(null).sealCoins, 0);
+  assert.equal(sellLostItems(undefined).sealCoins, 0);
+});
+
+test('an unknown item in the bag is ignored, not paid for', () => {
+  const sold = sellLostItems(['gumball', 'no-such-thing', 'sunhat']);
+  const expected = (lostItemById('gumball').value + lostItemById('sunhat').value);
+  assert.equal(sold.sealCoins, expected, 'a junk id that no longer exists pays nothing');
+  assert.deepEqual(sold.held, [], 'and is cleared anyway, so it cannot linger');
+});
+
+test('lostItemById finds real items and returns null for anything else', () => {
+  for (const item of LOST_ITEMS) {
+    assert.equal(lostItemById(item.id), item, `${item.id} must resolve to itself`);
+  }
+  assert.equal(lostItemById('nope'), null);
+  assert.equal(lostItemById(null), null);
+});
+
+test('the two currencies are genuinely separate things', () => {
+  // Rods are bought with the fish wallet. Seals are bought with Seal coins, and
+  // the two must never be interchangeable or the split means nothing.
+  assert.notEqual(SEALS[0].price, undefined);
+  assert.ok(SEALS.every((s) => Number.isFinite(s.price) && s.price > 0));
+  // A rod price and a seal price are different currencies, so they are not
+  // comparable numbers -- the game must never convert one into the other.
+  const source = readFileSync(new URL('../vendor/fru-angler/fishing.js', import.meta.url), 'utf8');
+  assert.doesNotMatch(source, new RegExp('coins\\\\s*[:=][^;]*SEALS?\\\\.price'),
+    'seal prices must never be converted into rod money');
 });

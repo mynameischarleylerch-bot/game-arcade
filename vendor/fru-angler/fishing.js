@@ -58,97 +58,97 @@ export const RODS = {/* ---- three more ordinary rods --------------------------
    */
 
   bamboo: {
-    id: 'bamboo', name: 'Splinter', price: 60,
+    id: 'bamboo', name: 'Splinter', price: 40,
     control: 0.20, resilience: 0.30, luck: 0, lureSpeed: 1, maxKg: 3,
     traits: [],
     blurb: 'Splinters. Still better than nothing.',
   },
   willow: {
-    id: 'willow', name: 'Greenstalk', price: 240,
+    id: 'willow', name: 'Greenstalk', price: 120,
     control: 0.28, resilience: 0.42, luck: 0.4, lureSpeed: 1.6, maxKg: 8,
     traits: [],
     blurb: 'Bends without complaining.',
   },
   carbon: {
-    id: 'carbon', name: 'Graphite Whisper', price: 900,
+    id: 'carbon', name: 'Graphite Whisper', price: 450,
     control: 0.34, resilience: 0.55, luck: 0.8, lureSpeed: 2.4, maxKg: 20,
     traits: [],
     blurb: 'Light, springy, slightly smug.',
   },
   oak: {
-    id: 'oak', name: 'Deeproot', price: 5200,
+    id: 'oak', name: 'Deeproot', price: 2400,
     control: 0.40, resilience: 0.70, luck: 1.2, lureSpeed: 3.2, maxKg: 45,
     traits: [],
     blurb: 'Heavy enough to feel the water.',
   },
   titan: {
-    id: 'titan', name: 'Cloudlance', price: 22000,
+    id: 'titan', name: 'Cloudlance', price: 9500,
     control: 0.46, resilience: 0.85, luck: 1.8, lureSpeed: 4.2, maxKg: 120,
     traits: [],
     blurb: 'Absorbs thrashing like a rumour.',
   },
   zephyr: {
-    id: 'zephyr', name: 'Zephyr Spindle', price: 34000,
+    id: 'zephyr', name: 'Zephyr Spindle', price: 14500,
     control: 0.47, resilience: 0.80, luck: 1.9, lureSpeed: 4.4, maxKg: 150,
     traits: [],
     blurb: 'Weighs nothing. Catches nothing. Catches plenty, actually.',
   },
   quicksilver: {
-    id: 'quicksilver', name: 'Quicksilver Ribbon', price: 48000,
+    id: 'quicksilver', name: 'Quicksilver Ribbon', price: 20000,
     control: 0.48, resilience: 0.82, luck: 2.0, lureSpeed: 4.6, maxKg: 185,
     traits: [],
     blurb: 'Bends like it is apologising. Returns like it is not.',
   },
   horizon: {
-    id: 'horizon', name: 'Horizon Curve', price: 64000,
+    id: 'horizon', name: 'Horizon Curve', price: 26500,
     control: 0.49, resilience: 0.84, luck: 2.1, lureSpeed: 4.8, maxKg: 220,
     traits: [],
     blurb: 'Long enough that you forget you are holding it.',
   },
   canopy: {
-    id: 'canopy', name: 'Fernwhisper', price: 82000,
+    id: 'canopy', name: 'Fernwhisper', price: 34000,
     control: 0.50, resilience: 0.86, luck: 2.2, lureSpeed: 5.1, maxKg: 240,
     traits: ['flex'],
     blurb: 'Reaches over the reeds without touching them.',
   },
   channel: {
-    id: 'channel', name: 'Straightwater', price: 95000,
+    id: 'channel', name: 'Straightwater', price: 39000,
     control: 0.52, resilience: 0.88, luck: 2.3, lureSpeed: 5.3, maxKg: 265,
     traits: ['channel'],
     blurb: 'Finds the one straight line through a maze of channels.',
   },
   understory: {
-    id: 'understory', name: 'Understory', price: 102000,
+    id: 'understory', name: 'Understory', price: 42000,
     control: 0.55, resilience: 0.90, luck: 2.4, lureSpeed: 5.5, maxKg: 285,
     traits: ['flex'],
     blurb: 'Goes under the canopy rather than over it, which the reeds prefer.',
   },
   spillway: {
-    id: 'spillway', name: 'Spillway', price: 118000,
+    id: 'spillway', name: 'Spillway', price: 49000,
     control: 0.56, resilience: 0.91, luck: 2.5, lureSpeed: 5.7, maxKg: 300,
     traits: ['channel'],
     blurb: 'Reads the whole channel system at once and drops into the right one.',
   },
   glacier: {
-    id: 'glacier', name: 'Glacier Lance', price: 140000,
+    id: 'glacier', name: 'Glacier Lance', price: 58000,
     control: 0.57, resilience: 0.93, luck: 2.6, lureSpeed: 5.9, maxKg: 330,
     traits: ['ice'],
     blurb: 'Bored through the ice. Useless anywhere warm.',
   },
   glacierwall: {
-    id: 'glacierwall', name: 'Glacierwall', price: 165000,
+    id: 'glacierwall', name: 'Glacierwall', price: 69000,
     control: 0.58, resilience: 0.93, luck: 2.7, lureSpeed: 6.1, maxKg: 330,
     traits: ['ice'],
     blurb: 'Bored a shaft straight down through two hundred metres of shelf.',
   },
   abyss: {
-    id: 'abyss', name: 'Abyssal Rig', price: 260000,
+    id: 'abyss', name: 'Abyssal Rig', price: 108000,
     control: 0.60, resilience: 0.97, luck: 3.0, lureSpeed: 6.4, maxKg: 440,
     traits: ['reinforced'],
     blurb: 'Built for pressure. Heavy enough to be a nuisance on the bank.',
   },
   trenchline: {
-    id: 'trenchline', name: 'Trenchline', price: 320000,
+    id: 'trenchline', name: 'Trenchline', price: 132000,
     control: 0.62, resilience: 0.98, luck: 3.2, lureSpeed: 6.6, maxKg: 460,
     traits: ['reinforced'],
     blurb: 'Rated to the pressure at the bottom. The bottom knows it.',
@@ -818,6 +818,40 @@ export function rollLostItem(roll, { rarityScale = 1, lakeId = null } = {}) {
   return pool[pool.length - 1];
 }
 
+/**
+ * One lost item by id, or null.
+ *
+ * An old save can name an item that no longer exists in the table, and that must
+ * read as nothing rather than throwing at the shop.
+ */
+export function lostItemById(id) {
+  return LOST_ITEMS.find((item) => item.id === id) ?? null;
+}
+
+/**
+ * Sell everything in the bag, returning the Seal coins it pays and the emptied
+ * bag. Pure: nothing is mutated here.
+ *
+ * This is the ONLY route from lost items to money. Items used to be converted
+ * into rod coins the moment they came up, which made the seal shop's prices mean
+ * nothing -- you could not tell which economy a price belonged to. Selling is now
+ * a deliberate act, into its own currency.
+ *
+ * An id that is not in the table pays nothing but is still cleared, so a
+ * long-dead save cannot accumulate unpayable junk forever.
+ */
+export function sellLostItems(held) {
+  if (!Array.isArray(held) || held.length === 0) {
+    return { sealCoins: 0, held: [], count: 0 };
+  }
+  let sealCoins = 0;
+  for (const id of held) {
+    const item = lostItemById(id);
+    if (item) sealCoins += item.value;
+  }
+  return { sealCoins, held: [], count: held.length };
+}
+
 /** The junk a given lake can turn up, cheapest first. */
 export function lostItemsFor(areaId) {
   return LOST_ITEMS.filter((i) => i.water === areaId).sort((a, b) => a.value - b.value);
@@ -914,7 +948,7 @@ export function buySeal(wallet, sealId, level = 1) {
     return { ...wallet, ok: false, reason: `${seal.name} needs rank ${seal.level}.` };
   }
   if (!Number.isFinite(wallet?.coins) || wallet.coins < seal.price) {
-    return { ...wallet, ok: false, reason: `Not enough coins for ${seal.name}.` };
+    return { ...wallet, ok: false, reason: `Not enough seal coins for ${seal.name}.` };
   }
   return { ok: true, sealId, coins: wallet.coins - seal.price };
 }

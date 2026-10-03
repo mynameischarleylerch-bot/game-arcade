@@ -21,12 +21,12 @@ import {
  fishEntry, visitArea,
  SEALS, LOST_ITEMS,
  levelFrom, xpForCatch, xpForLevel, luckFor, luckFromLevel,
- rollLostItem, lostItemsFor,
+ rollLostItem, lostItemsFor, sellLostItems, lostItemById,
  buySeal, equipSeal, sealComment, sealDuplicates,
-} from './fishing.js?v=2026-10-03-c';
+} from './fishing.js?v=2026-10-03-d';
 import {
   reelConfig, stepReel as advance, reelOutcomeFor, isCaught, lineSnapped,
-} from './reel.js?v=2026-10-03-c';
+} from './reel.js?v=2026-10-03-d';
 
 /* ------------------------------------------------------------------ tuning */
 
@@ -69,6 +69,9 @@ const ui = {
   message: el('message'),
   line: el('line'),
   level: el('level'), levelTitle: el('level-title'), levelBar: el('level-progress'),
+  sealWallet: el('seal-coins'),      // HUD
+  sealShopCoins: el('seal-shop-coins'),  // inside the seal shop
+  findsList: el('finds-list'), sellFinds: el('sell-finds'),
   pet: el('fa-pet'),
   sealPanel: el('seal-shop-panel'), sealList: el('seal-shop-list'),
   sealCoins: el('seal-shop-coins'),
@@ -98,6 +101,7 @@ const state = {
   ownedSeals: [],      // every seal bought, cheapest first
   equippedSeal: null,  // the ONE of them sitting on the dock with you
   lost: [],            // lost items recovered, newest last
+  sealCoins: 0,        // the seal economy; sold finds are the ONLY way in
   giftedRods: [],      // rods handed over on arrival, so they cannot be farmed
 };
 
@@ -141,6 +145,18 @@ function load() {
     state.lost = Array.isArray(saved.lost)
       ? saved.lost.filter((id) => LOST_ITEMS.some((item) => item.id === id))
       : [];
+    // Seal coins. A save from BEFORE the split has no sealCoins key at all, and
+    // its lost items were paid straight into the rod wallet at the time -- so
+    // those finds are already sold and must not be paid for a second time.
+    //
+    // The test for "before the split" is the ABSENCE of the key. Testing the value
+    // is wrong: Array.isArray(0) is false, so every save written since the split
+    // (which stores sealCoins: 0) was treated as legacy and had its bag sold off
+    // behind the player's back the moment they reloaded.
+    state.sealCoins = Number.isFinite(saved.sealCoins) && saved.sealCoins > 0 ? saved.sealCoins : 0;
+    if (!('sealCoins' in saved)) {
+      state.lost = [];
+    }
     // Rods already handed over. An old save has none, which correctly means the
     // player has not been gifted yet -- they will be, on their first arrival.
     state.giftedRods = Array.isArray(saved.giftedRods)
@@ -168,6 +184,7 @@ function save() {
       ownedSeals: state.ownedSeals,
       equippedSeal: state.equippedSeal,
       lost: state.lost,
+      sealCoins: state.sealCoins,
       giftedRods: state.giftedRods,
     }));
   } catch {
@@ -191,6 +208,42 @@ function paintRod() {
   placeBobber(parseFloat(ui.bobber.style.left) || 60, parseFloat(ui.bobber.style.top) || 70);
 }
 
+/** What is in the bag, and what selling it would pay. */
+function paintFinds() {
+  if (!ui.findsList || !ui.sellFinds) return;
+  const bag = Array.isArray(state.lost) ? state.lost : [];
+  const worth = bag.reduce((sum, id) => sum + (lostItemById(id)?.value ?? 0), 0);
+
+  if (bag.length === 0) {
+    ui.findsList.textContent = 'Nothing in the bag yet. Fish a while.';
+    ui.sellFinds.disabled = true;
+    ui.sellFinds.textContent = 'Sell your finds';
+    return;
+  }
+  // Grouped by name, so a bag of nine of the same thing reads as nine.
+  const tally = new Map();
+  for (const id of bag) tally.set(id, (tally.get(id) ?? 0) + 1);
+  const list = [...tally.entries()]
+    .map(([id, n]) => `${lostItemById(id)?.name ?? id}${n > 1 ? ` ×${n}` : ''}`)
+    .join(', ');
+  ui.findsList.textContent = `${bag.length} found: ${list}. Worth ${worth} seal coins.`;
+  ui.sellFinds.disabled = false;
+  ui.sellFinds.textContent = `Sell ${bag.length} for ${worth} seal coins`;
+}
+
+/** Sell the whole bag into Seal coins. Rod coins are never touched. */
+function sellFinds() {
+  const sold = sellLostItems(state.lost);
+  if (sold.count === 0) return;
+  state.sealCoins += sold.sealCoins;
+  state.lost = sold.held;
+  say(`Sold ${sold.count} thing${sold.count === 1 ? '' : 's'} for ${sold.sealCoins} seal coins.`);
+  save();
+  paintFinds();
+  paintChrome();
+  renderSealShop();
+}
+
 /** The seal on the dock, tinted per seal and hidden when there is none. */
 function paintPet() {
   if (!ui.pet) return;
@@ -205,6 +258,7 @@ function paintPet() {
 function paintChrome() {
   const current = rod();
   ui.coins.textContent = state.coins;
+  if (ui.sealWallet) ui.sealWallet.textContent = state.sealCoins;
   ui.rod.textContent = current.name;
   ui.rodStats.textContent =
     `control ${current.control.toFixed(2)} · resilience ${current.resilience.toFixed(2)} · ` +
@@ -227,6 +281,7 @@ function paintChrome() {
     ui.levelBar.dataset.level = String(rank.level);
   }
   paintPet();
+  paintFinds();
 
   // The button says how many rods you carry, so the inventory is findable at a glance.
   if (ui.bagCount) {
@@ -509,9 +564,11 @@ function landFish() {
     lakeId: state.areaId,
   });
   if (found) {
-    state.coins += found.value;
+    // It goes in the bag, not in your wallet. Selling is a deliberate act in the
+    // seal shop, and it pays Seal coins -- junk used to be worth rod money the
+    // instant it came up, which made the two economies impossible to tell apart.
     state.lost = [...state.lost, found.id];
-    say(`You pulled up a ${found.name}. +¤${found.value}`);
+    say(`You pulled up a ${found.name}. Sell it for seal coins.`);
   }
 
   // A duplicate is a second copy at the same hook, not a second entry in the
@@ -804,8 +861,11 @@ const TOTAL_WEIGHT = FISH.reduce((sum, f) => sum + f.weight, 0);
 function renderSealShop() {
   if (!ui.sealList) return;
   const rank = levelFrom({ xp: state.xp });
-  ui.sealCoins.textContent = state.coins;
+  // The seal shop shows SEAL coins, not rod coins. They are different currencies
+  // and showing one number here made it look like the seal price was a rod price.
+  ui.sealShopCoins.textContent = state.sealCoins;
   ui.sealList.textContent = '';
+  paintFinds();
 
   for (const seal of SEALS) {
     const owned = state.ownedSeals.includes(seal.id);
@@ -836,11 +896,11 @@ function renderSealShop() {
         say(`${seal.name} settles onto the dock beside you.`);
       });
     } else {
-      button.textContent = `¤${seal.price}`;
+      button.textContent = `${seal.price} seal coins`;
       button.addEventListener('click', () => {
-        const result = buySeal({ coins: state.coins }, seal.id, rank.level);
+        const result = buySeal({ coins: state.sealCoins }, seal.id, rank.level);
         if (!result.ok) return say(result.reason);
-        state.coins = result.coins;
+        state.sealCoins = result.coins;
         state.ownedSeals = [...state.ownedSeals, seal.id];
         state.equippedSeal = seal.id;
         save(); renderSealShop(); paintChrome();
@@ -1028,6 +1088,7 @@ ui.hookSet?.addEventListener('click', () => {
 ui.catchAgain.addEventListener('click', () => { setPhase('idle'); say(IDLE_HINT); });
 ui.shopOpen.addEventListener('click', openShop);
 ui.sealOpen?.addEventListener('click', openSealShop);
+ui.sellFinds?.addEventListener('click', sellFinds);
 ui.sealClose?.addEventListener('click', closeSealShop);
 ui.shopClose.addEventListener('click', closeShop);
 ui.bagOpen?.addEventListener('click', openBag);
