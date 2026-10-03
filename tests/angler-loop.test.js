@@ -12,8 +12,8 @@ import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
 import { JSDOM } from 'jsdom';
 import { FISH, RARITY_ORDER, fishIndex, hookLineFor, AREAS,
-         RODS, RODS_BY_PRICE, SEALS, startingLoadout, TIMES, WEATHER,
-} from '../vendor/fru-angler/fishing.js?v=2026-10-03-p';
+         RODS, RODS_BY_PRICE, SEALS, startingLoadout, TIMES, WEATHER, LOST_ITEMS,
+} from '../vendor/fru-angler/fishing.js?v=2026-10-03-q';
 
 const PAGE = readFileSync(
   new URL('../vendor/fru-angler/index.html', import.meta.url),
@@ -1088,7 +1088,11 @@ test('your seal has an opinion about what you land', async () => {
     xp: 0, ownedSeals: [SEALS[0].id], equippedSeal: SEALS[0].id, giftedRods: [],
   }, 67);
   await landOne(ctx, 67);
-  const said = ctx.doc.getElementById('message').textContent;
+  // The seal's opinion lives in its speech bubble. It used to be found in the
+  // shared message line, but only by accident -- and when finds stopped using
+  // say() the test failed, which is how it became clear the two were never really
+  // the same channel.
+  const said = ctx.doc.getElementById('fa-bubble-text').textContent;
   assert.ok(said.length > 8, `the seal should have said something, said "${said}"`);
 });
 
@@ -1349,10 +1353,11 @@ test('duplicating a catch raises a notice of its own', async () => {
   }
 
   const notices = notifyFn.querySelectorAll('.notice');
-  assert.equal(notices.length, 1, 'a duplicate must raise exactly one notice');
-  assert.match(notices[0].textContent, /two .* one hook/i,
-    `the notice must say what happened, said "${notices[0].textContent}"`);
-  assert.match(notices[0].textContent, /Bubbles/,
+  assert.equal([...notices].filter((n) => /two .* one hook/i.test(n.textContent)).length, 1,
+    'a duplicate must raise exactly one notice of its own');
+  const dup = [...notices].find((n) => /two .* one hook/i.test(n.textContent));
+  assert.ok(dup, 'and it must be there');
+  assert.match(dup.textContent, /Bubbles/,
     'and name the seal that did it');
 
   // The bubble still carries the seal's opinion: a duplicate must not silence it.
@@ -1694,4 +1699,93 @@ test('every seeded boot uses its own run number', () => {
   const dupes = [...seen.entries()].filter(([, c]) => c > 1).map(([n]) => n);
   assert.deepEqual(dupes, [],
     `run number(s) reused, so a later test gets a window with no controller: ${dupes.join(', ')}`);
+});
+
+test('finding a lost item raises a notice, not a line someone overwrites', async () => {
+  // A find used to go through say(), the SHARED message line -- and the seal speaks
+  // last by design, so its line replaced the find about half a second after it
+  // appeared. Items carry your Seal coins; the find has to survive the seal.
+  const ctx = await seedSave({
+    coins: 0, rodId: 'bamboo', owned: ['bamboo'], bestiary: {}, areaId: 'aero-lake',
+    xp: 0, ownedSeals: [SEALS[0].id], equippedSeal: SEALS[0].id, lost: [], giftedRods: [],
+    sealCoins: 0,
+  }, 210);
+  await landOne(ctx, 210);
+
+  const notices = [...ctx.doc.querySelectorAll('#notify .notice')].map((n) => n.textContent);
+  const mentionsAnItem = notices.some((t) => LOST_ITEMS.some((it) => t.includes(it.name)));
+  assert.ok(mentionsAnItem,
+    `a landed item must raise a notice, notices were: ${JSON.stringify(notices)}`);
+  // And it must survive the seal speaking over it.
+  assert.equal(ctx.doc.getElementById('seal-shop-hint') !== null, true, 'sanity');
+  const bubble = ctx.doc.getElementById('fa-bubble-text').textContent;
+  assert.notEqual(bubble, '', 'the seal still gets its own bubble, separately');
+});
+
+test('a notice for a find names the item and what it is worth', async () => {
+  const ctx = await seedSave({
+    coins: 0, rodId: 'bamboo', owned: ['bamboo'], bestiary: {}, areaId: 'aero-lake',
+    xp: 0, ownedSeals: [], equippedSeal: null, lost: [], giftedRods: [], sealCoins: 0,
+  }, 211);
+  await landOne(ctx, 211);
+
+  const notice = [...ctx.doc.querySelectorAll('#notify .notice')]
+    .map((n) => n.textContent)
+    .find((t) => LOST_ITEMS.some((it) => t.includes(it.name)));
+  assert.ok(notice, 'there must be a notice for the item that came up');
+  assert.match(notice, /seal coins/i,
+    'and it must say the item is Seal coins, so the two currencies stay distinct');
+});
+
+test('the finds bag and the notice agree about what came up', async () => {
+  const ctx = await seedSave({
+    coins: 0, rodId: 'bamboo', owned: ['bamboo'], bestiary: {}, areaId: 'aero-lake',
+    xp: 0, ownedSeals: [], equippedSeal: null, lost: [], giftedRods: [], sealCoins: 0,
+  }, 212);
+  await landOne(ctx, 212);
+
+  const bag = ctx.doc.getElementById('finds-list').textContent;
+  const notices = [...ctx.doc.querySelectorAll('#notify .notice')].map((n) => n.textContent);
+  // With no seal equipped, anything in the bag must have been announced.
+  for (const name of LOST_ITEMS) {
+    if (bag.includes(name.name)) {
+      assert.ok(notices.some((t) => t.includes(name.name)),
+        `${name.name} is in the bag but nothing told the player`);
+    }
+  }
+});
+
+test('a notice never wipes the one before it', async () => {
+  // notify() used to clear the container before adding, so the second thing worth
+  // knowing on a catch erased the first. A find and a duplicate can both come up
+  // from one hook, and the seal speaks on that same catch -- so this collision is
+  // constant, not rare.
+  //
+  // notify() is module-private, so this checks the CONTRACT in source (it appends
+  // and trims the oldest, and never assigns textContent to the container) plus the
+  // real behaviour end to end: a catch with a seal and junk in the water must leave
+  // a find notice standing and the item still in the bag.
+  const src = readFileSync(new URL('../vendor/fru-angler/angler.js', import.meta.url), 'utf8');
+  const fn = src.slice(src.indexOf('function notify('));
+  const body = fn.slice(0, fn.indexOf('\n}\n'));
+  assert.match(body, /appendChild\(card\)/, 'notices must be appended');
+  assert.doesNotMatch(body, /ui\.notify\.textContent\s*=\s*''/,
+    'clearing the container would erase whatever came before it');
+  assert.match(body, /NOTICE_MAX/,
+    'and there must be a cap, or a long unlucky run covers the lake');
+
+  const ctx = await seedSave({
+    coins: 0, rodId: 'bamboo', owned: ['bamboo'], bestiary: {}, areaId: 'aero-lake',
+    xp: 0, ownedSeals: [SEALS[0].id], equippedSeal: SEALS[0].id, lost: [], giftedRods: [],
+    sealCoins: 0,
+  }, 214);
+  await landOne(ctx, 214);
+
+  const box = ctx.doc.getElementById('notify');
+  const cards = [...box.querySelectorAll('.notice')];
+  assert.ok(cards.length >= 1, 'the catch must leave a notice standing');
+  // Nothing may have been wiped by whatever came after it.
+  assert.equal(cards.filter((c) => c.classList.contains('notice--find')).length,
+    cards.filter((c) => /seal coins/i.test(c.textContent)).length,
+    'a find notice must survive a duplicate notice raised on the same catch');
 });

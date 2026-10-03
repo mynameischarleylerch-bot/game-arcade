@@ -24,10 +24,10 @@ import {
  levelFrom, xpForCatch, xpForLevel, luckFor, luckFromLevel,
  rollLostItem, lostItemsFor, sellLostItems, lostItemById,
  buySeal, equipSeal, sealComment, sealDuplicates, sealIdleLine,
-} from './fishing.js?v=2026-10-03-p';
+} from './fishing.js?v=2026-10-03-q';
 import {
   reelConfig, stepReel as advance, reelOutcomeFor, isCaught, lineSnapped,
-} from './reel.js?v=2026-10-03-p';
+} from './reel.js?v=2026-10-03-q';
 
 /* ------------------------------------------------------------------ tuning */
 
@@ -384,17 +384,43 @@ function sealChatter() {
   sealSays(sealIdleLine(seal, { areaId: state.areaId, count: chatter }));
 }
 
-/** A brief card for a duplicate, a gift or a sale. */
-let noticeTimer = null;
-function notify(text) {
+/**
+ * A brief card for a find, a duplicate, a gift or a sale.
+ *
+ * These STACK. It used to clear the container first, so a find raised at the same
+ * moment as a duplicate wiped the duplicate away -- and the seal speaks on the same
+ * catch, so the two things worth knowing collide constantly. Each card times itself
+ * out, and the cap stops a long unlucky run from covering the lake.
+ */
+const NOTICE_MS = 4200;
+const NOTICE_MAX = 3;
+let noticeTimers = new Set();
+
+function notify(text, tone = '') {
   if (!ui.notify || !text) return;
-  ui.notify.textContent = '';
   const card = document.createElement('div');
-  card.className = 'notice';
+  card.className = 'notice' + (tone ? ` notice--${tone}` : '');
   card.textContent = text;
   ui.notify.appendChild(card);
-  if (noticeTimer) clearTimeout(noticeTimer);
-  noticeTimer = setTimeout(() => { ui.notify.textContent = ''; }, 4200);
+
+  // Trim the oldest rather than clearing everything: an old notice going stale is
+  // fine, but a find must not erase a duplicate that arrived after it.
+  while (ui.notify.children.length > NOTICE_MAX) {
+    ui.notify.firstElementChild?.remove();
+  }
+
+  const timer = setTimeout(() => {
+    card.remove();
+    noticeTimers.delete(timer);
+  }, NOTICE_MS);
+  noticeTimers.add(timer);
+}
+
+/** Drop every notice. Used when a reset or a lake change should clear the slate. */
+function clearNotices() {
+  for (const t of noticeTimers) clearTimeout(t);
+  noticeTimers = new Set();
+  if (ui.notify) ui.notify.textContent = '';
 }
 
 /** The seal on the dock, tinted per seal and hidden when there is none. */
@@ -762,7 +788,10 @@ function landFish() {
     // seal shop, and it pays Seal coins -- junk used to be worth rod money the
     // instant it came up, which made the two economies impossible to tell apart.
     state.lost = [...state.lost, found.id];
-    say(`You pulled up a ${found.name}. Sell it for seal coins.`);
+    // A notice, not say(): the seal speaks on the same catch and would replace
+    // this line before it could be read. This is also the only place the player is
+    // told the item is Seal coins rather than rod coins.
+    notify(`${found.name} \u2014 worth ${found.value} seal coins. Sell it in the shop.`, 'find');
   }
 
   // A duplicate is a second copy at the same hook, not a second entry in the
