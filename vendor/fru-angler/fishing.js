@@ -1233,6 +1233,52 @@ export function sellFromBag(bag, index) {
  * would erase every tier above Common and Mythical would stop meaning anything.
  * Square-rooted, so the first fish is worth a lot and the fiftieth is worth a little.
  */
+/**
+ * The bag, collapsed into one row per species.
+ *
+ * The bag listed one row per FISH, so twelve identical Glidefins meant twelve
+ * identical rows with twelve identical buttons -- and only one of them is the
+ * decision, because they are all the same decision.
+ *
+ * `entry` is the fish the row SHOWS: the heaviest, since that is the one worth
+ * selling and the one a player would recognise. `total` is what the whole group is
+ * worth, which is a different number and worth showing too.
+ *
+ * Grouped by SPECIES, not by mutation. A triple-striped Glidefin and a plain one
+ * are the same creature and the same choice; splitting them would put two rows
+ * back where there was one.
+ */
+export function groupBag(bag) {
+  const owned = Array.isArray(bag) ? bag : [];
+  const order = [];
+  const byId = new Map();
+
+  for (const entry of owned) {
+    if (!entry || typeof entry !== 'object') continue;
+    const key = entry.fishId;
+    if (!byId.has(key)) {
+      byId.set(key, []);
+      order.push(key);
+    }
+    byId.get(key).push(entry);
+  }
+
+  return order.map((fishId) => {
+    const entries = byId.get(fishId);
+    // Heaviest wins the display; the earliest breaks a tie, so the row is stable
+    // between repaints rather than jumping about.
+    let entry = entries[0];
+    for (const e of entries) if (Number(e.weight) > Number(entry.weight)) entry = e;
+    return {
+      fishId,
+      entries,
+      entry,
+      count: entries.length,
+      total: entries.reduce((sum, e) => sum + bagEntryValue(e), 0),
+    };
+  });
+}
+
 export function bondLuck(fed) {
   const n = Math.max(0, Number(fed) || 0);
   return Math.round(Math.sqrt(n) * 0.2 * 1000) / 1000;

@@ -13,7 +13,7 @@ import { readFileSync } from 'node:fs';
 import { JSDOM } from 'jsdom';
 import { FISH, RARITY_ORDER, fishIndex, hookLineFor, AREAS,
          RODS, RODS_BY_PRICE, SEALS, startingLoadout, TIMES, WEATHER, LOST_ITEMS,
-} from '../vendor/fru-angler/fishing.js?v=2026-10-04-a';
+} from '../vendor/fru-angler/fishing.js?v=2026-10-04-b';
 
 const PAGE = readFileSync(
   new URL('../vendor/fru-angler/index.html', import.meta.url),
@@ -2082,16 +2082,19 @@ test('clicking Sell pays rod coins and takes that fish out', async () => {
   const row = ctx.doc.querySelector('#bag-list .bag__row');
   assert.ok(row, 'the bag must list the saved fish');
 
+  const { bagEntryValue } = await import('../vendor/fru-angler/fishing.js');
   const sell = row.querySelector('.bag__sell');
-  const want = Number(sell.textContent.replace(/[^0-9]/g, ''));
-  assert.ok(want > 0, 'the sell button states the price');
+  // The button says "Sell one" -- the price is on the row, not the button, since
+  // the button now sells one of a group. Assert the money, not the label.
+  assert.match(sell.textContent, /sell one/i, 'the button says what it does');
 
-  sell.dispatchEvent(new ctx.win.MouseEvent('click', { bubbles: true }));
-  assert.equal(Number(ctx.doc.getElementById('coins').textContent), want,
-    'selling must pay exactly the stated price');
+  sell.click();
+  assert.equal(Number(ctx.doc.getElementById('coins').textContent),
+    bagEntryValue({ fishId: 'glidefin', weight: 4, multiplier: 1 }),
+    'selling must pay exactly what that fish is worth');
   assert.equal(ctx.doc.querySelectorAll('#bag-list .bag__row').length, 0,
     'and the fish must be gone');
-  assert.equal(text(ctx, 'bag-count'), '', 'the badge must clear');
+  assert.equal(ctx.doc.getElementById('bag-count').textContent, '', 'the badge must clear');
 });
 
 test('clicking Feed spends the fish and raises that seal bond', async () => {
@@ -2105,10 +2108,12 @@ test('clicking Feed spends the fish and raises that seal bond', async () => {
   ctx.doc.getElementById('bag-open').dispatchEvent(
     new ctx.win.MouseEvent('click', { bubbles: true }));
   const feed = ctx.doc.querySelector('#bag-list .bag__feed');
+  // The button is now "Feed one" -- it no longer names the seal, because it acts
+  // on a group and the seal is named in the boost stack instead.
   assert.equal(feed.disabled, false, 'a seal is equipped, so feeding must be possible');
-  assert.match(feed.textContent, /Bubbles/, 'and the button must name the seal it feeds');
+  assert.match(feed.textContent, /feed one/i);
 
-  feed.dispatchEvent(new ctx.win.MouseEvent('click', { bubbles: true }));
+  feed.click();
   assert.equal(ctx.doc.querySelectorAll('#bag-list .bag__row').length, 0,
     'a fed fish is gone');
   assert.equal(Number(ctx.doc.getElementById('coins').textContent), 0,
@@ -2463,4 +2468,58 @@ test('the finds bag sells one item, not only the lot', async () => {
     String(after + gumball.value + LOST_ITEMS.find((i) => i.id === 'sunhat').value),
     'sell-all must still clear the bag');
   assert.equal(ctx.doc.getElementById('finds-list').textContent, 'Nothing in the bag yet. Fish a while.');
+});
+test('the bag groups identical fish into one row with Sell one and Feed one', async () => {
+  // The bag listed one row per FISH, so twelve identical Glidefins meant twelve
+  // identical rows with twelve identical buttons. Same problem the finds bag had.
+  const ctx = await seedSave({
+    coins: 0, rodId: 'bamboo', owned: ['bamboo'], bestiary: {}, areaId: 'aero-lake',
+    xp: 0, ownedSeals: ['bubbles'], equippedSeal: 'bubbles', lost: [],
+    giftedRods: [], sealCoins: 0, bond: {},
+    bag: [
+      { fishId: 'glidefin', weight: 1, mutation: null, multiplier: 1 },
+      { fishId: 'glidefin', weight: 2, mutation: null, multiplier: 1 },
+      { fishId: 'glidefin', weight: 3, mutation: null, multiplier: 1 },
+      { fishId: 'sunscale', weight: 1, mutation: null, multiplier: 1 },
+    ],
+  }, 1300);
+
+  ctx.doc.getElementById('bag-open').dispatchEvent(
+    new ctx.win.MouseEvent('click', { bubbles: true }));
+  const rows = ctx.doc.querySelectorAll('#bag-list .bag__row');
+  assert.equal(rows.length, 2,
+    `one row per species, got ${rows.length} for three Glidefins and one Sunscale`);
+
+  const glide = [...rows].find((r) => /Glidefin/.test(r.textContent));
+  assert.match(glide.textContent, /\u00d73|3/,
+    `the row must show how many it holds, got "${glide.textContent.replace(/\s+/g, ' ')}"`);
+
+  // The heaviest of the group is the one on show: it is what the row is worth.
+  assert.match(glide.textContent, /3 kg/, 'and the heaviest weight, not the first');
+
+  // Sell one takes exactly one of the three.
+  const before = Number(ctx.doc.getElementById('coins').textContent);
+  glide.querySelector('.bag__sell').click();
+  const after = Number(ctx.doc.getElementById('coins').textContent);
+  assert.ok(after > before, `selling one must pay, ${before} -> ${after}`);
+  assert.equal(ctx.doc.querySelectorAll('#bag-list .bag__row').length, 2,
+    'the row stays, two Glidefins left');
+  const still = [...ctx.doc.querySelectorAll('#bag-list .bag__row')]
+    .find((r) => /Glidefin/.test(r.textContent));
+  assert.match(still.textContent, /2 held/, 'and the count drops to two');
+  // The row advertised its BEST fish, so selling one must take that one -- selling
+  // the smallest of a group would quietly pay far less than the row implied.
+  assert.match(still.textContent, /best 2 kg/,
+    `the best of what is left must be shown, got "${still.textContent.replace(/\s+/g, ' ')}"`);
+
+  // Feed one likewise.
+  const feed = still.querySelector('.bag__feed');
+  assert.equal(feed.disabled, false, 'a seal is equipped');
+  feed.click();
+  const saved = JSON.parse(ctx.win.localStorage.getItem('fru-angler-save'));
+  assert.deepEqual(saved.bond, { bubbles: 1 }, 'and raises the bond by one');
+  // Started with four: three Glidefins and a Sunscale. One sold, one fed.
+  assert.equal(saved.bag.length, 2, 'leaving one Glidefin and the Sunscale');
+  assert.deepEqual(saved.bag.map((e) => e.fishId).sort(), ['glidefin', 'sunscale'],
+    `and they must be the right two, got ${JSON.stringify(saved.bag.map((e) => e.fishId))}`);
 });

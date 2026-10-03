@@ -10,6 +10,7 @@ import {
  areaProgress, levelFrom, xpForCatch, luckFromLevel, luckFor, LOST_ITEMS, rollLostItem, lostItemsFor, SEALS, buySeal, equipSeal, sealComment, sealDuplicates, visitArea, xpForLevel, sellLostItems, lostItemById, MUTATIONS, mutationMultiplierFor, mutationById, sealLines, WEATHER, TIMES, skyFor, luckFromSky,
   addToBag, fishEntrySpec, bagWorth, bagEntryValue,
   sellFromBag, feedToBond, bondLuck, bondCount,
+  groupBag,
   fishSilhouette,} from '../vendor/fru-angler/fishing.js';
 
 test('the starting wallet can afford exactly one upgrade from the cheapest rod', () => {
@@ -2252,4 +2253,45 @@ test('you can sell one find out of the bag, not only all of them', () => {
 
   assert.equal(sellLostItems([], 1).ok, false, 'an empty bag sells nothing');
   assert.equal(sellLostItems(['gumball'], 0).ok, false, 'nor does zero of them');
+});
+
+test('grouping the bag is pure, and it groups by fish rather than by value', () => {
+  // The bag had to be grouped so that twelve identical fish are one row. The
+  // grouping itself is a rule -- which fish collapse together, and which of them
+  // the row shows -- so it belongs in fishing.js where it can be tested without a
+  // DOM.
+  const glides = [1, 2, 3].map((w) => fishEntrySpec(FISH[0], w));
+  const sun = fishEntrySpec(FISH[1], 1);
+
+  const groups = groupBag([...glides, sun]);
+  assert.equal(groups.length, 2, 'three of one fish and one of another is two rows');
+
+  const g = groups.find((x) => x.fishId === FISH[0].id);
+  assert.equal(g.entries.length, 3, 'all three collapse together');
+  assert.equal(g.count, 3, 'and the count is stated');
+
+  // Which fish the row SHOWS: the heaviest, because that is the one worth selling
+  // and the one a player would recognise.
+  assert.equal(g.entry.weight, 3, 'the row shows the heaviest');
+  assert.equal(g.total, g.entries.reduce((sum, e) => sum + bagEntryValue(e), 0),
+    'and totals what the whole group is worth');
+
+  // A mutated fish is still that fish: a triple-striped Glidefin and a plain one
+  // collapse, because they are the same creature and the same decision.
+  const mutated = fishEntrySpec(FISH[0], 2, { name: 'Triple', multiplier: 3 });
+  assert.equal(groupBag([glides[0], mutated]).length, 1,
+    'a mutation must not split a species into two rows');
+
+  // Degenerate inputs must not throw.
+  assert.deepEqual(groupBag([]), []);
+  assert.deepEqual(groupBag(null), []);
+  // And a ghost fish in a save cannot produce a row that cannot be sold.
+  const ghosts = groupBag([{ fishId: 'no-such-fish', weight: 1, multiplier: 1 }]);
+  assert.equal(ghosts.length, 1, 'a ghost still gets a row, so it can be cleared');
+  assert.equal(ghosts[0].entry.weight, 1, 'and keeps its value');
+
+  // The original is never mutated: the save holds one array.
+  const source = [...glides, sun];
+  groupBag(source);
+  assert.equal(source.length, 4, 'the bag must not be reordered in place');
 });

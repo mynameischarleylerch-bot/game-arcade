@@ -24,12 +24,12 @@ import {
  levelFrom, xpForCatch, xpForLevel, luckFor, luckFromLevel,
  rollLostItem, lostItemsFor, sellLostItems, lostItemById,
  addToBag, fishEntrySpec, bagWorth, bagEntryValue,
- sellFromBag, feedToBond, bondLuck, bondCount,
+ sellFromBag, feedToBond, bondLuck, bondCount, groupBag,
  buySeal, equipSeal, sealComment, sealDuplicates, sealIdleLine,
-} from './fishing.js?v=2026-10-04-a';
+} from './fishing.js?v=2026-10-04-b';
 import {
   reelConfig, stepReel as advance, reelOutcomeFor, isCaught, lineSnapped,
-} from './reel.js?v=2026-10-04-a';
+} from './reel.js?v=2026-10-04-b';
 
 /* ------------------------------------------------------------------ tuning */
 
@@ -1593,6 +1593,105 @@ function paintBagBadge(count) {
  * feed raises that seal's bond, which adds luck. The two compete for the same
  * fish, which is the only reason the bag is a decision rather than a queue.
  */
+/**
+ * One row per species in the bag.
+ *
+ * The bag listed one row per FISH, so twelve identical Glidefins were twelve
+ * identical rows with twelve identical buttons -- and only one of them is a real
+ * decision, because they are all the same decision. Each row now stands for the
+ * whole group: it shows the heaviest fish of that species, how many there are, and
+ * what the lot is worth, with Sell one and Feed one acting on the group.
+ */
+function paintBagRow(group, seal) {
+  const fish = fishById(group.fishId);
+  if (!fish) return null;
+
+  const row = document.createElement('div');
+  row.className = 'bag__row';
+  row.dataset.fish = group.fishId;
+
+  const what = document.createElement('div');
+  what.className = 'bag__what';
+
+  const portrait = document.createElement('span');
+  portrait.className = 'bag__portrait';
+  portrait.style.setProperty('--fish-hue', String(fish.hue));
+
+  const titles = document.createElement('span');
+  titles.className = 'bag__titles';
+
+  const name = document.createElement('b');
+  name.className = 'bag__name';
+  name.textContent = (group.entry.mutation ? `${group.entry.mutation} ` : '') + fish.name;
+  titles.appendChild(name);
+
+  // How many, and what the lot is worth. Both are stated, because the button sells
+  // ONE of them and the player has to know that before clicking.
+  const meta = document.createElement('span');
+  meta.className = 'bag__meta';
+  meta.textContent = group.count > 1
+    ? `${fish.rarity} \u00b7 ${group.count} held \u00b7 best ${group.entry.weight} kg \u00b7 `
+      + `${group.total.toLocaleString('en-US')} coins for the lot`
+    : `${fish.rarity} \u00b7 ${group.entry.weight} kg`;
+  titles.appendChild(meta);
+
+  what.append(portrait, titles);
+
+  const actions = document.createElement('div');
+  actions.className = 'bag__actions';
+
+  // The index of the fish this row SHOWS, not merely the first of the species.
+  // The row advertises the heaviest of the group, so Sell one has to take that
+  // one: selling the smallest of three would pay far less than the row implied,
+  // and the player would have no way to tell.
+  const at = state.bag.indexOf(group.entry);
+  // Defensive: a stale row whose fish has gone must not act on its neighbour.
+  const here = at >= 0 && state.bag[at]?.fishId === group.fishId;
+
+  const sell = document.createElement('button');
+  sell.className = 'btn btn--small bag__sell';
+  sell.textContent = group.count > 1 ? `Sell one (${group.count})` : 'Sell one';
+  sell.addEventListener('click', () => (here ? sellOneFish(at, fish) : null));
+
+  const feed = document.createElement('button');
+  feed.className = 'btn btn--small bag__feed';
+  if (!seal) {
+    feed.textContent = 'Feed one';
+    feed.disabled = true;
+    feed.title = 'Equip a seal first, then you can feed it.';
+  } else {
+    feed.textContent = group.count > 1 ? `Feed one (${group.count})` : 'Feed one';
+    feed.addEventListener('click', () => (here ? feedOneFish(at, fish, seal) : null));
+  }
+
+  actions.append(sell, feed);
+  row.append(what, actions);
+  return row;
+}
+
+/** Sell one fish out of the bag, leaving the rest. */
+function sellOneFish(at, fish) {
+  if (at < 0) return;
+  const result = sellFromBag(state.bag, at);
+  if (!result.ok) return say(result.reason);
+  state.coins += result.coins;
+  state.bag = result.bag;
+  save(); paintChrome(); paintBag();
+  say(`${fish.name} sold for ${result.coins.toLocaleString('en-US')} coins.`);
+}
+
+/** Feed one fish to the equipped seal, leaving the rest. */
+function feedOneFish(at, fish, seal) {
+  if (at < 0) return;
+  const result = feedToBond(state.bag, at, state.bond, seal.id);
+  if (!result.ok) return say(result.reason);
+  state.bag = result.bag;
+  state.bond = result.bond;
+  save(); paintChrome(); paintBag();
+  sealChatter();
+  say(`${fish.name} fed to ${seal.name}. Bond ${bondCount(state.bond, seal.id)}.`);
+}
+
 function paintBag() {
   if (!ui.bagList) return;
   const bag = Array.isArray(state.bag) ? state.bag : [];
@@ -1609,64 +1708,12 @@ function paintBag() {
   ui.bagList.textContent = '';
   if (bag.length === 0) return;
 
-  bag.forEach((entry, index) => {
-    const fish = fishById(entry.fishId);
-    if (!fish) return;
-    const worth = bagEntryValue(entry);
-
-    const row = document.createElement('div');
-    row.className = 'bag__row';
-
-    const what = document.createElement('div');
-    what.className = 'bag__what';
-    what.innerHTML = `
-      <span class="bag__portrait" style="--fish-hue:${fish.hue}"></span>
-      <span class="bag__titles">
-        <b class="bag__name">${entry.mutation ? entry.mutation + ' ' : ''}${fish.name}</b>
-        <span class="bag__meta">${fish.rarity} \u00b7 ${entry.weight} kg</span>
-      </span>`;
-
-    const actions = document.createElement('div');
-    actions.className = 'bag__actions';
-
-    const sell = document.createElement('button');
-    sell.className = 'btn btn--small bag__sell';
-    sell.textContent = `Sell ${worth.toLocaleString('en-US')}`;
-    sell.addEventListener('click', () => {
-      const result = sellFromBag(state.bag, index);
-      if (!result.ok) return say(result.reason);
-      state.coins += result.coins;
-      state.bag = result.bag;
-      save(); paintChrome(); paintBag();
-      say(`${fish.name} sold for ${result.coins.toLocaleString('en-US')} coins.`);
-    });
-
-    const feed = document.createElement('button');
-    feed.className = 'btn btn--small bag__feed';
-    // No seal, no feeding: say why, rather than a button that cannot work.
-    if (!seal) {
-      feed.textContent = 'Feed';
-      feed.disabled = true;
-      feed.title = 'Equip a seal first, then you can feed it.';
-    } else {
-      feed.textContent = `Feed ${seal.name}`;
-      feed.addEventListener('click', () => {
-        const result = feedToBond(state.bag, index, state.bond, seal.id);
-        if (!result.ok) return say(result.reason);
-        state.bag = result.bag;
-        state.bond = result.bond;
-        save(); paintChrome(); paintBag();
-        sealChatter();
-        say(`${fish.name} fed to ${seal.name}. Bond ${bondCount(state.bond, seal.id)}.`);
-      });
-    }
-
-    actions.appendChild(sell);
-    actions.appendChild(feed);
-    row.appendChild(what);
-    row.appendChild(actions);
-    ui.bagList.appendChild(row);
-  });
+  // One row per SPECIES, not per fish. Twelve identical Glidefins are twelve
+  // identical decisions, so they share a row.
+  for (const group of groupBag(bag)) {
+    const row = paintBagRow(group, seal);
+    if (row) ui.bagList.appendChild(row);
+  }
 }
 
 function openBagPanel() {
