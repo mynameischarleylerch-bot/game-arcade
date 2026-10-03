@@ -525,6 +525,35 @@
   .lake-row[aria-disabled="true"]:hover { transform: none; box-shadow: inset 0 1px 0 #fff, 0 2px 6px rgba(1, 87, 155, .12); }
 
   /* The swatch is painted with the lake's own palette. */
+  /* Rod traits, shown in the shop so a gated lake explains itself. */
+  .rod__traits { display: flex; gap: .3rem; flex-wrap: wrap; }
+  .rod__trait {
+    padding: .1rem .45rem; border-radius: 999px;
+    background: linear-gradient(180deg, var(--glass-top), var(--glass-mid));
+    border: 1px solid var(--hairline-strong);
+    font-size: .68rem; font-weight: 700; letter-spacing: .06em;
+    text-transform: uppercase; font-style: normal; color: var(--deep);
+    box-shadow: inset 0 1px 0 #fff;
+  }
+  .rod__opens { font-size: .72rem; color: var(--ink-soft); }
+
+  /* A lake's trait, on its row in the picker. */
+  .lake-row__trait {
+    justify-self: start;
+    margin-top: .2rem;
+    padding: .08rem .4rem; border-radius: 999px;
+    background: linear-gradient(180deg, var(--glass-top), var(--glass-mid));
+    border: 1px solid var(--hairline);
+    font-size: .64rem; font-weight: 700; letter-spacing: .07em;
+    text-transform: uppercase; color: var(--deep);
+  }
+  .lake-row__trait::before { content: '\25C6\00a0'; }
+  .lake-row[aria-disabled="true"] .lake-row__trait {
+    background: rgba(1, 87, 155, .1);
+    border-color: rgba(1, 87, 155, .2);
+    color: var(--ink-soft);
+  }
+
   .lake-row__swatch {
     width: 46px; height: 34px; border-radius: 9px;
     border: 1px solid rgba(255, 255, 255, .9);

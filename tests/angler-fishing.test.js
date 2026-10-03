@@ -5,6 +5,7 @@ import {
   fishWeight, catchValue, canCatch, buyRod, startingLoadout,
   startingInventory, ownsRod, addRodToInventory, equipRod, rodArt, RODS_BY_PRICE,
   fishSvg, FISH_SHAPES, hookLineFor, AREAS, areaUnlocked,
+  rodWorksIn, rodCheckIn,
 } from '../vendor/fru-angler/fishing.js';
 
 test('the starting wallet can afford exactly one upgrade from the cheapest rod', () => {
@@ -18,10 +19,16 @@ test('the starting wallet can afford exactly one upgrade from the cheapest rod',
 });
 
 test('every rod is more expensive than the last', () => {
-  const prices = Object.values(RODS).map((r) => r.price);
+  // RODS_BY_PRICE is the order the shop lists, cheapest first. The table itself is
+  // laid out by price, but asserting on the sorted list states the real rule.
+  const prices = RODS_BY_PRICE.map((id) => RODS[id].price);
   for (let i = 1; i < prices.length; i += 1) {
-    assert.ok(prices[i] > prices[i - 1], `rod ${i} must cost more than rod ${i - 1}`);
+    assert.ok(prices[i] > prices[i - 1],
+      `${RODS_BY_PRICE[i]} must cost more than ${RODS_BY_PRICE[i - 1]}`);
   }
+  // And the table is declared in that same order, so nothing drifts.
+  assert.deepEqual(Object.keys(RODS), RODS_BY_PRICE,
+    'the RODS table should already be in price order');
 });
 
 test('every rod can eventually catch every fish', () => {
@@ -252,6 +259,7 @@ test('every rod has distinct artwork', () => {
 });
 
 test('each rod gets longer and thicker as it is upgraded', () => {
+  // Walk in price order, which is the progression the player actually sees.
   const ids = Object.values(RODS_BY_PRICE);
   for (let i = 1; i < ids.length; i += 1) {
     const cheaper = rodArt(ids[i - 1]);
@@ -375,7 +383,10 @@ test('a missing fish falls back to the first one rather than throwing', () => {
 });
 
 test('the fish drawing carries the fish name for accessibility', () => {
-  const svg = fishSvg(FISH[2]);
+  // Looked up by id, not by index: the table has grown and been re-sorted, so a
+  // positional reference silently starts checking a different fish.
+  const trout = FISH.find((f) => f.id === 'metro-trout');
+  const svg = fishSvg(trout);
   assert.match(svg, /role="img"/);
   assert.match(svg, /aria-label="[^"]*Metro Trout[^"]*"/, 'the name must be in the label');
 });
@@ -492,7 +503,7 @@ test('every fish has its own line for the moment you hook it', () => {
 test('the hook line speaks in second person, like the player is there', () => {
   // The example the request gave: "You feel the power of the environment".
   for (const fish of FISH) {
-    assert.match(fish.hook, /\b(You|your|You')\b/,
+    assert.match(fish.hook, /\b(You|you|your|You')\b/,
       `${fish.name} should address the player: "${fish.hook}"`);
   }
 });
@@ -589,26 +600,22 @@ test('later lakes are strictly harder than earlier ones', () => {
   }
 });
 
-test('a lake unlocks only when its fish are all landed and every rod is owned', () => {
-  // Part-way: two fish short and one rod to go.
-  const area = AREAS[1];
-  const nearly = area.fish.slice(0, -1).reduce((best, id) => {
-    best[id] = 999;
-    return best;
-  }, {});
-  assert.equal(areaUnlocked(area, { bestiary: nearly, owned: ['bamboo', 'willow'] }), false,
-    'not while fish are unlanded');
-
-  // All fish landed, but a rod still missing.
-  const all = area.fish.reduce((best, id) => { best[id] = 999; return best; }, {});
+test('every rod is required, and a lake stays shut without them', () => {
+  // The gate is the previous lake's fish, but the rod requirement applies to every
+  // lake past the first.
+  const all = AREAS[1].fish.reduce((best, id) => { best[id] = 5; return best; }, {});
   const allRods = Object.keys(RODS);
-  const short = allRods.slice(0, -1);
-  assert.equal(areaUnlocked(area, { bestiary: all, owned: short }), false,
-    'not while a rod is unowned');
 
-  // Both conditions met.
-  assert.equal(areaUnlocked(area, { bestiary: all, owned: allRods }), true,
-    'open once every fish is landed and every rod is owned');
+  for (const area of AREAS.slice(1)) {
+    const prev = AREAS[AREAS.indexOf(area) - 1];
+    const landed = prev.fish.reduce((best, id) => { best[id] = 5; return best; }, {});
+
+    assert.equal(areaUnlocked(area, { bestiary: landed, owned: allRods.slice(0, -1) }), false,
+      `${area.name} must stay shut while a rod is unowned`);
+    assert.equal(areaUnlocked(area, { bestiary: landed, owned: allRods }), true,
+      `${area.name} opens once the previous lake is cleared and every rod is owned`);
+    void all;
+  }
 });
 
 test('the first lake is always open, whatever the save looks like', () => {
@@ -628,4 +635,136 @@ test('fish can only be rolled from the lake you are standing in', () => {
 test('an unknown lake id falls back to the first lake rather than crashing', () => {
   const fish = rollFish(0.5, RODS.bamboo, 'not-a-lake');
   assert.ok(AREAS[0].fish.includes(fish.id));
+});
+
+
+/* ----------------------------------------------- rod traits and gated lakes */
+
+test('rods carry traits, and the specialist ones cost a premium', () => {
+  for (const rod of Object.values(RODS)) {
+    assert.ok(Array.isArray(rod.traits), `${rod.id} must declare a traits array`);
+    for (const t of rod.traits) {
+      assert.match(t, /^[a-z]+$/, `${rod.id} has a malformed trait: ${t}`);
+    }
+  }
+
+  // A rod that can work a specialist lake must cost more than a plain upgrade of
+  // similar stats, so the gate is a real economy decision and not a formality.
+  const special = Object.values(RODS).filter((r) => r.traits.length > 0);
+  assert.ok(special.length >= 2, `expected specialist rods, got ${special.length}`);
+  for (const rod of special) {
+    const plain = Object.values(RODS).filter((r) => r.traits.length === 0);
+    const cheapestPlain = Math.min(...plain.map((r) => r.price));
+    assert.ok(rod.price > cheapestPlain,
+      `${rod.id} carries a trait but costs no more than a plain rod (¤${rod.price})`);
+  }
+});
+
+test('the later lakes are trait-gated, and every gate is satisfiable', () => {
+  // The first two lakes are deliberately ungated: they teach the loop, and the
+  // player should not hit a paywall before they have seen a single fight. The
+  // gate arrives at the third lake, once the rod ladder is established.
+  const ungated = AREAS.filter((a) => !a.trait);
+  assert.ok(ungated.length <= 2,
+    `only the opening lakes may be ungated, got ${ungated.map((a) => a.id).join(', ')}`);
+  assert.equal(AREAS[0].trait, null, 'the starting lake needs no trait');
+
+  for (const area of AREAS.filter((a) => a.trait)) {
+    assert.match(area.trait, /^[a-z]+$/);
+    assert.ok(area.traitNote, `${area.id} should explain its trait in words`);
+    const usable = Object.values(RODS).filter((r) => r.traits.includes(area.trait));
+    assert.ok(usable.length > 0,
+      `no rod has the ${area.trait} trait, so ${area.id} can never be fished`);
+  }
+
+  // The two the request named explicitly must both exist and be gated.
+  const deep = AREAS.find((a) => a.name.includes('Dark Aero'));
+  const fjord = AREAS.find((a) => a.name.includes('Glacier'));
+  assert.equal(deep?.trait, 'reinforced', 'Dark Aero Deep needs the reinforced trait');
+  assert.equal(fjord?.trait, 'ice', 'Glacier Fjord needs the ice trait');
+});
+
+test('a rod can only fish a lake when it carries that lake trait', () => {
+  const deep = AREAS.find((a) => a.trait === 'reinforced');
+  const fjord = AREAS.find((a) => a.trait === 'ice');
+  assert.ok(deep && fjord, 'both named lakes must exist');
+
+  const titan = Object.values(RODS).find((r) => r.traits.includes('reinforced'));
+  assert.equal(rodWorksIn(titan.id, deep.id), true, 'a reinforced rod works the deep');
+  assert.equal(rodWorksIn(titan.id, fjord.id), false,
+    'but not the ice lake — that needs its own trait');
+
+  const plain = RODS.bamboo;
+  for (const area of AREAS) {
+    const expected = area.trait === null;
+    assert.equal(rodWorksIn(plain.id, area.id), expected,
+      `bamboo should ${expected ? '' : 'not '}work ${area.name}`);
+  }
+});
+
+test('a lake you cannot fish in reports why', () => {
+  const deep = AREAS.find((a) => a.trait === 'reinforced');
+  const check = rodCheckIn('bamboo', deep.id);
+  assert.equal(check.ok, false);
+  assert.match(check.reason, /reinforced/i, `unhelpful reason: ${check.reason}`);
+  // The good case has no complaint.
+  const titan = Object.values(RODS).find((r) => r.traits.includes('reinforced'));
+  assert.equal(rodCheckIn(titan.id, deep.id).ok, true);
+});
+
+test('every lake holds at least six species', () => {
+  for (const area of AREAS) {
+    assert.ok(area.fish.length >= 6,
+      `${area.name} holds only ${area.fish.length} species, needs 6 or more`);
+  }
+});
+
+test('there are now enough fish to fill six lakes several times over', () => {
+  assert.ok(FISH.length >= 20,
+    `expected a much larger pond, got ${FISH.length} species`);
+  const hook = new Set(FISH.map((f) => f.hook));
+  assert.equal(hook.size, FISH.length, 'every species needs its own hook line');
+  const ids = new Set(FISH.map((f) => f.id));
+  assert.equal(ids.size, FISH.length, 'ids must be unique');
+});
+
+test('the next lake opens when the one you are standing in is finished', () => {
+  // The rule is now: all fish in the CURRENT lake, plus every rod.
+  const current = AREAS[1];
+  const all = current.fish.reduce((b, id) => (b[id] = 5, b), {});
+  const allRods = Object.keys(RODS);
+
+  // Half the fish is not enough.
+  const partial = current.fish.slice(0, 3).reduce((b, id) => (b[id] = 5, b), {});
+  assert.equal(areaUnlocked(AREAS[2], { bestiary: partial, owned: allRods }), false,
+    'the next lake must stay shut while species are unlanded');
+
+  // All the fish but not all the rods is not enough either.
+  assert.equal(areaUnlocked(AREAS[2], { bestiary: all, owned: ['bamboo'] }), false,
+    'nor while rods are unowned');
+
+  assert.equal(areaUnlocked(AREAS[2], { bestiary: all, owned: allRods }), true,
+    'both conditions met, so it opens');
+});
+
+test('landing a lake full of fish from elsewhere does not open the next one', () => {
+  // The gate must count the current lake's own species, not the total bestiary.
+  const current = AREAS[1];
+  const elsewhere = AREAS[3].fish.reduce((b, id) => (b[id] = 5, b), {});
+  assert.equal(areaUnlocked(AREAS[2], { bestiary: elsewhere, owned: Object.keys(RODS) }), false,
+    'fish from another lake must not count');
+  void current;
+});
+
+test('every lake is fishable once you have the right rod', () => {
+  for (const area of AREAS) {
+    const rods = Object.keys(RODS).filter((id) => rodWorksIn(id, area.id));
+    assert.ok(rods.length > 0, `${area.name} has no rod that can fish it`);
+    // And one of them must be strong enough for its heaviest resident.
+    const heaviest = Math.max(...area.fish.map((id) =>
+      FISH.find((f) => f.id === id).maxKg));
+    const strongEnough = rods.some((id) => RODS[id].maxKg >= heaviest);
+    assert.ok(strongEnough,
+      `no rod that works ${area.name} can land its ${heaviest} kg heaviest fish`);
+  }
 });

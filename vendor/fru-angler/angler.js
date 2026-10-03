@@ -16,6 +16,8 @@ import {
  AREAS,
  areaUnlocked,
  areaProgress,
+ rodWorksIn,
+ rodCheckIn,
  fishEntry,
 } from './fishing.js?v=2026-10-01-s';
 import {
@@ -267,7 +269,23 @@ function placeBobber(left, top) {
 
 /* -------------------------------------------------------------------- cast */
 
+/**
+ * Can we fish where we are standing?
+ *
+ * A lake gated on a rod trait is not fishable without that trait, so the cast is
+ * refused here rather than after the bobber has already flown. Moving to such a
+ * lake is still allowed — it is how you see what you are missing — but you cannot
+ * fish it until the rod is right.
+ */
+function canCastHere() {
+  const check = rodCheckIn(state.rodId, state.areaId);
+  if (!check.ok) say(check.reason);
+  return check.ok;
+}
+
 function beginCast() {
+  // Refuse before the bobber flies, so a gated lake is never fished by accident.
+  if (!canCastHere()) return;
   state.meter = 0;
   state.holding = true;
   say('');
@@ -442,7 +460,15 @@ function makeRodRow(id, { owned, onDone }) {
     + `<span>${owned ? '<i class="rod__swatch" style="background:' + art.colour + '"></i>' : '¤' + spec.price}</span></span>`
     + `<span class="rod__stats">control ${spec.control.toFixed(2)} · resilience ${spec.resilience.toFixed(2)} · `
     + `luck ${spec.luck.toFixed(1)} · max ${spec.maxKg} kg</span>`
+    + (spec.traits.length
+        ? `<span class="rod__traits">${spec.traits.map((t) =>
+            `<i class="rod__trait">${t}</i>`).join('')}</span>`
+        : '')
     + `<span class="rod__blurb">${spec.blurb}</span>`
+    + (spec.traits.length
+        ? `<span class="rod__opens">opens ${AREAS.filter((a) => a.trait && spec.traits.includes(a.trait))
+            .map((a) => a.name).join(', ')}</span>`
+        : '')
     + `<span class="rod__state">${tag}</span>`;
 
   button.addEventListener('click', () => {
@@ -601,12 +627,26 @@ function renderLakes() {
     } else if (open) {
       state_.textContent = `${area.fish.length} species`;
     } else {
-      // Say what is missing rather than just "locked".
+      // Say what is missing rather than just "locked": the fish, the rods, and
+      // the trait, because the trait is the one you cannot buy your way past here.
       const p = areaProgress(area, state);
-      state_.textContent = `${p.landed}/${p.total} fished · ${p.rods}/${p.rodTotal} rods`;
+      const bits = [`${p.landed}/${p.total} fished`, `${p.rods}/${p.rodTotal} rods`];
+      if (area.trait && !RODS[state.rodId].traits.includes(area.trait)) bits.push(`needs ${area.trait}`);
+      state_.textContent = bits.join(' · ');
     }
 
+    // A trait you cannot satisfy is shown as shut even once the fish are landed,
+    // because that is the truth: you cannot cast there.
+    const usable = rodWorksIn(state.rodId, area.id);
+    if (!usable && open) row.setAttribute('aria-disabled', 'true');
+
     row.append(swatch, label, state_);
+    if (area.trait) {
+      const tag = document.createElement('span');
+      tag.className = 'lake-row__trait';
+      tag.textContent = usable ? area.trait : `${area.trait} — locked`;
+      label.appendChild(tag);
+    }
     if (open && !here) {
       row.addEventListener('click', () => {
         state.areaId = area.id;

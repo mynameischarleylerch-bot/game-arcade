@@ -40,27 +40,57 @@ export const RODS = {
   bamboo: {
     id: 'bamboo', name: 'Bamboo Pole', price: 60,
     control: 0.20, resilience: 0.30, luck: 0, lureSpeed: 1, maxKg: 3,
+    traits: [],
     blurb: 'Splinters. Still better than nothing.',
   },
   willow: {
     id: 'willow', name: 'Willow Rod', price: 240,
     control: 0.28, resilience: 0.42, luck: 0.4, lureSpeed: 1.6, maxKg: 8,
+    traits: [],
     blurb: 'Bends without complaining.',
   },
   carbon: {
     id: 'carbon', name: 'Carbon Float', price: 900,
     control: 0.34, resilience: 0.55, luck: 0.8, lureSpeed: 2.4, maxKg: 20,
+    traits: [],
     blurb: 'Light, springy, slightly smug.',
   },
   oak: {
     id: 'oak', name: 'Oak Lance', price: 3200,
     control: 0.40, resilience: 0.70, luck: 1.2, lureSpeed: 3.2, maxKg: 45,
+    traits: [],
     blurb: 'Heavy enough to feel the water.',
   },
   titan: {
     id: 'titan', name: 'Titan Aero', price: 11000,
     control: 0.46, resilience: 0.85, luck: 1.8, lureSpeed: 4.2, maxKg: 120,
+    traits: [],
     blurb: 'Absorbs thrashing like a rumour.',
+  },
+
+  /* ---- specialist rods ---------------------------------------------
+   * Each exists to open one gated lake, so each carries that lake's trait.
+   * They cost a real premium over the plain top rod: the gate has to be an
+   * economy decision, not a formality. Stats are otherwise comparable, so the
+   * player is paying for access rather than for power.
+   */
+  canopy: {
+    id: 'canopy', name: 'Canopy Stretch', price: 16000,
+    control: 0.46, resilience: 0.78, luck: 2.2, lureSpeed: 5.0, maxKg: 90,
+    traits: ['flex'],
+    blurb: 'Reaches over the reeds without touching them.',
+  },
+  glacier: {
+    id: 'glacier', name: 'Frostline Core', price: 24000,
+    control: 0.48, resilience: 0.80, luck: 1.6, lureSpeed: 4.0, maxKg: 140,
+    traits: ['ice'],
+    blurb: 'Bored through the ice. Useless anywhere warm.',
+  },
+  abyss: {
+    id: 'abyss', name: 'Abyssal Rig', price: 42000,
+    control: 0.50, resilience: 0.92, luck: 2.0, lureSpeed: 4.6, maxKg: 260,
+    traits: ['reinforced'],
+    blurb: 'Built for pressure. Heavy enough to be a nuisance on the bank.',
   },
 };
 
@@ -78,6 +108,11 @@ const ROD_LOOKS = {
   carbon: { path: 'M40.7 52 L58 31', width: 1.9, colour: '#4a6b7c' },
   oak: { path: 'M40.7 52 L61 27', width: 2.4, colour: '#7d4f2e' },
   titan: { path: 'M40.7 52 L64 23', width: 3.0, colour: '#8c9aa8' },
+  // Longer and thicker again, and tinted with their own lake, so the scene says
+  // which water this rod is built for.
+  canopy: { path: 'M40.7 52 L65 25', width: 3.1, colour: '#5f8f3f' },
+  glacier: { path: 'M40.7 52 L66 23', width: 3.4, colour: '#bfe4f5' },
+  abyss: { path: 'M40.7 52 L68 21', width: 4.2, colour: '#1d4a63' },
 };
 
 const LURE_OFFSET = 0.6;   // nudge the lure just past the tip so it sits on the end
@@ -111,19 +146,61 @@ export const RODS_BY_PRICE = Object.keys(RODS)
  * Fisch's. Rarity order matches Fisch's so the difficulty curve reads the same.
  */
 export const FISH = [
-  { id: 'glidefin', name: 'Glidefin', rarity: 'Common', pricePerKg: 4, minKg: 0.4, maxKg: 2.0, fight: 0.35, hue: 195, draw: 'slim', weight: 30,
+  { id: 'glidefin', name: 'Glidefin', rarity: 'Common', pricePerKg: 4, minKg: 0.4, maxKg: 2, fight: 0.35, hue: 195, draw: 'slim', weight: 30,
     hook: 'The wind picks up. You feel something small skimming across the top.' },
+  { id: 'sunscale', name: 'Sunscale', rarity: 'Common', pricePerKg: 7, minKg: 0.5, maxKg: 2.4, fight: 0.4, hue: 48, draw: 'slim', weight: 22,
+    hook: 'Warm as a windowsill. You feel it turn towards the light.' },
+  { id: 'bubbleperch', name: 'Bubble Perch', rarity: 'Common', pricePerKg: 8, minKg: 0.4, maxKg: 1.8, fight: 0.42, hue: 160, draw: 'deep', weight: 16,
+    hook: 'It blows a small burst of bubbles. You feel the line twitch and think it is a fish.' },
   { id: 'aero-minnow', name: 'Aero Minnow', rarity: 'Common', pricePerKg: 6, minKg: 0.3, maxKg: 1.2, fight: 0.45, hue: 210, draw: 'slim', weight: 26,
     hook: 'A flicker of silver. You feel the line go slack, then taut again.' },
-  { id: 'metro-trout', name: 'Metro Trout', rarity: 'Uncommon', pricePerKg: 18, minKg: 1.5, maxKg: 5.5, fight: 0.60, hue: 150, draw: 'deep', weight: 20,
+  { id: 'ripplefin', name: 'Ripplefin', rarity: 'Common', pricePerKg: 9, minKg: 0.6, maxKg: 2.8, fight: 0.5, hue: 178, draw: 'flat', weight: 18,
+    hook: 'The surface dimples where it goes. You feel the ring travel up the line.' },
+  { id: 'glossdace', name: 'Gloss Dace', rarity: 'Common', pricePerKg: 10, minKg: 0.7, maxKg: 3.1, fight: 0.55, hue: 200, draw: 'slim', weight: 14,
+    hook: 'Silver under the light, gone again. You feel it hesitate before it commits.' },
+  { id: 'metro-trout', name: 'Metro Trout', rarity: 'Uncommon', pricePerKg: 18, minKg: 1.5, maxKg: 5.5, fight: 0.6, hue: 150, draw: 'deep', weight: 20,
     hook: 'You feel it darting under the surface, quick and stubborn.' },
+  { id: 'coralpike', name: 'Coral Pike', rarity: 'Uncommon', pricePerKg: 24, minKg: 2, maxKg: 7, fight: 0.65, hue: 20, draw: 'deep', weight: 14,
+    hook: 'You feel it hold station in the warm shallows, refusing to move.' },
+  { id: 'reedcarp', name: 'Reed Carp', rarity: 'Uncommon', pricePerKg: 26, minKg: 2.4, maxKg: 8.5, fight: 0.68, hue: 95, draw: 'deep', weight: 11,
+    hook: 'Something grinds through the reeds. You feel the line judder as it passes.' },
+  { id: 'duskdarter', name: 'Dusk Darter', rarity: 'Uncommon', pricePerKg: 22, minKg: 1.2, maxKg: 4.6, fight: 0.7, hue: 330, draw: 'slim', weight: 12,
+    hook: 'A shadow crosses the line. You feel it gone before you see it.' },
+  { id: 'lanternjack', name: 'Lantern Jack', rarity: 'Uncommon', pricePerKg: 28, minKg: 1.8, maxKg: 6.4, fight: 0.72, hue: 55, draw: 'flat', weight: 10,
+    hook: 'A pale light moves under the surface. You feel it drift, unhurried.' },
+  { id: 'snowsmelt', name: 'Snowsmelt', rarity: 'Uncommon', pricePerKg: 30, minKg: 2.6, maxKg: 9, fight: 0.76, hue: 190, draw: 'slim', weight: 9,
+    hook: 'Meltwater runs down the line. You feel the cold coming from upstream.' },
+  { id: 'mudsole', name: 'Mud Sole', rarity: 'Rare', pricePerKg: 58, minKg: 3.5, maxKg: 12, fight: 0.74, hue: 88, draw: 'flat', weight: 8,
+    hook: 'The line goes slack and stays slack. You feel it working something over.' },
   { id: 'doric-dab', name: 'DORFic Dab', rarity: 'Rare', pricePerKg: 55, minKg: 0.8, maxKg: 3.4, fight: 0.75, hue: 45, draw: 'flat', weight: 12,
     hook: 'The line drags low. You feel whatever this is hugging the bottom.' },
+  { id: 'orangebarbel', name: 'Orange Barbel', rarity: 'Rare', pricePerKg: 62, minKg: 4, maxKg: 14, fight: 0.78, hue: 32, draw: 'deep', weight: 8,
+    hook: 'You feel it dive for the warm bottom and hold there, heavy and sure.' },
+  { id: 'emberfin', name: 'Emberfin', rarity: 'Rare', pricePerKg: 76, minKg: 4.5, maxKg: 16, fight: 0.8, hue: 12, draw: 'long', weight: 7,
+    hook: 'The line comes back warm. You feel the heat before the weight.' },
+  { id: 'mirrorpike', name: 'Mirror Pike', rarity: 'Rare', pricePerKg: 70, minKg: 5, maxKg: 18, fight: 0.82, hue: 168, draw: 'long', weight: 7,
+    hook: 'You feel something long decide to move, and then it simply does.' },
+  { id: 'frostfin', name: 'Frostfin', rarity: 'Rare', pricePerKg: 88, minKg: 6, maxKg: 22, fight: 0.84, hue: 196, draw: 'long', weight: 6,
+    hook: 'Ice ticks against the line. You feel it hold perfectly still, waiting.' },
+  { id: 'blueglass', name: 'Blueglass', rarity: 'Legendary', pricePerKg: 168, minKg: 9, maxKg: 34, fight: 0.87, hue: 215, draw: 'deep', weight: 4,
+    hook: 'You feel something turn over, slow and heavy, like a pane of glass.' },
   { id: 'eco-gar', name: 'Eco Gar', rarity: 'Legendary', pricePerKg: 140, minKg: 12, maxKg: 40, fight: 0.88, hue: 110, draw: 'long', weight: 8,
     hook: 'You feel the power of the environment surge up the line.' },
-  { id: 'glacier-char', name: 'Glacier Char', rarity: 'Mythical', pricePerKg: 320, minKg: 30, maxKg: 110, fight: 1.0, hue: 275, draw: 'long', weight: 4,
+  { id: 'rimepike', name: 'Rime Pike', rarity: 'Legendary', pricePerKg: 155, minKg: 10, maxKg: 38, fight: 0.9, hue: 205, draw: 'long', weight: 5,
+    hook: 'You feel the cold come off the line in waves. It is not struggling. It is waiting.' },
+  { id: 'deepglow', name: 'Deepglow', rarity: 'Legendary', pricePerKg: 205, minKg: 16, maxKg: 60, fight: 0.93, hue: 262, draw: 'long', weight: 4,
+    hook: 'You feel a light on the other end of the line. It is not your lamp.' },
+  { id: 'pressurefin', name: 'Pressurefin', rarity: 'Legendary', pricePerKg: 228, minKg: 20, maxKg: 70, fight: 0.95, hue: 250, draw: 'deep', weight: 3,
+    hook: 'The line hums with pressure. You feel the weight of the water itself.' },
+  { id: 'blackmirror', name: 'Blackmirror', rarity: 'Mythical', pricePerKg: 390, minKg: 24, maxKg: 88, fight: 0.97, hue: 240, draw: 'deep', weight: 2,
+    hook: 'The line goes dead, and then you feel it pull again, from straight down.' },
+  { id: 'voidpike', name: 'Voidpike', rarity: 'Mythical', pricePerKg: 355, minKg: 26, maxKg: 96, fight: 0.98, hue: 285, draw: 'long', weight: 2,
+    hook: 'You feel it take the line and hold it, out past where light gives up.' },
+  { id: 'glacier-char', name: 'Glacier Char', rarity: 'Mythical', pricePerKg: 320, minKg: 30, maxKg: 110, fight: 1, hue: 275, draw: 'long', weight: 4,
     hook: 'The cold runs up your arm. This one is older than the ice.' },
-];
+  { id: 'lastlantern', name: 'Lastlantern', rarity: 'Mythical', pricePerKg: 420, minKg: 30, maxKg: 120, fight: 1, hue: 190, draw: 'long', weight: 1,
+    hook: 'You feel the line go warm for the first time in your life.' },
+];;
 
 export const RARITY_COLOURS = {
   Common: '#7ea8bd',
@@ -585,7 +662,8 @@ export const AREAS = [
     theme: 'Frutiger Aero',
     blurb: 'Still, bright water under a very large sun.',
     locked: false,
-    fish: ['glidefin', 'aero-minnow'],
+    trait: null,
+    fish: ['glidefin', 'aero-minnow', 'sunscale', 'ripplefin', 'bubbleperch', 'glossdace'],
     palette: {
       skyTop: '#81d4fa', skyMid: '#b3e5fc', skyFloor: '#f4fbff',
       water: '#2f81c4', accent: '#4fc3f7',
@@ -598,7 +676,8 @@ export const AREAS = [
     theme: 'DORFic',
     blurb: 'Warm orange shallows cut by straight geometric channels.',
     locked: true,
-    fish: ['metro-trout', 'doric-dab'],
+    trait: null,
+    fish: ['coralpike', 'duskdarter', 'metro-trout', 'doric-dab', 'orangebarbel', 'emberfin'],
     palette: {
       skyTop: '#f7c894', skyMid: '#fbe0c4', skyFloor: '#fffaf4',
       water: '#c2701f', accent: '#e07b2a',
@@ -611,7 +690,9 @@ export const AREAS = [
     theme: 'Eco',
     blurb: 'Green water, dappled light, and things that hide in it.',
     locked: true,
-    fish: ['metro-trout', 'doric-dab', 'eco-gar'],
+    trait: 'flex',
+    traitNote: 'needs a rod that can reach over the reeds',
+    fish: ['reedcarp', 'lanternjack', 'mudsole', 'mirrorpike', 'eco-gar', 'coralpike'],
     palette: {
       skyTop: '#a8cf8f', skyMid: '#c8e0b0', skyFloor: '#f6faf0',
       water: '#4e7a35', accent: '#7aa84a',
@@ -624,7 +705,9 @@ export const AREAS = [
     theme: 'Glacier',
     blurb: 'Pale blue ice water. Everything here is cold and fast.',
     locked: true,
-    fish: ['doric-dab', 'eco-gar', 'glacier-char'],
+    trait: 'ice',
+    traitNote: 'needs a rod that can bore through the ice',
+    fish: ['snowsmelt', 'frostfin', 'rimepike', 'blueglass', 'glacier-char', 'mirrorpike'],
     palette: {
       skyTop: '#cfe6f5', skyMid: '#e3f1f9', skyFloor: '#fbfdff',
       water: '#3f7fa8', accent: '#7fc4e8',
@@ -637,7 +720,9 @@ export const AREAS = [
     theme: 'Dark Aero',
     blurb: 'The bottom of the world, where the light barely reaches.',
     locked: true,
-    fish: ['eco-gar', 'glacier-char'],
+    trait: 'reinforced',
+    traitNote: 'needs a rod reinforced enough for the pressure',
+    fish: ['deepglow', 'pressurefin', 'voidpike', 'blackmirror', 'lastlantern', 'glacier-char'],
     palette: {
       skyTop: '#0f2027', skyMid: '#122a34', skyFloor: '#0a141a',
       water: '#06222e', accent: '#29b6f6',
@@ -652,22 +737,62 @@ export const AREAS = [
  * A lake opens once every fish that lives in it has been landed and every rod is
  * owned. The first lake is always open, so a fresh or corrupt save can always fish.
  */
+/**
+ * Can this rod work this lake?
+ *
+ * A lake that names a trait can only be fished with a rod carrying it. That is the
+ * point of the specialist rods: without one, the lake is shut to you however much
+ * money you have. Money buys the trait, but nothing else substitutes for it.
+ */
+export function rodWorksIn(rodId, areaId) {
+  const area = AREAS.find((a) => a.id === areaId) ?? AREAS[0];
+  if (!area.trait) return true;
+  return (RODS[rodId]?.traits ?? []).includes(area.trait);
+}
+
+/** rodWorksIn, with a reason a player can read. */
+export function rodCheckIn(rodId, areaId) {
+  const area = AREAS.find((a) => a.id === areaId) ?? AREAS[0];
+  if (!area.trait) return { ok: true, reason: '' };
+  const rod = RODS[rodId];
+  if (!rod) return { ok: false, reason: `Unknown rod: ${rodId}` };
+  if (rod.traits.includes(area.trait)) return { ok: true, reason: '' };
+  return {
+    ok: false,
+    reason: `${area.name} needs a rod with the ${area.trait} trait. ${rod.name} has none.`,
+  };
+}
+
+/** Every lake this rod is allowed in, in order. */
+export function areasForRod(rodId) {
+  return AREAS.filter((a) => rodWorksIn(rodId, a.id));
+}
+
 export function areaUnlocked(area, progress) {
   if (!area || area.locked === false) return true;
   const bestiary = progress?.bestiary ?? {};
   const owned = progress?.owned ?? [];
   const allRods = Object.keys(RODS);
   if (allRods.some((id) => !owned.includes(id))) return false;
-  return (area.fish ?? []).every((id) => Number(bestiary[id]) > 0);
+  // And every species of the lake BEFORE this one. This used to count the fish in
+  // the lake being opened, so a lake advertised its own contents before you had
+  // earned it, and the gate moved whenever the roster changed.
+  const index = AREAS.indexOf(area);
+  const previous = index > 0 ? AREAS[index - 1] : null;
+  const gate = previous ? previous.fish : area.fish;
+  return gate.every((id) => Number(bestiary[id]) > 0);
 }
 
 /** How close a player is to opening the next lake, for the locked badge. */
 export function areaProgress(area, progress) {
   const bestiary = progress?.bestiary ?? {};
-  const landed = (area?.fish ?? []).filter((id) => Number(bestiary[id]) > 0).length;
+  const index = AREAS.indexOf(area);
+  const previous = index > 0 ? AREAS[index - 1] : null;
+  const gate = previous ? previous.fish : (area?.fish ?? []);
+  const landed = gate.filter((id) => Number(bestiary[id]) > 0).length;
   return {
     landed,
-    total: (area?.fish ?? []).length,
+    total: gate.length,
     rods: (progress?.owned ?? []).filter((id) => RODS[id]).length,
     rodTotal: Object.keys(RODS).length,
   };

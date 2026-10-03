@@ -11,7 +11,8 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
 import { JSDOM } from 'jsdom';
-import { FISH, RARITY_ORDER, fishIndex, hookLineFor } from '../vendor/fru-angler/fishing.js';
+import { FISH, RARITY_ORDER, fishIndex, hookLineFor, AREAS,
+         RODS, RODS_BY_PRICE } from '../vendor/fru-angler/fishing.js';
 
 const PAGE = readFileSync(
   new URL('../vendor/fru-angler/index.html', import.meta.url),
@@ -22,7 +23,7 @@ const PAGE = readFileSync(
  * Boot a fresh instance. Each call gets its own JSDOM, virtual clock and module
  * instance (the ?run= query defeats Node's ES module cache).
  */
-async function boot(run = 1, randomValue = 0.1) {
+async function boot(run = 1, randomValue = 0.1, seed = null) {
   const dom = new JSDOM(PAGE, { url: 'http://localhost:8080/vendor/fru-angler/index.html' });
   const win = dom.window;
 
@@ -58,8 +59,26 @@ async function boot(run = 1, randomValue = 0.1) {
   globalThis.setInterval = (fn) => { ctx.intervals.add(fn); return ctx.intervals.size; };
   globalThis.clearInterval = () => ctx.intervals.clear();
 
+  // A save must be in place BEFORE the module is imported: load() reads it at
+  // import time. Each boot() builds its own JSDOM, so the seed is written to this
+  // window rather than to some earlier one.
+  if (seed) win.localStorage.setItem('fru-angler-save', JSON.stringify(seed));
+
   await import(`../vendor/fru-angler/angler.js?run=${run}`);
   return ctx;
+}
+
+/**
+ * Write a save, then boot a single fresh instance against it.
+ *
+ * Booting first and re-importing the module leaves TWO live instances listening on
+ * the same window, so input handlers run twice and a test can accidentally watch
+ * the instance it did not mean to. Seeding first gives exactly one.
+ */
+async function seedSave(save, run = 900) {
+  const probe = await boot(run, 0.1);
+  probe.win.localStorage.setItem('fru-angler-save', JSON.stringify(save));
+  return probe;
 }
 
 /** Advance one animation frame. */
@@ -134,7 +153,7 @@ test('the game boots with a rod, a wallet and the idle hint', async () => {
   assert.equal(text(ctx, 'rod'), 'Bamboo Pole');
   assert.ok(Number(text(ctx, 'coins')) > 0, 'starts with coins');
   assert.equal(text(ctx, 'message').length > 0, true, 'tells the player what to do');
-  assert.equal(text(ctx, 'bestiary'), '0/6 species landed');
+  assert.equal(text(ctx, 'bestiary'), `0/${FISH.length} species landed`);
 });
 
 test('holding space raises the cast meter and releasing starts the wait', async () => {
@@ -198,7 +217,7 @@ test('a tracking player lands the fish, is paid, and the bestiary updates', asyn
     'the card states rarity and weight: ' + meta);
   assert.match(text(ctx, 'catch-value'), /^¤ \d+$/);
   assert.ok(Number(text(ctx, 'coins')) > before, 'landing a fish pays out');
-  assert.equal(text(ctx, 'bestiary'), '1/6 species landed');
+  assert.equal(text(ctx, 'bestiary'), `1/${FISH.length} species landed`);
 });
 
 test('ignoring the fish drains the bar and snaps the line', async () => {
@@ -234,7 +253,8 @@ test('the shop lists every rod and a purchase upgrades the equipped one', async 
   assert.equal(ctx.doc.getElementById('shop-panel').hidden, false);
 
   const buttons = [...ctx.doc.querySelectorAll('#shop-list .rod')];
-  assert.equal(buttons.length, 4, 'the shop offers the four rods you do not own');
+  assert.equal(buttons.length, RODS_BY_PRICE.length - 1,
+    'the shop offers every rod you do not own');
 
   // The shop no longer lists the equipped rod, so nothing here says "equipped".
   assert.equal(buttons.some((b) => b.textContent.includes('equipped')), false,
@@ -243,7 +263,8 @@ test('the shop lists every rod and a purchase upgrades the equipped one', async 
   // Cheapest first: the willow is affordable on the starting wallet, the titan is not.
   assert.equal(buttons[0].dataset.rod, 'willow');
   assert.equal(buttons[0].disabled, false, 'the willow is affordable to start with');
-  assert.equal(buttons[buttons.length - 1].dataset.rod, 'titan');
+  assert.equal(buttons[buttons.length - 1].dataset.rod, 'abyss',
+    'the dearest rod is listed last');
   assert.equal(buttons[buttons.length - 1].disabled, true,
     'the top rod is unaffordable on the starting wallet');
 
@@ -271,7 +292,7 @@ test('progress and wallet survive a reload', async () => {
 
   assert.equal(text(first, 'coins'), '4321');
   assert.equal(text(first, 'rod'), 'Carbon Float');
-  assert.equal(text(first, 'bestiary'), '1/6 species landed');
+  assert.equal(text(first, 'bestiary'), `1/${FISH.length} species landed`);
 });
 
 test('a corrupt save falls back to a playable loadout', async () => {
@@ -289,7 +310,8 @@ test('an unknown saved rod id is ignored rather than breaking the HUD', async ()
   }));
   await import('../vendor/fru-angler/angler.js?run=10b');
   assert.equal(text(ctx, 'rod'), 'Bamboo Pole', 'an unknown rod falls back to the cheapest');
-  assert.equal(text(ctx, 'bestiary'), '0/6 species landed', 'a null bestiary is not trusted');
+  assert.equal(text(ctx, 'bestiary'), `0/${FISH.length} species landed`,
+    'a null bestiary is not trusted');
 });
 
 
@@ -370,7 +392,8 @@ test('the shop is for buying, and points at the inventory for owned rods', async
   ctx.doc.getElementById('shop-open').click();
   const headings = [...ctx.doc.querySelectorAll('#shop-list .shop__section')]
     .map((h) => h.textContent);
-  assert.match(headings[0], /For sale \(4\)/, `headings were ${JSON.stringify(headings)}`);
+  assert.match(headings[0], new RegExp(`For sale \\(${RODS_BY_PRICE.length - 1}\\)`),
+    `headings were ${JSON.stringify(headings)}`);
   assert.equal(shopRow(ctx, 'bamboo'), null, 'the rod you own is not sold to you again');
   assert.ok(shopRow(ctx, 'willow'), 'rods you do not own are listed');
 });
@@ -506,7 +529,7 @@ test('the inventory lists every fish, showing the heaviest landed', async () => 
   const ctx = await boot(24);
   ctx.doc.getElementById('inventory-open').click();
   const rows = ctx.doc.querySelectorAll('#inventory-fish .species');
-  assert.equal(rows.length, 6, 'all six species are listed even before you catch them');
+  assert.equal(rows.length, FISH.length, 'every species is listed even before you catch them');
   assert.equal([...rows].filter((r) => r.dataset.caught === 'true').length, 0,
     'nothing caught yet');
 
@@ -549,7 +572,7 @@ test('only one panel is open at a time', async () => {
 test('an empty inventory panel still lists all six fish', async () => {
   const ctx = await boot(27);
   ctx.doc.getElementById('inventory-open').click();
-  assert.equal(ctx.doc.querySelectorAll('#inventory-fish .species').length, 6);
+  assert.equal(ctx.doc.querySelectorAll('#inventory-fish .species').length, FISH.length);
   assert.match(ctx.doc.getElementById('inventory-rods').textContent, /Bamboo/);
 });
 
@@ -705,11 +728,14 @@ test('per-fish odds in the index are a share of all casts, not of the tier', () 
   assert.doesNotMatch(source, /totalWeight\(\)/,
     'the per-tier helper is the bug this guards against');
 
-  // Sanity: a one-fish tier must not produce 100%.
-  const single = fishIndex().find((g) => g.fish.length === 1);
-  assert.ok(single, 'expected at least one single-fish tier');
-  const perFish = single.fish[0].weight / FISH.reduce((s, f) => s + f.weight, 0) * 100;
-  assert.ok(perFish < 100, `a single fish in its tier still cannot be a certainty: ${perFish}%`);
+  // Sanity: no single fish may read as a certainty. Check the rarest tier, which
+  // has the least to dilute it.
+  const rarest = fishIndex().find((g) => g.rarity === 'Mythical');
+  assert.ok(rarest, 'expected a Mythical tier');
+  for (const f of rarest.fish) {
+    const perFish = f.weight / FISH.reduce((s, x) => s + x.weight, 0) * 100;
+    assert.ok(perFish < 100, `${f.name} cannot be a certainty: ${perFish}%`);
+  }
 
   // And the page must have somewhere to show them.
   assert.match(page, /id="index-list"/);
@@ -824,7 +850,10 @@ test('a fresh save starts in Aero Lake and can move once a lake unlocks', async 
   assert.ok(rows.slice(1).every((r) => r.getAttribute('aria-disabled') === 'true'),
     'the rest start locked');
   assert.match(rows[1].textContent, /DORFic Delta/, 'and they are named');
-  assert.match(rows[1].textContent, /0\/2 fished/, 'a locked lake says what is missing');
+  assert.ok(rows[1].textContent.includes(`0/${AREAS[0].fish.length} fished`),
+    `a locked lake counts the lake before it: "${rows[1].textContent}"`);
+  assert.ok(rows[1].textContent.includes(`1/${RODS_BY_PRICE.length} rods`),
+    `and says how many rods are missing: "${rows[1].textContent}"`);
 
   // Opening it shows the same rows.
   button.dispatchEvent(new ctx.win.MouseEvent('click', { bubbles: true }));
@@ -834,16 +863,19 @@ test('a fresh save starts in Aero Lake and can move once a lake unlocks', async 
 
 test('an earned lake is loaded and the scene painted with its light', async () => {
   const ctx = await boot(36);
-  const { AREAS } = await import('../vendor/fru-angler/fishing.js');
+  const { AREAS, RODS } = await import('../vendor/fru-angler/fishing.js');
+  const allRods = Object.keys(RODS);
 
-  // Earn the second lake honestly: land its fish and own every rod.
+  // Earn the second lake the way the game now asks: clear the lake before it
+  // (Aero Lake, all six species) and own every rod.
   const area = AREAS[1];
   const bestiary = {};
-  for (const id of area.fish) bestiary[id] = 5;
+  for (const id of AREAS[0].fish) bestiary[id] = 5;
   localStorage.setItem('fru-angler-save', JSON.stringify({
     coins: 500,
-    owned: ['bamboo', 'willow', 'carbon', 'oak', 'titan'],
-    rodId: 'titan',
+    // Every rod: the gate requires the full set, and it grows as rods are added.
+    owned: allRods,
+    rodId: allRods[allRods.length - 1],
     bestiary,
     areaId: area.id,
   }));
@@ -878,4 +910,68 @@ test('the scene repaints with the lake palette', async () => {
   const before = lake.style.getPropertyValue('--sky-top');
   assert.ok(before, 'the lake must carry its palette as custom properties');
   assert.match(before, /^#[0-9a-f]{3,8}$/i, `unexpected sky colour: ${before}`);
+});
+
+
+/* ------------------------------------------------- trait-gated fishing */
+
+test('a lake you cannot reach with your rod refuses the cast', async () => {
+  // Seed the save BEFORE booting. Booting first and re-importing leaves two live
+  // module instances on the same window, and the older one still casts, so this
+  // test would watch the un-guarded path.
+  const { AREAS, RODS, rodWorksIn } = await import('../vendor/fru-angler/fishing.js');
+  const deep = AREAS[AREAS.length - 1];
+  const bestiary = {};
+  for (const id of AREAS[AREAS.length - 2].fish) bestiary[id] = 5;
+  const allRods = Object.keys(RODS);
+
+  const ctx = await boot(40, 0.1, {
+    coins: 99999, owned: allRods, rodId: 'bamboo', bestiary, areaId: deep.id,
+  });
+
+  assert.equal(rodWorksIn('bamboo', deep.id), false, 'precondition: bamboo cannot work it');
+  assert.equal(text(ctx, 'lake-name'), deep.name, 'and we are standing there');
+
+  // Pressing must not start a cast, and must say why.
+  key(ctx, 'keydown');
+  run(ctx, 30);
+  key(ctx, 'keyup');
+  run(ctx, 10);
+
+  assert.equal(ctx.doc.getElementById('lake').dataset.phase, 'idle',
+    'the cast must not start in a gated lake');
+  assert.match(text(ctx, 'message'), new RegExp(deep.trait),
+    `the message should name the missing trait: "${text(ctx, 'message')}"`);
+});
+
+test('with the right rod, the gated lake fishes normally', async () => {
+  const { AREAS, RODS, rodWorksIn } = await import('../vendor/fru-angler/fishing.js');
+  const deep = AREAS[AREAS.length - 1];
+  const bestiary = {};
+  for (const id of AREAS[AREAS.length - 2].fish) bestiary[id] = 5;
+  const allRods = Object.keys(RODS);
+  const right = allRods.find((id) => RODS[id].traits.includes(deep.trait));
+  assert.ok(right, `no rod carries the ${deep.trait} trait`);
+
+  const ctx = await boot(41, 0.1, {
+    coins: 99999, owned: allRods, rodId: right, bestiary, areaId: deep.id,
+  });
+  assert.equal(rodWorksIn(right, deep.id), true, 'precondition: this rod can work it');
+
+  key(ctx, 'keydown');
+  run(ctx, 30);
+  key(ctx, 'keyup');
+  run(ctx, 20);
+
+  assert.notEqual(ctx.doc.getElementById('lake').dataset.phase, 'idle',
+    'the cast should start with the right rod');
+});
+
+test('the shop shows the trait a rod carries and the lake it opens', () => {
+  const page = readFileSync(new URL('../vendor/fru-angler/index.html', import.meta.url), 'utf8');
+  const source = readFileSync(new URL('../vendor/fru-angler/angler.js', import.meta.url), 'utf8');
+  assert.match(page, /\.rod__trait\b/, 'traits need a style');
+  assert.match(page, /\.rod__opens\b/, 'and the lake they open needs one');
+  assert.match(source, /rod__trait/, 'the shop row must render the trait');
+  assert.match(source, /opens \$\{AREAS\.filter/, 'and say which lake it opens');
 });
