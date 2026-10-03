@@ -200,11 +200,30 @@
   }
   .cell[data-filled="true"] { animation: land 180ms var(--ease); }
 
+  /* ---- the clear effect ------------------------------------------------ */
+
+  /* A cleared cell: a bloom that expands and fades. Under half a second, so the
+   * board never feels like it is lagging behind the click. */
+  .burst {
+    position: absolute; border-radius: 50%; pointer-events: none;
+    background: radial-gradient(circle,
+      rgba(255, 255, 255, 0.95), rgba(255, 255, 255, 0.35) 45%, rgba(255, 255, 255, 0) 70%);
+    box-shadow: 0 0 18px rgba(255, 255, 255, 0.8), 0 0 42px rgba(160, 220, 255, 0.6);
+    animation: burst 460ms var(--ease) forwards;
+    z-index: 3;
+  }
+  @keyframes burst {
+    from { transform: scale(0.2); opacity: 0.95; }
+    to   { transform: scale(2.1); opacity: 0; }
+  }
+
   @media (prefers-reduced-motion: reduce) {
     *, *::before, *::after {
       animation: none !important;
       transition: none !important;
     }
+    .burst { opacity: 0; }
+  }
   }
 
   @media (max-width: 460px) { :root { --cell: 38px; } }

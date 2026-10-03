@@ -112,3 +112,28 @@ test('the animation is decorative only and respects reduced motion', () => {
   assert.ok(reduced.length > 0, 'there must be a reduced-motion block');
   assert.match(reduced, /animation:\s*none/, 'and it must switch animations off');
 });
+
+test('a cleared line is animated, not just deleted', () => {
+  assert.match(CSS, /\.burst\s*\{/, 'there must be a clear effect');
+  assert.match(CSS, /@keyframes burst/, 'with a keyframe animation');
+  assert.match(CSS, /animation:[^;]*\bburst\b/, 'and something must trigger it');
+});
+
+test('the clear effect is layered Aero light, not a flat flash', () => {
+  const burst = rule('.burst');
+  assert.ok(burst, '.burst must be styled');
+  assert.match(burst, /radial-gradient/, 'a bloom, not a solid box');
+  assert.match(burst, /box-shadow/, 'and a glow');
+});
+
+test('the spawn animation is short, so the board never feels laggy', () => {
+  const land = CSS.match(/animation:\s*land\s+(\d+)ms/);
+  assert.ok(land, 'the landing animation must declare a duration');
+  assert.ok(Number(land[1]) <= 500, `landing is ${land[1]}ms, too slow`);
+});
+
+test('the burst is decorative only and never intercepts a click', () => {
+  const burst = rule('.burst');
+  assert.match(burst, /pointer-events:\s*none/,
+    'a bloom must not swallow the drop that follows it');
+});

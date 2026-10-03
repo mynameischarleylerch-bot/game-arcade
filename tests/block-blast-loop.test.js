@@ -187,3 +187,40 @@ test('the preview never promises a move the game would refuse', async () => {
     }
   }
 });
+
+test('placing a whole tray refills it with three new blocks', async () => {
+  const win = await boot(10);
+  const doc = win.document;
+
+  /** Place the held block at the first legal cell; returns false if none. */
+  function placeHeld() {
+    const block = doc.querySelector('#tray .tray__block');
+    if (!block) return false;
+    mouse(win, 'mousedown', block);
+    for (let y = 0; y < 8; y += 1) {
+      for (let x = 0; x < 8; x += 1) {
+        mouse(win, 'mousemove', cellAt(doc, x, y));
+        if (!doc.querySelector('#board .cell.is-target')) continue;
+        mouse(win, 'mousedown', cellAt(doc, x, y));
+        return true;
+      }
+    }
+    mouse(win, 'mousedown', block);   // put it back
+    return false;
+  }
+
+  assert.equal(doc.querySelectorAll('#tray .tray__block').length, 3);
+
+  // Place all three. The tray empties, then refills.
+  for (let i = 0; i < 3; i += 1) {
+    const before = doc.querySelectorAll('#tray .tray__block').length;
+    if (before === 0) break;
+    assert.equal(placeHeld(), true, `block ${i + 1} of the tray should have placed`);
+  }
+
+  assert.equal(doc.querySelectorAll('#tray .tray__block').length, 3,
+    'an emptied tray is refilled with three new blocks');
+  assert.ok(Number(doc.getElementById('score').textContent) > 0,
+    'placing scored something');
+  assert.equal(doc.getElementById('over').hidden, true, 'the run continues');
+});
