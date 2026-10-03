@@ -6,7 +6,7 @@
  * only part that touches the DOM.
  */
 import {
-  RODS, FISH, RARITY_COLOURS,
+  RODS, FISH, RARITY_ORDER,
   castQuality, castDistance, biteDelayFor, rollFish, rollMutation,
   fishWeight, canCatch, catchValue, startingLoadout, buyRod, recordCatch,
 } from './fishing.js?v=2026-10-01-a';
@@ -22,7 +22,7 @@ const SHAKE_BONUS_MS = 420;   // bite delay removed per shake pressed
 const SHAKE_MAX_ON_SCREEN = 3;
 const REEL_DT = 1 / 60;
 const SAVE_KEY = 'fru-angler-save';
-const IDLE_HINT = 'Hold Space or press and hold, then release in the green band.';
+const IDLE_HINT = 'HOLD SPACE TO CHARGE, RELEASE IN THE WOOD BAND.';
 
 /* --------------------------------------------------------------------- dom */
 
@@ -38,6 +38,8 @@ const ui = {
   shopOpen: el('shop-open'), shopClose: el('shop-close'),
   coins: el('coins'), rod: el('rod'), rodStats: el('rod-stats'), bestiary: el('bestiary'),
   message: el('message'),
+  line: el('line'),
+  rarity: el('catch-rarity'),
 };
 
 /* ------------------------------------------------------------------- state */
@@ -100,6 +102,7 @@ function paintChrome() {
 
 function setPhase(phase) {
   state.phase = phase;
+  ui.lake.dataset.phase = phase;
   ui.cast.hidden = phase !== 'casting';
   ui.reel.hidden = phase !== 'reeling';
   ui.catch.hidden = phase !== 'result';
@@ -140,6 +143,18 @@ function clearShake() {
   for (const node of ui.lake.querySelectorAll('.shake')) node.remove();
 }
 
+/** Move the bobber, its splash and the fishing line together. */
+function placeBobber(left, top) {
+  ui.bobber.style.left = `${left}%`;
+  ui.bobber.style.top = `${top}%`;
+  ui.splash.style.left = `${left}%`;
+  ui.splash.style.top = `${top}%`;
+  // The line runs from the rod tip (fixed at 56,32 in the scene) to the bobber.
+  const x = 56 + (left / 100) * 44;
+  const y = 32 + (top / 100) * 68;
+  ui.line?.setAttribute('d', `M56 32 Q${(56 + x) / 2} ${(32 + y) / 2 + 6} ${x.toFixed(2)} ${y.toFixed(2)}`);
+}
+
 /* -------------------------------------------------------------------- cast */
 
 function beginCast() {
@@ -153,10 +168,8 @@ function releaseCast() {
   const quality = castQuality(state.meter);
   const reach = castDistance(quality);
   ui.lake.style.setProperty('--cast-ms', `${Math.round(320 + reach * 420)}ms`);
-  ui.bobber.style.left = `${22 + reach * 56}%`;
-  ui.bobber.style.top = `${30 + reach * 26}%`;
-  ui.splash.style.left = ui.bobber.style.left;
-  ui.splash.style.top = ui.bobber.style.top;
+  // A longer cast lands further right, in open water rather than on the pier.
+  placeBobber(46 + reach * 42, 70 + reach * 16);
   ui.splash.classList.add('is-on');
 
   state.biteAt = performance.now() + biteDelayFor(rod());
@@ -199,10 +212,24 @@ function stepReel() {
   else if (outcome === lineSnapped) loseFish(`${state.hooked.name} got away.`);
 }
 
-function showResult(name, meta, value, colour) {
-  ui.catchName.textContent = name;
-  ui.catchName.style.color = colour ?? RARITY_COLOURS.Common;
-  ui.catchMeta.textContent = meta;
+/** Rarity as a row of blocks: one per tier, filled up to this fish's. */
+function paintRarity(rarity) {
+  if (!ui.rarity) return;
+  const level = RARITY_ORDER.indexOf(rarity) + 1;
+  ui.rarity.textContent = '';
+  for (let i = 0; i < RARITY_ORDER.length; i += 1) {
+    const pip = document.createElement('span');
+    pip.className = i < level ? 'catch__pip is-on' : 'catch__pip';
+    ui.rarity.appendChild(pip);
+  }
+  ui.rarity.setAttribute('aria-label', `Rarity ${level} of ${RARITY_ORDER.length}: ${rarity}`);
+}
+
+function showResult(name, meta, value, rarity) {
+  // The UI is set in caps for the pixel look; case it here once, not at each call site.
+  ui.catchName.textContent = name.toUpperCase();
+  paintRarity(rarity);
+  ui.catchMeta.textContent = meta.toUpperCase();
   ui.catchValue.textContent = `¤ ${value}`;
   setPhase('result');
   ui.catchAgain.focus();
@@ -216,7 +243,7 @@ function landFish() {
   // The weight ceiling is the rod's real limit: land nothing heavier, or it snaps.
   if (!canCatch(fish, kg, current)) {
     return loseFish(
-      `${fish.name} weighed ${kg} kg — over this rod's ${current.maxKg} kg limit. Line snapped.`,
+      `${fish.name} weighed ${kg} kg — over this rod's ${current.maxKg} kg limit.`
     );
   }
 
@@ -233,13 +260,13 @@ function landFish() {
     kg > wasBest ? 'new personal best!' : null,
   ].filter(Boolean).join(' · ');
 
-  showResult(mutation.name ? `${mutation.name} ${fish.name}` : fish.name, meta, value, RARITY_COLOURS[fish.rarity]);
+  showResult(mutation.name ? `${mutation.name} ${fish.name}` : fish.name, meta, value, fish.rarity);
   save();
   paintChrome();
 }
 
 function loseFish(reason) {
-  showResult('Line snapped', reason, 0, '#e07b2a');
+  showResult('Line snapped', reason, 0, null);
 }
 
 /* -------------------------------------------------------------------- shop */

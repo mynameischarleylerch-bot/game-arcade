@@ -131,3 +131,58 @@ test('a zero-resistance rod is handled without dividing by zero', () => {
     1 / 60,
   ));
 });
+
+
+test('no fish can outrun the player, so every fish is winnable', () => {
+  // The fish's worst-case step is fishSpeed * (1 + jitter). If that ever reaches
+  // playerSpeed the fish is mathematically unwinnable, however good the player is.
+  for (const fight of [0, 0.35, 0.6, 0.88, 1]) {
+    for (const resilience of [0, 0.3, 0.85]) {
+      const cfg = reelConfig({ fight, control: 0.2, resilience });
+      const worstCase = cfg.fishSpeed * (1 + cfg.jitter);
+      assert.ok(worstCase < cfg.playerSpeed,
+        `fight ${fight} / resilience ${resilience}: fish peaks at ${worstCase.toFixed(3)} ` +
+        `but the player only reaches ${cfg.playerSpeed}`);
+    }
+  }
+});
+
+test('a Mythical on the starter rod is still beatable by a tracking player', () => {
+  const cfg = reelConfig({ fight: 1, control: 0.2, resilience: 0.3 });
+  let state = { fishX: 0.5, playerX: 0.5, progress: 0.34, holding: true };
+  let landed = false;
+  for (let i = 0; i < 60 * 120; i += 1) {
+    const next = stepReel(cfg, state, 1 / 60, ((i * 7919) % 1000) / 1000);
+    // Chase the fish, clamping to the bar like the UI does.
+    state = { ...next, playerX: Math.min(1, Math.max(0, next.fishX)), holding: next.fishX < 1 };
+    if (state.progress >= 1) { landed = true; break; }
+    assert.ok(state.progress > 0, `a tracking player lost containment at frame ${i}`);
+  }
+  assert.ok(landed, 'the worst fish in the game must still be landable');
+});
+
+
+test('the player bar travels left at nearly the speed it travels right', () => {
+  // Asymmetric control is the subtlest way to make a fishing minigame unfair: the
+  // bar is pushed one way by the key and drifts the other, and if the drift is
+  // much slower a fish swimming that way can never be followed.
+  for (const resilience of [0, 0.3, 0.85]) {
+    const cfg = reelConfig({ fight: 0.6, control: 0.24, resilience });
+    assert.ok(cfg.idleDrift >= cfg.playerSpeed * 0.6,
+      `drift ${cfg.idleDrift} is far slower than push ${cfg.playerSpeed}`);
+    assert.ok(cfg.idleDrift <= cfg.playerSpeed,
+      'drift should not outpace the push, or releasing is the fast way to move');
+  }
+});
+
+test('a left-swimming fish can be followed with the available controls', () => {
+  const cfg = reelConfig({ fight: 0.88, control: 0.24, resilience: 0.4 });
+  // Force the fish hard left every frame: the player must be able to keep up.
+  let state = { fishX: 0.9, playerX: 0.9, progress: 0.34, holding: true };
+  for (let i = 0; i < 240; i += 1) {
+    const next = stepReel(cfg, state, 1 / 60, 0);
+    state = { ...next, playerX: next.fishX, holding: next.fishX > cfg.playerWidth / 2 };
+    assert.ok(state.playerX >= 0 && state.playerX <= 1);
+  }
+  assert.ok(state.progress > 0.34, 'progress held while following the fish left');
+});

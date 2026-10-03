@@ -21,9 +21,15 @@ const PAGE = readFileSync(
  * Boot a fresh instance. Each call gets its own JSDOM, virtual clock and module
  * instance (the ?run= query defeats Node's ES module cache).
  */
-async function boot(run = 1) {
+async function boot(run = 1, randomValue = 0.1) {
   const dom = new JSDOM(PAGE, { url: 'http://localhost:8080/vendor/fru-angler/index.html' });
   const win = dom.window;
+
+  // Pin the randomness. The game uses Math.random() for the fish roll, the bite
+  // jitter, the reel wander and the shake placement, so one constant makes a run
+  // reproducible. 0.1 lands on a Glidefin — difficulty itself is covered by
+  // angler-reel.test.js, so these tests only need a known fish to exercise wiring.
+  globalThis.Math.random = () => randomValue;
 
   let now = 1000;
   let queue = [];
@@ -137,7 +143,7 @@ test('the bobber travels and a bite eventually opens the minigame', async () => 
 });
 
 test('a tracking player lands the fish, is paid, and the bestiary updates', async () => {
-  const ctx = await boot(4);
+  const ctx = await boot(4, 0.1);   // pinned to a Glidefin: fight 0.35, easy to hold
   const before = Number(text(ctx, 'coins'));
 
   assert.equal(castAndWaitForBite(ctx), true, 'hooked');
@@ -147,7 +153,10 @@ test('a tracking player lands the fish, is paid, and the bestiary updates', asyn
   for (let i = 0; i < 60 * 60; i += 1) {
     const ui = reelUi(ctx);
     const centre = ui.playerLeft + ui.playerWidth / 2;
-    if (centre < ui.fish) key(ctx, 'keydown');
+    // Aim where the fish is going, not where it is: chasing the current position
+    // lags by a frame and loses containment on the twitchy fish.
+    const lead = ui.fish - centre;
+    if (lead > -0.5) key(ctx, 'keydown');
     else key(ctx, 'keyup');
     step(ctx);
     if (!ctx.doc.getElementById('catch').hidden) break;
@@ -159,8 +168,8 @@ test('a tracking player lands the fish, is paid, and the bestiary updates', asyn
   const name = text(ctx, 'catch-name');
   const meta = text(ctx, 'catch-meta');
   assert.ok(name.length > 0, 'the catch card names the fish');
-  assert.doesNotMatch(name, /Line snapped/, 'a tracked fish is not snapped: ' + name);
-  assert.match(meta, /(Common|Uncommon|Rare|Legendary|Mythical) · [\d.]+ kg/,
+  assert.doesNotMatch(name, /LINE SNAPPED/, 'a tracked fish is not snapped: ' + name);
+  assert.match(meta, /(COMMON|UNCOMMON|RARE|LEGENDARY|MYTHICAL) · [0-9.]+ KG/,
     'the card states rarity and weight: ' + meta);
   assert.match(text(ctx, 'catch-value'), /^¤ \d+$/);
   assert.ok(Number(text(ctx, 'coins')) > before, 'landing a fish pays out');
@@ -178,8 +187,8 @@ test('ignoring the fish drains the bar and snaps the line', async () => {
   run(ctx, 60 * 60);
 
   assert.equal(ctx.doc.getElementById('catch').hidden, false, 'the attempt resolved');
-  assert.equal(text(ctx, 'catch-name'), 'Line snapped');
-  assert.match(text(ctx, 'catch-meta'), /got away|Line snapped/);
+  assert.equal(text(ctx, 'catch-name'), 'LINE SNAPPED');
+  assert.match(text(ctx, 'catch-meta'), /GOT AWAY|LINE SNAPPED/);
   assert.equal(text(ctx, 'catch-value'), '¤ 0');
 });
 
@@ -191,7 +200,7 @@ test('casting again returns to the idle prompt', async () => {
   ctx.doc.getElementById('catch-again').click();
   assert.equal(ctx.doc.getElementById('catch').hidden, true);
   assert.equal(ctx.doc.getElementById('reel').hidden, true);
-  assert.match(text(ctx, 'message'), /Hold Space/);
+  assert.match(text(ctx, 'message'), /HOLD SPACE/);
 });
 
 test('the shop lists every rod and a purchase upgrades the equipped one', async () => {
@@ -247,4 +256,50 @@ test('an unknown saved rod id is ignored rather than breaking the HUD', async ()
   await import('../vendor/fru-angler/angler.js?run=10b');
   assert.equal(text(ctx, 'rod'), 'Bamboo Pole', 'an unknown rod falls back to the cheapest');
   assert.equal(text(ctx, 'bestiary'), '0/6 species landed', 'a null bestiary is not trusted');
+});
+
+
+test('the scene draws the fishing line from the rod tip to the bobber', async () => {
+  const ctx = await boot(11);
+  const line = ctx.doc.getElementById('line');
+  const start = line.getAttribute('d');
+
+  key(ctx, 'keydown');
+  run(ctx, 45);
+  key(ctx, 'keyup');
+
+  assert.notEqual(line.getAttribute('d'), start, 'the line follows the cast');
+  const d = line.getAttribute('d');
+  const [, x, y] = d.match(/([\d.]+)\s+([\d.]+)$/).map(Number);
+  const left = parseFloat(ctx.doc.getElementById('bobber').style.left);
+  assert.ok(Math.abs(x - (56 + (left / 100) * 44)) < 0.5,
+    `line end ${x} should match the bobber at ${left}%`);
+});
+
+test('the lake reports its phase so the bobber can restyle itself', async () => {
+  const ctx = await boot(12);
+  const lake = ctx.doc.getElementById('lake');
+  assert.equal(lake.dataset.phase, 'idle');
+  key(ctx, 'keydown');
+  run(ctx, 3);
+  assert.equal(lake.dataset.phase, 'casting');
+  key(ctx, 'keyup');
+  assert.equal(lake.dataset.phase, 'waiting');
+});
+
+test('a landed fish shows rarity as filled blocks, not colour', async () => {
+  const ctx = await boot(13, 0.1);   // pinned to a Glidefin: one rarity block filled
+  assert.equal(castAndWaitForBite(ctx), true);
+  for (let i = 0; i < 60 * 60; i += 1) {
+    const ui = reelUi(ctx);
+    if (ui.playerLeft + ui.playerWidth / 2 < ui.fish) key(ctx, 'keydown');
+    else key(ctx, 'keyup');
+    step(ctx);
+    if (!ctx.doc.getElementById('catch').hidden) break;
+  }
+  const pips = ctx.doc.querySelectorAll('#catch-rarity .catch__pip');
+  assert.equal(pips.length, 5, 'five rarity blocks, one per tier');
+  const filled = [...pips].filter((p) => p.classList.contains('is-on'));
+  assert.ok(filled.length >= 1 && filled.length <= 5);
+  assert.match(ctx.doc.getElementById('catch-rarity').getAttribute('aria-label'), /Rarity \d of 5/);
 });

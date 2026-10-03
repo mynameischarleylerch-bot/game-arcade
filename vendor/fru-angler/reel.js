@@ -12,13 +12,17 @@
 
 const BASE_FISH_SPEED = 0.55;      // bar-widths per second at fight = 1
 const BASE_PLAYER_SPEED = 1.05;    // bar-widths per second under the player's thumb
-const IDLE_DRIFT = 0.28;           // the bar slides back left when not held
+/* The bar is pushed right while held and slides left when released, so the two
+ * speeds must stay close. A much slower drift made a left-swimming fish
+ * impossible to follow; 0.9 keeps a small penalty for mashing the key. */
+const IDLE_DRIFT = BASE_PLAYER_SPEED * 0.9;
 const PROGRESS_RATE = 0.34;        // scale applied to the fill/drain rate
 const DRAIN_RATE = 0.22;           // scale applied to the drain rate
 const EASY_FRAMES = 2.2;           // seconds of perfect containment for a docile fish
 const HARD_FRAMES = 5.5;           // ...and for a Mythical
 const RESILIENCE_CALM = 0.55;      // how much resilience can flatten the fish
 const MAX_PLAYER_WIDTH = 0.5;
+const MAX_FISH_SPEED = BASE_PLAYER_SPEED * 0.8;   // the angler can always catch up
 
 export const reelOutcome = {
   inProgress: 'in-progress',
@@ -38,13 +42,20 @@ export function reelConfig({ fight, control, resilience }) {
 
   // Resilience damps both the fish's speed and how erratically it turns.
   const calm = 1 - r * RESILIENCE_CALM;
-  const fishSpeed = BASE_FISH_SPEED * (0.35 + f * 0.65) * calm;
+  const rawSpeed = BASE_FISH_SPEED * (0.35 + f * 0.65) * calm;
+
+  // Fairness: the fish's fastest possible step is fishSpeed * (1 + jitter), and it
+  // must stay under the player's top speed or a hard fish becomes mathematically
+  // unwinnable rather than merely hard. Cap the mean, then the wander.
+  const fishSpeed = Math.min(rawSpeed, MAX_FISH_SPEED);
+  const rawJitter = (0.5 + f * 1.1) * (1 - r * 0.6);
+  const jitter = Math.max(0, Math.min(rawJitter, MAX_FISH_SPEED / fishSpeed - 1));
 
   return {
     fight: f,
     playerWidth: c,
     fishSpeed,
-    jitter: Math.max(0, (0.5 + f * 1.1) * (1 - r * 0.6)),
+    jitter,
     playerSpeed: BASE_PLAYER_SPEED,
     idleDrift: IDLE_DRIFT,
     // Docile fish fill fast and rare; Mythicals drag on.
