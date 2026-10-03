@@ -23,10 +23,10 @@ import {
  levelFrom, xpForCatch, xpForLevel, luckFor, luckFromLevel,
  rollLostItem, lostItemsFor, sellLostItems, lostItemById,
  buySeal, equipSeal, sealComment, sealDuplicates,
-} from './fishing.js?v=2026-10-03-d';
+} from './fishing.js?v=2026-10-03-e';
 import {
   reelConfig, stepReel as advance, reelOutcomeFor, isCaught, lineSnapped,
-} from './reel.js?v=2026-10-03-d';
+} from './reel.js?v=2026-10-03-e';
 
 /* ------------------------------------------------------------------ tuning */
 
@@ -70,6 +70,8 @@ const ui = {
   line: el('line'),
   level: el('level'), levelTitle: el('level-title'), levelBar: el('level-progress'),
   sealWallet: el('seal-coins'),      // HUD
+  bubble: el('fa-bubble'), bubbleText: el('fa-bubble-text'),
+  notify: el('notify'),
   sealShopCoins: el('seal-shop-coins'),  // inside the seal shop
   findsList: el('finds-list'), sellFinds: el('sell-finds'),
   pet: el('fa-pet'),
@@ -244,12 +246,54 @@ function sellFinds() {
   renderSealShop();
 }
 
+/**
+ * Say something out of the seal's mouth.
+ *
+ * A bubble rather than only the message line: the message line is shared, so a
+ * sale or a gift would overwrite the seal's opinion. The bubble belongs to the
+ * pet and nothing else competes for it.
+ */
+function sealSays(line) {
+  if (!ui.bubble) return;
+  if (!line) {
+    ui.bubble.setAttribute('hidden', '');
+    return;
+  }
+  // The bubble is 25 units wide; SVG has no text wrapping, so long lines are cut
+  // rather than allowed to run off the lake.
+  const text = String(line);
+  const shown = text.length > 42 ? `${text.slice(0, 41)}\u2026` : text;
+  ui.bubbleText.textContent = shown;
+  ui.bubble.removeAttribute('hidden');
+}
+
+/** A brief card for a duplicate, a gift or a sale. */
+let noticeTimer = null;
+function notify(text) {
+  if (!ui.notify || !text) return;
+  ui.notify.textContent = '';
+  const card = document.createElement('div');
+  card.className = 'notice';
+  card.textContent = text;
+  ui.notify.appendChild(card);
+  if (noticeTimer) clearTimeout(noticeTimer);
+  noticeTimer = setTimeout(() => { ui.notify.textContent = ''; }, 4200);
+}
+
 /** The seal on the dock, tinted per seal and hidden when there is none. */
 function paintPet() {
   if (!ui.pet) return;
   const seal = SEALS.find((item) => item.id === state.equippedSeal) ?? null;
-  ui.pet.toggleAttribute('hidden', !seal);
-  if (!seal) return;
+  // Hide the WRAPPER, not the pet: parentNode is the fitted group, and the pet
+  // is its own nearest 'g' ancestor, so closest('g') here returns the pet itself
+  // and the wrapper -- the thing that is actually visible -- never changes.
+  const holder = ui.pet?.parentNode;
+  if (holder) {
+    if (seal) holder.removeAttribute('hidden');
+    else holder.setAttribute('hidden', '');
+  }
+  if (!seal) { sealSays(''); return; }
+  fitPet();
   const stops = ui.pet.querySelectorAll('stop');
   if (stops[1]) stops[1].setAttribute('stop-color', `hsl(${seal.hue} 82% 74%)`);
   if (stops[2]) stops[2].setAttribute('stop-color', `hsl(${seal.hue} 62% 30%)`);
@@ -371,6 +415,23 @@ function fitFigure() {
   // height/width makes one unit the same number of pixels on both axes.
   const scale = box.height / box.width;
   group.setAttribute('transform', `translate(33.2 0) scale(${scale.toFixed(4)} 1) translate(-33.2 0)`);
+}
+
+/**
+ * Counter-stretch the pet.
+ *
+ * The scene is drawn with preserveAspectRatio="none", so viewBox units are
+ * stretched to the lake's shape. #angler-fit corrects that for the angler; the
+ * pet cannot live in that group (it would travel with his shoulder) and so had no
+ * correction at all -- which is why the seal came out as a wide smear on any lake
+ * that is not square. Same maths, anchored on the pet's own centre.
+ */
+function fitPet() {
+  const group = document.getElementById('fa-pet-fit');
+  const box = ui.lake.getBoundingClientRect();
+  if (!group || !box.width || !box.height) return;
+  const scale = box.height / box.width;
+  group.setAttribute('transform', `translate(14 0) scale(${scale.toFixed(4)} 1) translate(-14 0)`);
 }
 
 /** Move the bobber, its splash and the fishing line together. */
@@ -574,12 +635,17 @@ function landFish() {
   // A duplicate is a second copy at the same hook, not a second entry in the
   // index — the index is what gates the next lake, and that must stay honest.
   const seal = SEALS.find((item) => item.id === state.equippedSeal) ?? null;
-  const comment = sealComment(seal, fish, { bestiary: state.bestiary });
-  if (sealDuplicates(seal, Math.random())) {
-    say(`${seal.name} nudges a second one loose. Two ${fish.name}, one hook.`);
-  } else if (comment) {
-    say(comment);
+
+  // A duplicate is worth its own notice: it is the most surprising thing that
+  // happens on a cast, and it used to share a line with everything else.
+  const duplicated = sealDuplicates(seal, Math.random());
+  if (duplicated) {
+    notify(`${seal.name} duplicates it \u2014 two ${fish.name}, one hook.`);
+    state.duplicates = (state.duplicates ?? 0) + 1;
   }
+
+  // The seal speaks into its own bubble, so a notice cannot overwrite its opinion.
+  sealSays(sealComment(seal, fish, { bestiary: state.bestiary }));
 
   save();
   paintChrome();
@@ -1155,11 +1221,14 @@ function frame(now) {
 load();
 paintChrome();
 fitFigure();
-// The lake changes shape with the window, so the counter-scale must follow.
+fitPet();
+// The lake changes shape with the window, so the counter-scale must follow --
+// for the angler AND for the pet, which needs its own correction.
+const refit = () => { fitFigure(); fitPet(); };
 if (typeof ResizeObserver === 'function') {
-  new ResizeObserver(fitFigure).observe(ui.lake);
+  new ResizeObserver(refit).observe(ui.lake);
 } else {
-  addEventListener('resize', fitFigure);
+  addEventListener('resize', refit);
 }
 setPhase('idle');
 // Paint the starting lake before the first frame, so the scene is never

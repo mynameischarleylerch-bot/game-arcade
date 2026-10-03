@@ -625,6 +625,56 @@
     .lake__bubble { animation: none; opacity: .5; }
     .bite__card { animation: none; }
   }
+  /* ---- HUD grouping -------------------------------------------------
+   * Readouts that belong together sit in one group, so the bar reads as a few
+   * clusters rather than six loose fragments with the rod's own numbers marooned
+   * at the far end. */
+  .hud { flex-wrap: wrap; row-gap: .35rem; }
+  .hud__group {
+    display: inline-flex; align-items: center; gap: .35rem;
+    padding: .12rem .45rem; border-radius: 999px;
+    background: rgba(255, 255, 255, .28);
+    border: 1px solid rgba(255, 255, 255, .5);
+  }
+  .hud__rod { flex-direction: column; align-items: flex-start; gap: 0; }
+  .hud__rod #rod-stats { font-size: .72rem; line-height: 1.15; }
+
+  /* ---- the seal's speech bubble -------------------------------------
+   * Drawn inside the scene so it sits on the dock with the pet, in the same
+   * Aero glass as every other panel. */
+  .bubble__body {
+    fill: #ffffff; fill-opacity: .94;
+    stroke: rgba(1, 87, 155, .45); stroke-width: .4;
+  }
+  .bubble__tail { fill: #ffffff; fill-opacity: .94; stroke: none; }
+  .bubble__text {
+    fill: #013a63; font-size: 3.1px; text-anchor: middle;
+    font-family: "Segoe UI", Frutiger, system-ui, sans-serif;
+  }
+
+  /* ---- notices -------------------------------------------------------
+   * A duplicate or a gift gets its own brief card rather than replacing the
+   * message line, so a sale cannot wipe the seal's opinion off the screen. */
+  .notices {
+    position: absolute; right: 1rem; bottom: 1rem; z-index: 6;
+    display: grid; gap: .35rem; justify-items: end; pointer-events: none;
+  }
+  .notice {
+    padding: .4rem .7rem; border-radius: 999px; font-weight: 700;
+    font-size: .85rem; color: #10380f;
+    background: linear-gradient(180deg, rgba(255,255,255,.95), rgba(206,241,199,.9));
+    border: 1px solid rgba(255,255,255,.9);
+    box-shadow: 0 6px 16px rgba(1, 87, 155, .3), inset 0 1px 0 #fff;
+    animation: notice-in 220ms cubic-bezier(.22,.61,.36,1);
+  }
+  @keyframes notice-in {
+    from { transform: translateY(8px); opacity: 0; }
+    to   { transform: translateY(0);   opacity: 1; }
+  }
+  @media (prefers-reduced-motion: reduce) {
+    .notices .notice { animation: none; }
+  }
+
   /* The rank readout and the seal rows. Same glass recipe as everything else. */
   /* Seal coins are a separate currency and must read as one at a glance. */
   .hud__seal-coins { color: var(--accent-line, #0288d1); font-weight: 700; }
@@ -672,10 +722,18 @@
 <body>
   <div class="stage">
     <div class="hud">
-      <span>¤ <b id="coins">0</b></span>
-      <span class="hud__seal-coins">seal <b id="seal-coins">0</b></span>
-      <span class="hud__rank">rank <b id="level">1</b> <span id="level-title">Deckhand</span><progress class="hud__bar" id="level-progress" value="0" max="48" aria-label="Rank progress"></progress></span>
-      <span>Rod <b id="rod">—</b></span>
+      <span class="hud__group">
+        <span title="Coins from fish. Buy rods with these.">¤ <b id="coins">0</b></span>
+        <span class="hud__seal-coins" title="Seal coins. Sold finds only. Buy seals with these.">seal <b id="seal-coins">0</b></span>
+      </span>
+      <span class="hud__group hud__rank">
+        <span>rank <b id="level">1</b> <span id="level-title">Deckhand</span></span>
+        <progress class="hud__bar" id="level-progress" value="0" max="48" aria-label="Rank progress"></progress>
+      </span>
+      <span class="hud__group hud__rod">
+        <span>Rod <b id="rod">—</b></span>
+        <span class="hud__dim" id="rod-stats"></span>
+      </span>
       <button id="inventory-open" class="btn btn--small" type="button" aria-haspopup="dialog">
         Inventory <b id="inventory-count" class="hud__badge">1 rod</b>
       </button>
@@ -687,7 +745,6 @@
         Lake <b id="lake-name" class="hud__badge">Aero Lake</b>
       </button>
       <span class="hud__spacer"></span>
-      <span class="hud__dim" id="rod-stats"></span>
     </div>
 
     <div class="lake" id="lake" data-phase="idle">
@@ -776,13 +833,26 @@
 
         <!-- The fishing line runs from the measured rod tip to the bobber. It sits
              outside the fitted group so it is not counter-warped. -->
-        <!-- The pet seal, on the deck to the angler's left. Outside #angler-fit so
-             the counter-scale that keeps the angler round does not warp it. -->
-        <g id="fa-pet" hidden aria-hidden="true">
+        <!-- The pet seal and its speech bubble, on the deck to the angler's left.
+             It cannot live inside #angler-fit: that group is translated to the
+             angler's shoulder, so a pet inside it would travel with his body. So
+             it gets its OWN fitted group instead -- the scene is drawn with
+             preserveAspectRatio="none", which stretches anything outside a fitted
+             group to the lake's shape, and a seal stretched by that comes out as a
+             smear. fitPet() applies the same correction fitFigure() does. -->
+        <g id="fa-pet-fit" hidden>
+        <g id="fa-pet">
           <ellipse cx="14" cy="57.4" rx="5.4" ry="2.4" fill="#0a4a70" opacity=".2"/>
           <ellipse cx="14" cy="55.6" rx="4.6" ry="3.4" fill="url(#fa-pet-fill)"/>
           <ellipse cx="12.6" cy="54.4" rx="1.5" ry="1.1" fill="#ffffff" opacity=".8"/>
           <circle cx="15.8" cy="55.2" r="0.55" fill="#06334f"/>
+        </g>
+        </g>
+        <!-- What the seal has to say. A tail points back down at it. -->
+        <g id="fa-bubble" hidden>
+          <path class="bubble__tail" d="M14 50 L16.5 45.5 L11.5 45.5 Z" fill="#ffffff"/>
+          <rect class="bubble__body" x="1.5" y="32" width="25" height="14" rx="5"/>
+          <text class="bubble__text" id="fa-bubble-text" x="14" y="41"></text>
         </g>
 
         <path id="line" d="M60 33 Q61 42 63 52"/>
@@ -915,6 +985,10 @@
       </div>
 
       <p class="message" id="message" hidden></p>
+
+      <!-- Ephemeral notices: a duplicate, a gift, a sale. Announced to a screen
+           reader as well as drawn, so it is not purely visual. -->
+      <div class="notices" id="notify" role="status" aria-live="polite"></div>
     </div>
 
     <div class="hud" style="justify-content:space-between">
@@ -925,6 +999,6 @@
     </div>
   </div>
 
-  <script type="module" src="./angler.js?v=2026-10-03-d"></script>
+  <script type="module" src="./angler.js?v=2026-10-03-e"></script>
 </body>
 </html>

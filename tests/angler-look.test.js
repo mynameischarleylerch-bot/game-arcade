@@ -519,3 +519,59 @@ test('the bubbles respect reduced motion', () => {
   const reduced = PAGE.slice(PAGE.indexOf('@media (prefers-reduced-motion: reduce)'));
   assert.match(reduced, /\.lake__bubble\s*\{[^}]*animation:\s*none/);
 });
+
+/* -------------------------------------------------- the pet, and its voice */
+
+test('the pet is counter-scaled so the scene cannot stretch it', () => {
+  // The scene uses preserveAspectRatio="none", so anything OUTSIDE #angler-fit is
+  // stretched to the lake's shape. The pet is outside it (it sits at a fixed
+  // point on the deck), so it needs the same correction fitFigure() applies to the
+  // angler -- otherwise a seal comes out as a wide smear.
+  assert.match(PAGE, /id="fa-pet-fit"/, 'the pet needs its own fitted group');
+  assert.match(PAGE, /id="fa-pet"/, 'and the pet itself');
+  // The fitted group WRAPS the pet, so it comes first in document order.
+  const order = PAGE.indexOf('id="fa-pet-fit');
+  assert.ok(order < PAGE.indexOf('id="fa-pet"'),
+    'the pet must be inside the group that counter-stretches it');
+  assert.match(PAGE.slice(order, order + 400), /<g id="fa-pet"/,
+    'and the pet must open inside it');
+});
+
+test('the pet is a group the controller actually counter-scales', () => {
+  const src = readFileSync(new URL('../vendor/fru-angler/angler.js', import.meta.url), 'utf8');
+  assert.match(src, /fa-pet-fit/, 'the controller must reference the fitted group');
+  assert.match(src, /scale\(/, 'and apply a scale transform to it');
+});
+
+test('the seal has a speech bubble, not just a caption', () => {
+  assert.match(PAGE, /id="fa-bubble"/, 'the seal needs somewhere to talk');
+  assert.match(PAGE, /class="bubble/, 'and it should read as a bubble');
+});
+
+test('the bubble is hidden until the seal says something', () => {
+  const src = readFileSync(new URL('../vendor/fru-angler/angler.js', import.meta.url), 'utf8');
+  assert.match(src, /fa-bubble/, 'the controller must drive the bubble');
+  assert.match(PAGE, /id="fa-bubble"[^>]*hidden/, 'and it starts hidden');
+});
+
+test('duplicating a catch raises a notification of its own', () => {
+  const src = readFileSync(new URL('../vendor/fru-angler/angler.js', import.meta.url), 'utf8');
+  assert.match(src, /sealDuplicates/, 'the duplicate roll must reach the controller');
+  assert.match(src, /function notify|notify\(/, 'and it must notify');
+});
+
+test('a notification is an assertive live region, so it is announced', () => {
+  assert.match(PAGE, /id="notify"[^>]*aria-live|role="status"/,
+    'a notification needs to be announced, not just drawn');
+});
+
+test('the HUD groups its readouts, it does not sprawl', () => {
+  // The stat line belongs with the rod it describes, not marooned at the far end
+  // of the bar with a huge gap between it and the rod's name.
+  assert.match(PAGE, /class="hud__group hud__rod"/,
+    'the rod readout needs its own group');
+  assert.match(PAGE, /hud__spacer/, 'and the bar needs a spacer to push buttons over');
+  const hud = PAGE.slice(PAGE.indexOf('class="hud"'), PAGE.indexOf('class="lake"'));
+  assert.ok(hud.indexOf('id="rod-stats"') > hud.indexOf('id="rod"'),
+    'the stats must come after the rod name, not before it');
+});

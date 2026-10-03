@@ -992,7 +992,7 @@ test('the HUD shows a rank, a title and the seal sitting with you', async () => 
   assert.equal(ctx.doc.getElementById('level').textContent, '1', 'a new angler is rank 1');
   assert.match(ctx.doc.getElementById('level-title').textContent, /\w/, 'and has a title');
   // No seal yet, so nothing on the dock.
-  assert.equal(ctx.doc.getElementById('fa-pet').hasAttribute('hidden'), true,
+  assert.equal(ctx.doc.getElementById('fa-pet-fit').hasAttribute('hidden'), true,
     'the dock is empty until a seal is bought');
 });
 
@@ -1021,7 +1021,7 @@ test('an old save with no rank, seals or gifts still loads', async () => {
   assert.equal(ctx.doc.getElementById('level').textContent, '1', 'an old save is rank 1');
   assert.ok(ctx.doc.getElementById('level-title').textContent.length > 0);
   assert.equal(ctx.doc.getElementById('coins').textContent, '5000', 'coins survive');
-  assert.equal(ctx.doc.getElementById('fa-pet').hasAttribute('hidden'), true);
+  assert.equal(ctx.doc.getElementById('fa-pet-fit').hasAttribute('hidden'), true);
 });
 
 test('a save naming a seal you do not own does not put one on the dock', async () => {
@@ -1029,7 +1029,7 @@ test('a save naming a seal you do not own does not put one on the dock', async (
     coins: 0, rodId: 'bamboo', owned: ['bamboo'], bestiary: {}, areaId: 'aero-lake',
     equippedSeal: 'abyss', ownedSeals: [], xp: 0, giftedRods: [],
   }, 63);
-  assert.equal(ctx.doc.getElementById('fa-pet').hasAttribute('hidden'), true,
+  assert.equal(ctx.doc.getElementById('fa-pet-fit').hasAttribute('hidden'), true,
     'a save cannot equip a seal it never granted');
 });
 
@@ -1057,7 +1057,7 @@ test('buying a seal with junk you can afford puts it on the dock', async () => {
   row.querySelector('.seal__equip').dispatchEvent(
     new ctx.win.MouseEvent('click', { bubbles: true }));
 
-  assert.equal(ctx.doc.getElementById('fa-pet').hasAttribute('hidden'), false,
+  assert.equal(ctx.doc.getElementById('fa-pet-fit').hasAttribute('hidden'), false,
     `${cheap.name} should now be sitting on the dock`);
   assert.equal(ctx.doc.getElementById('seal-coins').textContent, '0', 'and you paid Seal coins');
 });
@@ -1228,7 +1228,7 @@ test('seals cost Seal coins and rod coins cannot buy them', async () => {
     `being broke in Seal coins must say so, said "${broke.doc.getElementById('message').textContent}"`);
   assert.equal(broke.doc.getElementById('coins').textContent, '999999',
     'and rod coins must be untouched');
-  assert.equal(broke.doc.getElementById('fa-pet').hasAttribute('hidden'), true, 'no seal');
+  assert.equal(broke.doc.getElementById('fa-pet-fit').hasAttribute('hidden'), true, 'no seal');
 
   // Now rich in Seal coins: the same purchase works.
   const rich = await seedSave({
@@ -1241,7 +1241,7 @@ test('seals cost Seal coins and rod coins cannot buy them', async () => {
     .find((r) => r.textContent.includes(cheap.name))
     .querySelector('.seal__equip').dispatchEvent(new rich.win.MouseEvent('click', { bubbles: true }));
   assert.equal(rich.doc.getElementById('seal-coins').textContent, '0', 'paid in Seal coins');
-  assert.equal(rich.doc.getElementById('fa-pet').hasAttribute('hidden'), false, 'seal equipped');
+  assert.equal(rich.doc.getElementById('fa-pet-fit').hasAttribute('hidden'), false, 'seal equipped');
 });
 
 test('rods are still bought with rod coins only', async () => {
@@ -1258,4 +1258,109 @@ test('rods are still bought with rod coins only', async () => {
   assert.ok(Number(ctx.doc.getElementById('coins').textContent) < 900, 'rod coins were spent');
   assert.equal(ctx.doc.getElementById('seal-coins').textContent, '0',
     'and Seal coins were not');
+});
+
+test('the seal speaks in its own bubble when you land something', async () => {
+  const ctx = await seedSave({
+    coins: 0, rodId: 'bamboo', owned: ['bamboo'], bestiary: {}, areaId: 'aero-lake',
+    xp: 0, ownedSeals: [SEALS[0].id], equippedSeal: SEALS[0].id, lost: [], giftedRods: [],
+    sealCoins: 0,
+  }, 78);
+
+  const bubble = ctx.doc.getElementById('fa-bubble');
+  assert.equal(bubble.hasAttribute('hidden'), true, 'the bubble starts closed');
+
+  await landOne(ctx, 78);
+  assert.equal(bubble.hasAttribute('hidden'), false, 'the seal must speak on a catch');
+  const said = ctx.doc.getElementById('fa-bubble-text').textContent;
+  assert.ok(said.length > 8, `the bubble must carry words, got "${said}"`);
+});
+
+test('no seal means no bubble, and nothing throws', async () => {
+  const ctx = await seedSave({
+    coins: 0, rodId: 'bamboo', owned: ['bamboo'], bestiary: {}, areaId: 'aero-lake',
+    xp: 0, ownedSeals: [], equippedSeal: null, lost: [], giftedRods: [], sealCoins: 0,
+  }, 79);
+  await landOne(ctx, 79);
+  assert.equal(ctx.doc.getElementById('fa-bubble').hasAttribute('hidden'), true,
+    'with no seal equipped there is nobody to talk');
+});
+
+test('the pet is shown when a seal is equipped and hidden without one', async () => {
+  const petOn = await seedSave({
+    coins: 0, rodId: 'bamboo', owned: ['bamboo'], bestiary: {}, areaId: 'aero-lake',
+    xp: 0, ownedSeals: [SEALS[0].id], equippedSeal: SEALS[0].id, lost: [], giftedRods: [],
+    sealCoins: 0,
+  }, 80);
+  assert.equal(petOn.doc.getElementById('fa-pet-fit').hasAttribute('hidden'), false,
+    'the pet must be on the dock when a seal is equipped');
+
+  const petOff = await seedSave({
+    coins: 0, rodId: 'bamboo', owned: ['bamboo'], bestiary: {}, areaId: 'aero-lake',
+    xp: 0, ownedSeals: [], equippedSeal: null, lost: [], giftedRods: [], sealCoins: 0,
+  }, 81);
+  assert.equal(petOff.doc.getElementById('fa-pet-fit').hasAttribute('hidden'), true,
+    'and gone when none is');
+});
+
+test('the pet is counter-scaled to the lake, so it cannot smear', async () => {
+  // jsdom reports every box as 0x0, and fitPet() correctly refuses to correct a
+  // scale against a box it does not have -- so the transform cannot be asserted
+  // here. Check the maths in the source instead: it must mirror fitFigure()'s
+  // height/width correction, anchored on the pet's own centre rather than the
+  // angler's shoulder.
+  const src = readFileSync(new URL('../vendor/fru-angler/angler.js', import.meta.url), 'utf8');
+  const body = src.slice(src.indexOf('function fitPet'), src.indexOf('function placeBobber'));
+  assert.match(body, /box\.height\s*\/\s*box\.width/,
+    'fitPet must use the same height/width correction as fitFigure');
+  assert.match(body, /translate\(14 0\)/,
+    'anchored on the pet centre at x=14, not the angler shoulder at x=33.2');
+  assert.match(body, /setAttribute\('transform'/,
+    'and it must actually write the transform');
+});
+
+test('duplicating a catch raises a notice of its own', async () => {
+  const ctx = await seedSave({
+    coins: 0, rodId: 'bamboo', owned: ['bamboo'], bestiary: {}, areaId: 'aero-lake',
+    xp: 0, ownedSeals: [SEALS[0].id], equippedSeal: SEALS[0].id, lost: [], giftedRods: [],
+    sealCoins: 0,
+  }, 83);
+
+  // Bubbles duplicates 6% of catches, so one catch is a coin flip -- and a test
+  // that only passes 6% of the time is not a test. Drive the notice through
+  // notify() directly and assert what the player sees.
+  const notifyFn = ctx.doc.getElementById('notify');
+  assert.ok(notifyFn, 'there must be a place for notices');
+
+  // Bubbles duplicates 6% of catches, so landing one fish is a coin flip and a
+  // test written that way is not a test. Force the roll the controller actually
+  // uses: Math.random is already pinned by boot(), so pin it again to a value
+  // inside the duplicate window for this one catch.
+  const originalRandom = globalThis.Math.random;
+  globalThis.Math.random = () => 0.01;   // under Bubbles' 6% chance
+  try {
+    await landOne(ctx, 83);
+  } finally {
+    globalThis.Math.random = originalRandom;
+  }
+
+  const notices = notifyFn.querySelectorAll('.notice');
+  assert.equal(notices.length, 1, 'a duplicate must raise exactly one notice');
+  assert.match(notices[0].textContent, /two .* one hook/i,
+    `the notice must say what happened, said "${notices[0].textContent}"`);
+  assert.match(notices[0].textContent, /Bubbles/,
+    'and name the seal that did it');
+
+  // The bubble still carries the seal's opinion: a duplicate must not silence it.
+  const bubble = ctx.doc.getElementById('fa-bubble');
+  assert.equal(bubble.hasAttribute('hidden'), false,
+    'the seal must still speak after a duplicate');
+  // Whatever the roll did, the notices region must exist, be announced, and hold
+  // only well-formed cards.
+  assert.equal(notifyFn.getAttribute('aria-live'), 'polite',
+    'notices are announced, not only drawn');
+  assert.equal(notifyFn.getAttribute('role'), 'status');
+  for (const card of notifyFn.querySelectorAll('.notice')) {
+    assert.ok(card.textContent.length > 5, 'a notice must say something');
+  }
 });
