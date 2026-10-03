@@ -480,7 +480,7 @@ test('equipping from the inventory works and is free', async () => {
 test('the inventory lists every fish, showing the heaviest landed', async () => {
   const ctx = await boot(24);
   ctx.doc.getElementById('inventory-open').click();
-  const rows = ctx.doc.querySelectorAll('#inventory-fish .catch');
+  const rows = ctx.doc.querySelectorAll('#inventory-fish .species');
   assert.equal(rows.length, 6, 'all six species are listed even before you catch them');
   assert.equal([...rows].filter((r) => r.dataset.caught === 'true').length, 0,
     'nothing caught yet');
@@ -495,7 +495,7 @@ test('the inventory lists every fish, showing the heaviest landed', async () => 
     if (!ctx.doc.getElementById('catch').hidden) break;
   }
   ctx.doc.getElementById('inventory-open').click();
-  const caught = [...ctx.doc.querySelectorAll('#inventory-fish .catch')]
+  const caught = [...ctx.doc.querySelectorAll('#inventory-fish .species')]
     .filter((r) => r.dataset.caught === 'true');
   assert.equal(caught.length, 1, 'exactly the fish just landed');
   assert.match(caught[0].textContent, /kg/, 'and its weight is shown');
@@ -524,6 +524,6 @@ test('only one panel is open at a time', async () => {
 test('an empty inventory panel still lists all six fish', async () => {
   const ctx = await boot(27);
   ctx.doc.getElementById('inventory-open').click();
-  assert.equal(ctx.doc.querySelectorAll('#inventory-fish .catch').length, 6);
+  assert.equal(ctx.doc.querySelectorAll('#inventory-fish .species').length, 6);
   assert.match(ctx.doc.getElementById('inventory-rods').textContent, /Bamboo/);
 });

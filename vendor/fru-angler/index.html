@@ -230,6 +230,7 @@
     box-shadow: 0 20px 44px rgba(1,87,155,.4), inset 0 1px 0 #fff;
   }
   .catch__name { font-size: 1.5rem; font-weight: 700; }
+  .catch__name.species__name { font-size: 1rem; }
   /* Rarity is five blocks filled up to the fish's tier. */
   .catch__rarity { display: flex; gap: 4px; justify-content: center; margin-top: .4rem; }
   .catch__pip { width: 12px; height: 12px; border-radius: 3px; background: rgba(1,87,155,.18); }
@@ -257,7 +258,10 @@
     color: var(--deep); font: inherit; cursor: pointer;
   }
   .rod:disabled { cursor: not-allowed; opacity: .55; }
-  .rod--equipped { border-color: var(--deep); box-shadow: 0 0 0 2px rgba(1,87,155,.18) inset; }
+  .rod--equipped {
+    border-color: var(--deep);
+    box-shadow: 0 0 0 2px rgba(1,87,155,.18) inset;
+  }
   .rod__row { display: flex; justify-content: space-between; gap: .6rem; font-weight: 600; }
   .btn--small { padding: .2rem .7rem; font-size: .82rem; font-weight: 600; }
   .hud__badge {
@@ -266,17 +270,19 @@
     font-variant-numeric: tabular-nums;
   }
 
-  /* One row per species: the heaviest landed, or a placeholder if none. */
-  .catch {
+  /* One row per species in the inventory. Deliberately NOT `.catch`: that is the
+     full-screen catch overlay, and reusing it turned every row into an overlay
+     stacked over the panel. */
+  .species {
     display: flex; align-items: baseline; justify-content: space-between; gap: .6rem;
     padding: .45rem .6rem; border-radius: 10px;
     border: 1px solid rgba(1,87,155,.16);
     background: var(--shine);
   }
-  .catch[data-caught="false"] { opacity: .55; }
-  .catch__name { font-weight: 600; }
-  .catch__weight { font-size: .82rem; color: var(--ink-soft); font-variant-numeric: tabular-nums; }
-  .catch__none { font-size: .8rem; color: var(--ink-soft); font-style: italic; }
+  .species[data-caught="false"] { opacity: .55; }
+  .species__name { font-weight: 600; }
+  .species__weight { font-size: .82rem; color: var(--ink-soft); font-variant-numeric: tabular-nums; }
+  .species__none { font-size: .8rem; color: var(--ink-soft); font-style: italic; }
 
   .shop__section {
     margin: .7rem 0 .3rem; font-size: .72rem; font-weight: 700;
@@ -453,6 +459,6 @@
     </div>
   </div>
 
-  <script type="module" src="./angler.js?v=2026-10-01-j"></script>
+  <script type="module" src="./angler.js?v=2026-10-01-k"></script>
 </body>
 </html>

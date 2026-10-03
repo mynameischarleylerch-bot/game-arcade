@@ -185,7 +185,8 @@ test('the inventory button and panel are in the markup', () => {
 test('the inventory has styling for its rows and badge', () => {
   assert.match(PAGE, /\.hud__badge/, 'the count badge needs styling');
   assert.match(PAGE, /\.catch\b/, 'the fish rows need styling');
-  assert.match(PAGE, /\.catch__weight/, 'and their weights');
+  assert.match(PAGE, /\.species__weight/, 'and their weights');
+  assert.match(PAGE, /\.species\[data-caught="false"\]/, 'and a muted uncaught state');
 });
 
 test('the shop styles the inventory sections', () => {
@@ -240,4 +241,64 @@ test('the game folder holds only the files it needs', () => {
   const files = readdirSync(GAME).filter((f) => !f.startsWith('.')).sort();
   assert.deepEqual(files, ['angler.js', 'fishing.js', 'index.html', 'reel.js'],
     `unexpected files: ${files.join(', ')}`);
+});
+
+
+/* ------------------------------------------------- CSS class collisions */
+
+test('the inventory fish rows do not reuse the catch-overlay class', () => {
+  // ".catch" is the full-screen catch overlay: position absolute, inset 0, z 9.
+  // Reusing it for a row inside the inventory made every fish row a full-screen
+  // overlay stacked over the panel, hiding the rods and the close button.
+  assert.equal(/\.catch\s*\{/m.test(PAGE), false,
+    'the bare .catch selector must only be used by the overlay');
+
+  // The rows are built in JS, so check the script that creates them.
+  const script = readFileSync(new URL('../vendor/fru-angler/angler.js', import.meta.url), 'utf8');
+  assert.match(script, /row\.className = 'species'/,
+    'inventory fish rows must use their own .species class');
+  assert.equal(/row\.className = 'catch'/.test(script), false,
+    "the row must not reuse the catch overlay's class");
+  assert.match(PAGE, /\.species\s*\{/, '.species must be styled');
+  // A row is inline content: it must not be an overlay.
+  const rule = PAGE.match(/\.species\s*\{([^}]*)\}/)[1];
+  assert.equal(/position:\s*absolute/.test(rule), false,
+    'a fish row must not be absolutely positioned');
+});
+
+/**
+ * A class must not be declared twice as a plain selector: two plain rules silently
+ * merge and the loser is whichever the author forgot about. A pseudo-class or
+ * pseudo-element (`.rod:disabled`, `.lake::before`) is a different selector and
+ * legitimately separate, so those are excluded.
+ */
+const CSS_RULES = [...PAGE.matchAll(/([^{}]+)\{([^{}]*)\}/g)];
+
+test('no class is declared twice as a plain selector', () => {
+  const counts = new Map();
+
+  for (const [, selector] of CSS_RULES) {
+    // Only single-class selectors count. `.a` declares a class; `.a .b` and
+    // `.a:hover` are different, more specific selectors and are legitimate.
+    const trimmed = selector.trim();
+    if (/\s/.test(trimmed)) continue;                     // descendant or compound
+    const only = trimmed.match(/^\.([a-z][\w-]*)$/);
+    if (!only) continue;
+    counts.set(only[1], (counts.get(only[1]) ?? 0) + 1);
+  }
+
+  const dupes = [...counts.entries()]
+    .filter(([, n]) => n > 1)
+    .map(([name, n]) => `${name} x${n}`);
+  assert.deepEqual(dupes, [],
+    `classes declared as a plain selector more than once: ${dupes.join(', ')}`);
+});
+
+test('no element inside the inventory panel uses an overlay class', () => {
+  const panels = [...PAGE.matchAll(/id="(shop-panel|inventory-panel)"[\s\S]*?<\/div>\s*<\/div>/g)];
+  assert.ok(panels.length >= 2, 'both panels should be in the markup');
+  for (const [, id] of panels) {
+    assert.equal(new RegExp(`id="${id}"[\\s\\S]*?class="catch"`).test(PAGE), false,
+      `${id} must not contain an element with the catch-overlay class`);
+  }
 });

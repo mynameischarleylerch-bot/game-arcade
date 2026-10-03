@@ -11,10 +11,10 @@ import {
   fishWeight, canCatch, catchValue, startingLoadout, buyRod, recordCatch,
   startingInventory, ownsRod, addRodToInventory, equipRod, rodArt, RODS_BY_PRICE,
   fishById,
-} from './fishing.js?v=2026-10-01-j';
+} from './fishing.js?v=2026-10-01-k';
 import {
   reelConfig, stepReel as advance, reelOutcomeFor, isCaught, lineSnapped,
-} from './reel.js?v=2026-10-01-j';
+} from './reel.js?v=2026-10-01-k';
 
 /* ------------------------------------------------------------------ tuning */
 
@@ -438,21 +438,21 @@ function renderInventory() {
     if (got) landed += 1;
 
     const row = document.createElement('div');
-    row.className = 'catch';
+    row.className = 'species';
     row.dataset.caught = String(got);
     row.dataset.fish = fish.id;
 
     const name = document.createElement('span');
-    name.className = 'catch__name';
+    name.className = 'species__name';
     name.textContent = fish.name;
     name.style.color = RARITY_COLOURS[fish.rarity] ?? '';
 
     const weight = document.createElement('span');
     if (got) {
-      weight.className = 'catch__weight';
+      weight.className = 'species__weight';
       weight.textContent = `best ${best} kg`;
     } else {
-      weight.className = 'catch__none';
+      weight.className = 'species__none';
       weight.textContent = 'not caught';
     }
 
