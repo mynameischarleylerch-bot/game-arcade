@@ -352,3 +352,14 @@ test('the new tokens are all used, not just declared', () => {
     assert.ok(PAGE.split(token).length > 2, `${token} is declared but never used`);
   }
 });
+
+
+test('panels use the shared glass and shadow tokens', () => {
+  for (const sel of ['.hud', '.reel', '.catch__card', '.shop__panel']) {
+    const rule = PAGE.match(new RegExp(`${sel.replace('.', '\\.')}\\s*\\{([^}]*)\\}`));
+    assert.ok(rule, `${sel} must have a rule`);
+    assert.match(rule[1], /var\(--glass/, `${sel} should use --glass`);
+    assert.match(rule[1], /var\(--shadow-/, `${sel} should use a --shadow-* token`);
+    assert.match(rule[1], /var\(--hairline/, `${sel} should use a --hairline token`);
+  }
+});

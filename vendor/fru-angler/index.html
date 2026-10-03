@@ -85,7 +85,7 @@
     display: flex; align-items: center; gap: .5rem .7rem; flex-wrap: wrap;
     padding: .4rem .9rem; border-radius: 999px;
     background: var(--glass);
-    border: 1px solid rgba(255,255,255,.9);
+    border: 1px solid var(--hairline-strong);
     box-shadow: var(--shadow-card);
     backdrop-filter: blur(10px); -webkit-backdrop-filter: blur(10px);
   }
@@ -220,8 +220,8 @@
     width: min(92%, 34rem); padding: 1rem; z-index: 7;
     border-radius: 16px;
     background: var(--glass);
-    border: 1px solid rgba(255,255,255,.9);
-    box-shadow: 0 18px 40px rgba(1,87,155,.3), inset 0 1px 0 #fff;
+    border: 1px solid var(--hairline-strong);
+    box-shadow: var(--shadow-panel), var(--shadow-lift);
     backdrop-filter: blur(12px); -webkit-backdrop-filter: blur(12px);
   }
   .reel[hidden] { display: none; }
@@ -257,9 +257,9 @@
   .catch[hidden], .shop[hidden] { display: none; }
   .catch__card {
     padding: 1.4rem 1.8rem; border-radius: 18px; text-align: center;
-    background: linear-gradient(180deg, rgba(255,255,255,.94), rgba(255,255,255,.7));
-    border: 1px solid rgba(255,255,255,.9);
-    box-shadow: 0 20px 44px rgba(1,87,155,.4), inset 0 1px 0 #fff;
+    background: linear-gradient(180deg, rgba(255,255,255,.94), var(--glass-mid));
+    border: 1px solid var(--hairline-strong);
+    box-shadow: var(--shadow-panel), var(--shadow-lift);
   }
   /* The catch card pops: it scales in from small with a little overshoot. */
   .catch__card { animation: catch-pop 380ms cubic-bezier(.2,1.5,.4,1) both; }
@@ -312,9 +312,9 @@
   .shop__panel {
     width: min(100%, 30rem); max-height: 86%; overflow: auto;
     padding: 1.1rem 1.2rem; border-radius: 18px; text-align: left;
-    background: linear-gradient(180deg, rgba(255,255,255,.96), rgba(255,255,255,.78));
-    border: 1px solid rgba(255,255,255,.9);
-    box-shadow: 0 20px 44px rgba(1,87,155,.4), inset 0 1px 0 #fff;
+    background: linear-gradient(180deg, rgba(255,255,255,.96), var(--glass-mid));
+    border: 1px solid var(--hairline-strong);
+    box-shadow: var(--shadow-panel), var(--shadow-lift);
   }
   .shop__title { font-size: 1.15rem; font-weight: 700; margin: 0 0 .2rem; }
   .shop__wallet { color: var(--ink-soft); margin: 0 0 .8rem; }
