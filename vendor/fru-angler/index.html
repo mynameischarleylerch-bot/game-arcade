@@ -503,6 +503,50 @@
     to   { transform: scale(1); opacity: 1; }
   }
 
+  /* The lake picker: one row per water, with its own light behind the name. */
+  .lake-list { display: grid; gap: .55rem; }
+
+  .lake-row {
+    display: grid; grid-template-columns: 46px 1fr auto; align-items: center;
+    gap: .7rem; padding: .55rem .6rem; border-radius: 12px;
+    border: 1px solid rgba(1, 87, 155, .16);
+    background: var(--shine); color: var(--deep); font: inherit;
+    text-align: left; cursor: pointer;
+    box-shadow: inset 0 1px 0 #fff, 0 2px 6px rgba(1, 87, 155, .12);
+    transition: transform 140ms var(--ease), box-shadow 140ms var(--ease);
+  }
+  .lake-row:not([aria-disabled="true"]):hover {
+    transform: translateY(-1px); box-shadow: var(--shadow-lift);
+  }
+  .lake-row:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+
+  /* A locked lake is shown but not offered, and says why. */
+  .lake-row[aria-disabled="true"] { cursor: not-allowed; opacity: .72; filter: saturate(.55); }
+  .lake-row[aria-disabled="true"]:hover { transform: none; box-shadow: inset 0 1px 0 #fff, 0 2px 6px rgba(1, 87, 155, .12); }
+
+  /* The swatch is painted with the lake's own palette. */
+  .lake-row__swatch {
+    width: 46px; height: 34px; border-radius: 9px;
+    border: 1px solid rgba(255, 255, 255, .9);
+    box-shadow: inset 0 1px 0 rgba(255, 255, 255, .85), 0 1px 3px rgba(0, 0, 0, .2);
+  }
+  .lake-row__label { display: grid; gap: .1rem; min-width: 0; }
+  .lake-row__name { font-weight: 700; }
+  .lake-row__theme {
+    font-size: .7rem; font-weight: 700; letter-spacing: .08em;
+    text-transform: uppercase; opacity: .7;
+  }
+  .lake-row__blurb { font-size: .76rem; color: var(--ink-soft); }
+  .lake-row__state {
+    font-size: .72rem; font-weight: 700; color: var(--ink-soft);
+    white-space: nowrap; text-align: right;
+  }
+  /* The lake you are standing in. */
+  .lake-row[aria-current="true"] {
+    border-color: var(--accent-line, var(--accent));
+    box-shadow: var(--shadow-lift), inset 0 1px 0 #fff;
+  }
+
   /* The fish index: one block per rarity tier. */
   .index { display: grid; gap: 1rem; }
 
@@ -564,6 +608,10 @@
       </button>
       <button id="index-open" class="btn btn--small" type="button" aria-haspopup="dialog">
         Fish index
+      </button>
+      <button id="lake-picker" class="btn btn--small" type="button"
+              aria-haspopup="dialog" aria-expanded="false">
+        Lake <b id="lake-name" class="hud__badge">Aero Lake</b>
       </button>
       <span class="hud__spacer"></span>
       <span class="hud__dim" id="rod-stats"></span>
@@ -726,6 +774,20 @@
       </div>
 
       <!-- The fish index: every species grouped by rarity, with the real odds. -->
+      <!-- The lakes. Each opens by clearing the one before it. -->
+      <div class="shop" id="lake-panel" hidden>
+        <div class="shop__panel" role="dialog" aria-modal="true" aria-labelledby="lake-title">
+          <h2 class="shop__title" id="lake-title">Where to fish</h2>
+          <p class="shop__wallet">
+            Land every fish in a lake and own every rod to open the next one.
+          </p>
+          <div class="lake-list" id="lake-list"></div>
+          <p style="margin:.9rem 0 0">
+            <button class="btn" id="lake-close" type="button">Close</button>
+          </p>
+        </div>
+      </div>
+
       <div class="shop" id="index-panel" hidden>
         <div class="shop__panel" role="dialog" aria-modal="true" aria-labelledby="index-title">
           <h2 class="shop__title" id="index-title">Fish index</h2>

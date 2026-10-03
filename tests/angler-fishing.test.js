@@ -4,7 +4,7 @@ import {
   RODS, FISH, castQuality, castDistance, biteDelayFor, rollFish, rollMutation,
   fishWeight, catchValue, canCatch, buyRod, startingLoadout,
   startingInventory, ownsRod, addRodToInventory, equipRod, rodArt, RODS_BY_PRICE,
-  fishSvg, FISH_SHAPES, hookLineFor,
+  fishSvg, FISH_SHAPES, hookLineFor, AREAS, areaUnlocked,
 } from '../vendor/fru-angler/fishing.js';
 
 test('the starting wallet can afford exactly one upgrade from the cheapest rod', () => {
@@ -54,19 +54,34 @@ test('cast distance rewards a perfect cast', () => {
 });
 
 test('luck makes rare fish more likely as it rises', () => {
-  const mythRate = (luck) => {
-    let hits = 0;
-    const samples = 20000;
-    for (let i = 0; i < samples; i += 1) {
-      if (rollFish(i / samples, { luck }).rarity === 'Mythical') hits += 1;
+  // Checked per lake, since each lake has its own table of fish now.
+  for (const area of AREAS) {
+    const count = (rod) => {
+      const got = new Set();
+      for (let r = 0; r < 4000; r += 1) got.add(rollFish(r / 4000, rod, area.id).id);
+      return got;
+    };
+    const bare = count(RODS.bamboo);            // luck 0
+    const lucky = count(RODS.titan);            // luck 1.8
+    assert.ok(lucky.size >= bare.size,
+      `${area.name}: a luckier rod should not see fewer species (${bare.size} -> ${lucky.size})`);
+
+    // The Mythical is the point of luck: if this lake has one, a better rod must
+    // make it easier to reach, and even the worst rod can still stumble into it.
+    if (area.fish.some((id) => FISH.find((f) => f.id === id)?.rarity === 'Mythical')) {
+      const chance = (rod) => {
+        let n = 0;
+        for (let r = 0; r < 4000; r += 1) if (rollFish(r / 4000, rod, area.id).rarity === 'Mythical') n += 1;
+        return n;
+      };
+      assert.ok(chance(RODS.bamboo) > 0,
+        `${area.name}: even a bad rod can stumble into a mythical`);
+      assert.ok(chance(RODS.titan) > chance(RODS.bamboo),
+        `${area.name}: luck must actually raise the mythical rate`);
     }
-    return hits / samples;
-  };
-  const plain = mythRate(0);
-  const lucky = mythRate(1.8);
-  assert.ok(plain > 0, 'even a bad rod can stumble into a mythical');
-  assert.ok(lucky > plain, `luck ${lucky} must beat no-luck ${plain}`);
+  }
 });
+
 
 test('rollFish always returns a fish from the table', () => {
   for (let i = 0; i < 300; i += 1) {
@@ -75,11 +90,18 @@ test('rollFish always returns a fish from the table', () => {
   }
 });
 
-test('rollFish covers the whole table across the roll range', () => {
-  const seen = new Set();
-  for (let i = 0; i < 5000; i += 1) seen.add(rollFish(i / 5000, { luck: 0 }).id);
-  assert.equal(seen.size, FISH.length, 'every fish must be reachable');
+test('every species is reachable from the lake that holds it', () => {
+  // The roll range must be able to produce every fish a lake lists, not just the
+  // first few by weight.
+  for (const area of AREAS) {
+    const seen = new Set();
+    for (let r = 0; r < 4000; r += 1) seen.add(rollFish(r / 4000, RODS.titan, area.id).id);
+    for (const id of area.fish) {
+      assert.ok(seen.has(id), `${area.name}: ${id} is listed but never comes up on a cast`);
+    }
+  }
 });
+
 
 test('biteDelayFor shrinks as lure speed rises', () => {
   const slow = biteDelayFor({ lureSpeed: 1 }, { baseMs: 2000, seed: 0.5 });
@@ -480,4 +502,130 @@ test('a hook line is offered for an unknown fish rather than undefined', () => {
   assert.ok(hookLineFor({ id: 'nope' }).length > 0);
   // And a real fish gets its own, not the fallback.
   assert.equal(hookLineFor(FISH[0]), FISH[0].hook);
+});
+
+
+/* -------------------------------------------------------------- the areas */
+
+/**
+ * Areas: a Frutiger-themed set of waters, unlocked by clearing the current one.
+ *
+ * The unlock rule is "every fish in this water landed, and every rod owned", so
+ * each area is a full sweep of the game rather than a shortcut to rare fish.
+ */
+test('the lakes are all Frutiger-themed and all start locked but the first', () => {
+  assert.ok(AREAS.length >= 4, `expected at least 4 lakes, got ${AREAS.length}`);
+
+  const ids = AREAS.map((a) => a.id);
+  assert.equal(new Set(ids).size, ids.length, 'lake ids must be unique');
+
+  for (const area of AREAS) {
+    for (const key of ['id', 'name', 'theme', 'blurb', 'fish', 'palette']) {
+      assert.ok(area[key] !== undefined, `${area.id} is missing ${key}`);
+    }
+    // Frutiger: a named Aero-family theme, and a real palette to paint with.
+    assert.match(area.theme, /Aero|DORFic|Eco|Glacier|Dark Aero/,
+      `${area.id} should be named for a Frutiger theme, got "${area.theme}"`);
+    for (const key of ['skyTop', 'skyMid', 'skyFloor', 'water', 'accent']) {
+      assert.match(String(area.palette[key]), /^#[0-9a-f]{3,8}$/i,
+        `${area.id}.palette.${key} must be a hex colour, got ${area.palette[key]}`);
+    }
+    // haze and sun carry an alpha, so rgba() is correct for them.
+    for (const key of ['haze', 'sun']) {
+      assert.match(String(area.palette[key]), /^(#|rgba?\()/i,
+        `${area.id}.palette.${key} must be a colour, got ${area.palette[key]}`);
+    }
+  }
+
+  // The first lake is open from the start; the rest are not.
+  assert.equal(AREAS[0].locked, false, 'the first lake must be open to a new player');
+  for (const area of AREAS.slice(1)) {
+    assert.equal(area.locked, true, `${area.id} must start locked`);
+  }
+});
+
+test('every lake has fish in it, and every species is reachable somewhere', () => {
+  // Rosters deliberately overlap: a later lake keeps some of what you have already
+  // fished, so it reads as familiar but harder. The rule that matters is coverage.
+  const seen = new Set();
+  for (const area of AREAS) {
+    assert.ok(area.fish.length > 0, `${area.id} has no fish`);
+    for (const id of area.fish) {
+      assert.ok(FISH.some((f) => f.id === id), `${area.id} lists unknown fish ${id}`);
+      seen.add(id);
+    }
+  }
+  for (const fish of FISH) {
+    assert.ok(seen.has(fish.id), `${fish.name} is in no lake`);
+  }
+  // The Mythical only ever appears in the two hardest waters, and must be in the
+  // deepest one — that lake is the reward for getting this far.
+  const myth = FISH.find((f) => f.rarity === 'Mythical');
+  const homes = AREAS.filter((a) => a.fish.includes(myth.id));
+  assert.ok(homes.length >= 1, 'the Mythical must be catchable somewhere');
+  assert.ok(homes.includes(AREAS[AREAS.length - 1]),
+    'the deepest lake must hold the Mythical');
+  for (const a of homes) {
+    assert.ok(AREAS.indexOf(a) >= AREAS.length - 2,
+      `${a.name} is too easy a home for the Mythical`);
+    // A lake of one fish makes every cast identical, so luck would be meaningless.
+    assert.ok(a.fish.length >= 2, `${a.name} needs more than one species`);
+  }
+});
+
+test('later lakes are strictly harder than earlier ones', () => {
+  // A lake must earn its unlock, so each one holds fish at least as rare as the
+  // last. Otherwise a new lake is a downgrade.
+  const weightOf = (area) => area.fish.reduce((sum, id) => {
+    const f = FISH.find((x) => x.id === id);
+    return sum + (f.rarity === 'Common' ? 1 : f.rarity === 'Uncommon' ? 2
+      : f.rarity === 'Rare' ? 3 : f.rarity === 'Legendary' ? 4 : 5);
+  }, 0) / area.fish.length;
+
+  for (let i = 1; i < AREAS.length; i += 1) {
+    assert.ok(weightOf(AREAS[i]) > weightOf(AREAS[i - 1]),
+      `${AREAS[i].name} (${weightOf(AREAS[i]).toFixed(1)}) should be richer than ` +
+      `${AREAS[i - 1].name} (${weightOf(AREAS[i - 1]).toFixed(1)})`);
+  }
+});
+
+test('a lake unlocks only when its fish are all landed and every rod is owned', () => {
+  // Part-way: two fish short and one rod to go.
+  const area = AREAS[1];
+  const nearly = area.fish.slice(0, -1).reduce((best, id) => {
+    best[id] = 999;
+    return best;
+  }, {});
+  assert.equal(areaUnlocked(area, { bestiary: nearly, owned: ['bamboo', 'willow'] }), false,
+    'not while fish are unlanded');
+
+  // All fish landed, but a rod still missing.
+  const all = area.fish.reduce((best, id) => { best[id] = 999; return best; }, {});
+  const allRods = Object.keys(RODS);
+  const short = allRods.slice(0, -1);
+  assert.equal(areaUnlocked(area, { bestiary: all, owned: short }), false,
+    'not while a rod is unowned');
+
+  // Both conditions met.
+  assert.equal(areaUnlocked(area, { bestiary: all, owned: allRods }), true,
+    'open once every fish is landed and every rod is owned');
+});
+
+test('the first lake is always open, whatever the save looks like', () => {
+  assert.equal(areaUnlocked(AREAS[0], { bestiary: {}, owned: [] }), true);
+  assert.equal(areaUnlocked(AREAS[0], { bestiary: null, owned: null }), true);
+});
+
+test('fish can only be rolled from the lake you are standing in', () => {
+  const other = AREAS[1];
+  for (let i = 0; i < 300; i += 1) {
+    const fish = rollFish(i / 300, RODS.bamboo, other.id);
+    assert.ok(other.fish.includes(fish.id),
+      `${fish.name} is not in ${other.name}`);
+  }
+});
+
+test('an unknown lake id falls back to the first lake rather than crashing', () => {
+  const fish = rollFish(0.5, RODS.bamboo, 'not-a-lake');
+  assert.ok(AREAS[0].fish.includes(fish.id));
 });

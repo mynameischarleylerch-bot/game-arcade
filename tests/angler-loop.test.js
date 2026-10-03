@@ -795,3 +795,87 @@ test('the hook line names the fish and is shown while reeling', async () => {
   assert.doesNotMatch(shown, /undefined|Click SET HOOK/,
     'it must be the flavour line, not the prompt or a missing value');
 });
+
+
+/* -------------------------------------------------------------- the lakes */
+
+test('there is a lake picker, and the first lake is the one you start in', () => {
+  const page = readFileSync(new URL('../vendor/fru-angler/index.html', import.meta.url), 'utf8');
+  assert.match(page, /id="lake-picker"/, 'the page needs a lake picker');
+  assert.match(page, /id="lake-list"/, 'with somewhere to list them');
+
+  const source = readFileSync(new URL('../vendor/fru-angler/angler.js', import.meta.url), 'utf8');
+  assert.match(source, /AREAS/, 'the game must read the lake table');
+  assert.match(source, /areaUnlocked/, 'and respect the unlock rule');
+  assert.match(source, /rollFish\([\s\S]{0,60}?state\.areaId/,
+    'a cast must roll from the lake you are standing in');
+});
+
+test('a fresh save starts in Aero Lake and can move once a lake unlocks', async () => {
+  const ctx = await boot(34);
+  const button = ctx.doc.getElementById('lake-picker');
+  assert.ok(button, 'the HUD button exists');
+  assert.equal(button.getAttribute('aria-expanded'), 'false', 'closed to begin with');
+
+  // The rows live in the panel, not the button.
+  const rows = [...ctx.doc.querySelectorAll('#lake-list .lake-row')];
+  assert.ok(rows.length >= 4, `expected the lakes listed, saw ${rows.length}`);
+  assert.equal(rows[0].getAttribute('aria-disabled'), 'false', 'the first lake is open');
+  assert.ok(rows.slice(1).every((r) => r.getAttribute('aria-disabled') === 'true'),
+    'the rest start locked');
+  assert.match(rows[1].textContent, /DORFic Delta/, 'and they are named');
+  assert.match(rows[1].textContent, /0\/2 fished/, 'a locked lake says what is missing');
+
+  // Opening it shows the same rows.
+  button.dispatchEvent(new ctx.win.MouseEvent('click', { bubbles: true }));
+  assert.equal(ctx.doc.getElementById('lake-panel').hidden, false, 'the panel opens');
+  assert.ok(ctx.doc.querySelectorAll('#lake-list .lake-row').length >= 4, 'and lists them');
+});
+
+test('an earned lake is loaded and the scene painted with its light', async () => {
+  const ctx = await boot(36);
+  const { AREAS } = await import('../vendor/fru-angler/fishing.js');
+
+  // Earn the second lake honestly: land its fish and own every rod.
+  const area = AREAS[1];
+  const bestiary = {};
+  for (const id of area.fish) bestiary[id] = 5;
+  localStorage.setItem('fru-angler-save', JSON.stringify({
+    coins: 500,
+    owned: ['bamboo', 'willow', 'carbon', 'oak', 'titan'],
+    rodId: 'titan',
+    bestiary,
+    areaId: area.id,
+  }));
+  await import('../vendor/fru-angler/angler.js?run=36b');
+
+  assert.equal(text(ctx, 'lake-name'), area.name, 'a saved, earned lake is loaded');
+  assert.equal(ctx.doc.getElementById('lake').dataset.area, area.id,
+    'and the scene is painted with it');
+
+  // Its light is the warm DORFic one, not the default Aero sky.
+  const sky = ctx.doc.getElementById('lake').style.getPropertyValue('--sky-top');
+  assert.equal(sky.toLowerCase(), area.palette.skyTop.toLowerCase(),
+    `expected the ${area.theme} sky ${area.palette.skyTop}, got ${sky}`);
+});
+
+test('a save claiming an unearned lake falls back to the first one', async () => {
+  const ctx = await boot(38);
+  localStorage.setItem('fru-angler-save', JSON.stringify({
+    coins: 10, owned: ['bamboo'], rodId: 'bamboo', bestiary: {},
+    areaId: 'dark-aero-deep',
+  }));
+  await import('../vendor/fru-angler/angler.js?run=38b');
+
+  assert.equal(text(ctx, 'lake-name'), 'Aero Lake',
+    'must not drop a player into the deepest water');
+  assert.equal(ctx.doc.getElementById('lake').dataset.area, 'aero-lake');
+});
+
+test('the scene repaints with the lake palette', async () => {
+  const ctx = await boot(35);
+  const lake = ctx.doc.getElementById('lake');
+  const before = lake.style.getPropertyValue('--sky-top');
+  assert.ok(before, 'the lake must carry its palette as custom properties');
+  assert.match(before, /^#[0-9a-f]{3,8}$/i, `unexpected sky colour: ${before}`);
+});

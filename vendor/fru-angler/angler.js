@@ -13,6 +13,9 @@ import {
   fishById, fishSvg,
  fishIndex,
  hookLineFor,
+ AREAS,
+ areaUnlocked,
+ areaProgress,
  fishEntry,
 } from './fishing.js?v=2026-10-01-r';
 import {
@@ -53,6 +56,9 @@ const ui = {
   bagOpen: el('inventory-open'), bagClose: el('inventory-close'),
   indexPanel: el('index-panel'), indexList: el('index-list'),
   indexOpen: el('index-open'), indexClose: el('index-close'),
+  lakePicker: el('lake-picker'), lakePanel: el('lake-panel'),
+  lakeList: el('lake-list'), lakeName: el('lake-name'),
+  lakeClose: el('lake-close'),
   coins: el('coins'), rod: el('rod'), rodStats: el('rod-stats'), bestiary: el('bestiary'),
   message: el('message'),
   line: el('line'),
@@ -76,6 +82,7 @@ const state = {
   bestiary: {},         // fishId -> heaviest weight landed
   hookAt: 0,            // when the bite window closes
   bitten: null,         // the fish on the line, waiting to be hooked
+  areaId: AREAS[0].id,  // the water you are standing in
 };
 
 const rod = () => RODS[state.rodId];
@@ -101,6 +108,12 @@ function load() {
     if (RODS[saved.rodId] && ownsRod(state.owned, saved.rodId)) state.rodId = saved.rodId;
     else if (!ownsRod(state.owned, state.rodId)) state.rodId = state.owned[0];
     if (saved.bestiary && typeof saved.bestiary === 'object') state.bestiary = saved.bestiary;
+    // A saved lake is only honoured if it is genuinely open. A save naming a lake
+    // the player has not earned must not drop them into the Mythical water.
+    if (typeof saved.areaId === 'string') {
+      const area = AREAS.find((a) => a.id === saved.areaId);
+      if (area && areaUnlocked(area, state)) state.areaId = area.id;
+    }
   } catch {
     // Corrupt or blocked storage: the fresh loadout above already stands.
   }
@@ -110,6 +123,7 @@ function save() {
   try {
     localStorage.setItem(SAVE_KEY, JSON.stringify({
       coins: state.coins, rodId: state.rodId, owned: state.owned, bestiary: state.bestiary,
+    areaId: state.areaId,
     }));
   } catch {
     // Storage blocked: the session still plays, it just will not persist.
@@ -509,6 +523,114 @@ function renderInventory() {
 }
 
 /** The shop is for buying; what you own lives in the inventory. */
+/* ------------------------------------------------------------------ lakes */
+
+/**
+ * Paint the scene with the lake's own light.
+ *
+ * The gradients are written as custom properties on the lake element so the CSS
+ * picks them up, rather than restating every gradient in JS. The SVG stops inside
+ * the scene still use their own defs, so the water ramp is retinted here too.
+ */
+function paintArea(area) {
+  const { skyTop, skyMid, skyFloor, water, accent, haze, sun } = area.palette;
+  ui.lake.style.setProperty('--sky-top', skyTop);
+  ui.lake.style.setProperty('--sky-mid', skyMid);
+  ui.lake.style.setProperty('--sky-floor', skyFloor);
+  ui.lake.style.setProperty('--water', water);
+  ui.lake.style.setProperty('--accent', accent);
+  ui.lake.style.setProperty('--haze-tint', haze);
+  ui.lake.style.setProperty('--sun', sun);
+
+  // The scene's own defs: the deep water gradient and the far shore.
+  const stop = (id, colour, offset) => {
+    const node = document.querySelector(`#${id} stop[offset="${offset}"]`);
+    if (node) node.setAttribute('stop-color', colour);
+  };
+  stop('fa-water', water, '0');
+  stop('fa-water', water, '0.35');
+  stop('fa-water', water, '1');
+  stop('fa-shore', skyMid, '0');
+  stop('fa-shore', skyMid, '0.5');
+  stop('fa-shore', water, '1');
+
+  ui.lake.dataset.area = area.id;
+  if (ui.lakeName) ui.lakeName.textContent = area.name;
+  say(area.blurb);
+}
+
+/** The lake picker: every water, open or not, with a reason when it is shut. */
+function renderLakes() {
+  ui.lakeList.textContent = '';
+
+  for (const area of AREAS) {
+    const open = areaUnlocked(area, state);
+    const here = area.id === state.areaId;
+
+    const row = document.createElement('button');
+    row.type = 'button';
+    row.className = 'lake-row';
+    row.setAttribute('aria-disabled', open ? 'false' : 'true');
+    if (here) row.setAttribute('aria-current', 'true');
+    row.dataset.area = area.id;
+
+    // A swatch of the lake itself, so the picker reads at a glance.
+    const swatch = document.createElement('span');
+    swatch.className = 'lake-row__swatch';
+    swatch.setAttribute('aria-hidden', 'true');
+    swatch.style.background =
+      `linear-gradient(180deg, ${area.palette.skyTop}, ${area.palette.skyMid} 46%, ${area.palette.water})`;
+
+    const label = document.createElement('span');
+    label.className = 'lake-row__label';
+    const name = document.createElement('span');
+    name.className = 'lake-row__name';
+    name.textContent = area.name;
+    const theme = document.createElement('span');
+    theme.className = 'lake-row__theme';
+    theme.textContent = area.theme;
+    const blurb = document.createElement('span');
+    blurb.className = 'lake-row__blurb';
+    blurb.textContent = area.blurb;
+    label.append(name, theme, blurb);
+
+    const state_ = document.createElement('span');
+    state_.className = 'lake-row__state';
+    if (here) {
+      state_.textContent = 'You are here';
+    } else if (open) {
+      state_.textContent = `${area.fish.length} species`;
+    } else {
+      // Say what is missing rather than just "locked".
+      const p = areaProgress(area, state);
+      state_.textContent = `${p.landed}/${p.total} fished · ${p.rods}/${p.rodTotal} rods`;
+    }
+
+    row.append(swatch, label, state_);
+    if (open && !here) {
+      row.addEventListener('click', () => {
+        state.areaId = area.id;
+        paintArea(area);
+        save();
+        renderLakes();
+        closeLakes();
+      });
+    }
+    ui.lakeList.appendChild(row);
+  }
+}
+
+function openLakes() {
+  renderLakes();
+  ui.lakePanel.hidden = false;
+  ui.lakePicker.setAttribute('aria-expanded', 'true');
+}
+
+function closeLakes() {
+  ui.lakePanel.hidden = true;
+  ui.lakePicker.setAttribute('aria-expanded', 'false');
+}
+
 /* ------------------------------------------------------------- fish index */
 
 /** Every weight in the table, so per-fish odds can be a share of all casts. */
@@ -689,6 +811,11 @@ ui.shopOpen.addEventListener('click', openShop);
 ui.shopClose.addEventListener('click', closeShop);
 ui.bagOpen?.addEventListener('click', openBag);
 ui.indexOpen?.addEventListener('click', openIndex);
+ui.lakePicker?.addEventListener('click', openLakes);
+ui.lakeClose?.addEventListener('click', closeLakes);
+ui.lakePanel?.addEventListener('click', (event) => {
+  if (event.target === ui.lakePanel) closeLakes();
+});
 ui.indexClose?.addEventListener('click', closeIndex);
 // Clicking the scrim outside the panel closes it, same as the others.
 ui.indexPanel?.addEventListener('click', (event) => {
@@ -719,7 +846,7 @@ function frame(now) {
   }
 
   if (state.phase === 'waiting' && now >= state.biteAt) {
-    hookSet(rollFish(Math.random(), rod()));
+    hookSet(rollFish(Math.random(), rod(), state.areaId));
   }
 
   // Miss the window and the fish is gone. Otherwise "click to hook" is optional.
@@ -746,5 +873,10 @@ if (typeof ResizeObserver === 'function') {
   addEventListener('resize', fitFigure);
 }
 setPhase('idle');
-say(IDLE_HINT);
+// Paint the starting lake before the first frame, so the scene is never
+// showing the default palette for a frame.
+paintArea(AREAS.find((a) => a.id === state.areaId) ?? AREAS[0]);
+// Fill the picker now as well as on open, so its rows exist and their locked
+// state is readable without having to open it.
+renderLakes();
 requestAnimationFrame(frame);

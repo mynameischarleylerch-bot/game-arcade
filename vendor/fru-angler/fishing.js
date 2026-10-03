@@ -176,9 +176,15 @@ export function biteDelayFor(rod, { baseMs = BITE_BASE_MS, seed = Math.random() 
  * Luck multiplies the weight of everything rarer than Common, scaled by how
  * far down the table a fish sits, so the good stuff drifts up gradually.
  */
-export function rollFish(roll, rod) {
+export function rollFish(roll, rod, areaId) {
+  // Only the fish living in the water you are standing in are on the table. An
+  // unknown id falls back to the first lake, which is always open.
+  const area = AREAS.find((a) => a.id === areaId) ?? AREAS[0];
+  const pool = area.fish.map((id) => FISH.find((f) => f.id === id)).filter(Boolean);
+  const table = pool.length ? pool : FISH;
+
   const luck = Math.max(0, rod?.luck || 0);
-  const weights = FISH.map((fish, index) => {
+  const weights = table.map((fish, index) => {
     const base = fish.weight ?? 1;
     const depth = index / Math.max(1, FISH.length - 1);
     const boost = fish.rarity === 'Common' ? 1 : 1 + luck * depth * 2;
@@ -187,11 +193,11 @@ export function rollFish(roll, rod) {
 
   const total = weights.reduce((sum, w) => sum + w, 0);
   let cursor = Math.min(Math.max(roll, 0), 0.999999) * total;
-  for (let i = 0; i < FISH.length; i += 1) {
+  for (let i = 0; i < table.length; i += 1) {
     cursor -= weights[i];
-    if (cursor <= 0) return FISH[i];
+    if (cursor <= 0) return table[i];
   }
-  return FISH[0];
+  return table[0];
 }
 
 /** Roll a mutation. Weights are percentages and must total 100. */
@@ -560,6 +566,111 @@ export function hookLineFor(fish) {
   const tier = idx >= 0 ? RARITY_ORDER[idx] : 'Common';
   const extra = tier === 'Common' ? '' : `, and ${tier.toLowerCase()}`;
   return `Something takes the bait. You feel it move${extra}.`;
+}
+
+/* ------------------------------------------------------------------ areas */
+
+/**
+ * The lakes, in order. Each is a Frutiger world with its own light, and each is
+ * harder than the last — a lake is unlocked by clearing the one before it.
+ *
+ * The palettes are lifted from the site's own five themes so a lake looks like
+ * the shell theme it is named for. `locked` marks whether a lake opens from the
+ * start; only the first does.
+ */
+export const AREAS = [
+  {
+    id: 'aero-lake',
+    name: 'Aero Lake',
+    theme: 'Frutiger Aero',
+    blurb: 'Still, bright water under a very large sun.',
+    locked: false,
+    fish: ['glidefin', 'aero-minnow'],
+    palette: {
+      skyTop: '#81d4fa', skyMid: '#b3e5fc', skyFloor: '#f4fbff',
+      water: '#2f81c4', accent: '#4fc3f7',
+      haze: 'rgba(255, 255, 255, 0.75)', sun: 'rgba(255, 255, 255, 0.95)',
+    },
+  },
+  {
+    id: 'doric-delta',
+    name: 'DORFic Delta',
+    theme: 'DORFic',
+    blurb: 'Warm orange shallows cut by straight geometric channels.',
+    locked: true,
+    fish: ['metro-trout', 'doric-dab'],
+    palette: {
+      skyTop: '#f7c894', skyMid: '#fbe0c4', skyFloor: '#fffaf4',
+      water: '#c2701f', accent: '#e07b2a',
+      haze: 'rgba(255, 240, 224, 0.5)', sun: 'rgba(255, 214, 170, 0.7)',
+    },
+  },
+  {
+    id: 'eco-marsh',
+    name: 'Eco Marsh',
+    theme: 'Eco',
+    blurb: 'Green water, dappled light, and things that hide in it.',
+    locked: true,
+    fish: ['metro-trout', 'doric-dab', 'eco-gar'],
+    palette: {
+      skyTop: '#a8cf8f', skyMid: '#c8e0b0', skyFloor: '#f6faf0',
+      water: '#4e7a35', accent: '#7aa84a',
+      haze: 'rgba(255, 255, 255, 0.45)', sun: 'rgba(255, 255, 245, 0.85)',
+    },
+  },
+  {
+    id: 'glacier-fjord',
+    name: 'Glacier Fjord',
+    theme: 'Glacier',
+    blurb: 'Pale blue ice water. Everything here is cold and fast.',
+    locked: true,
+    fish: ['doric-dab', 'eco-gar', 'glacier-char'],
+    palette: {
+      skyTop: '#cfe6f5', skyMid: '#e3f1f9', skyFloor: '#fbfdff',
+      water: '#3f7fa8', accent: '#7fc4e8',
+      haze: 'rgba(255, 255, 255, 0.8)', sun: 'rgba(255, 255, 255, 1)',
+    },
+  },
+  {
+    id: 'dark-aero-deep',
+    name: 'Dark Aero Deep',
+    theme: 'Dark Aero',
+    blurb: 'The bottom of the world, where the light barely reaches.',
+    locked: true,
+    fish: ['eco-gar', 'glacier-char'],
+    palette: {
+      skyTop: '#0f2027', skyMid: '#122a34', skyFloor: '#0a141a',
+      water: '#06222e', accent: '#29b6f6',
+      haze: 'rgba(150, 200, 240, 0.08)', sun: 'rgba(180, 225, 255, 0.22)',
+    },
+  },
+];
+
+/**
+ * Is this lake open yet?
+ *
+ * A lake opens once every fish that lives in it has been landed and every rod is
+ * owned. The first lake is always open, so a fresh or corrupt save can always fish.
+ */
+export function areaUnlocked(area, progress) {
+  if (!area || area.locked === false) return true;
+  const bestiary = progress?.bestiary ?? {};
+  const owned = progress?.owned ?? [];
+  const allRods = Object.keys(RODS);
+  if (allRods.some((id) => !owned.includes(id))) return false;
+  return (area.fish ?? []).every((id) => Number(bestiary[id]) > 0);
+}
+
+/** How close a player is to opening the next lake, for the locked badge. */
+export function areaProgress(area, progress) {
+  const bestiary = progress?.bestiary ?? {};
+  const landed = (area?.fish ?? []).filter((id) => Number(bestiary[id]) > 0).length;
+  return {
+    landed,
+    total: (area?.fish ?? []).length,
+    rods: (progress?.owned ?? []).filter((id) => RODS[id]).length,
+    rodTotal: Object.keys(RODS).length,
+  };
 }
 
 export function fishIndex() {
