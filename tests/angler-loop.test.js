@@ -13,7 +13,7 @@ import { readFileSync } from 'node:fs';
 import { JSDOM } from 'jsdom';
 import { FISH, RARITY_ORDER, fishIndex, hookLineFor, AREAS,
          RODS, RODS_BY_PRICE, SEALS, startingLoadout, TIMES, WEATHER, LOST_ITEMS,
-} from '../vendor/fru-angler/fishing.js?v=2026-10-03-u';
+} from '../vendor/fru-angler/fishing.js?v=2026-10-03-v';
 
 const PAGE = readFileSync(
   new URL('../vendor/fru-angler/index.html', import.meta.url),
@@ -1930,4 +1930,76 @@ test('an owned rod is equippable from the inventory whatever lake you are in', a
   glacier.dispatchEvent(new ctx.win.MouseEvent('click', { bubbles: true }));
   assert.equal(ctx.doc.getElementById('rod').textContent.trim(), 'Glacier Lance',
     'and equipping it must work from the wrong lake');
+});
+
+test('the seal shop locks a seal whose lake is shut, before the click', () => {
+  // The rods learned this the hard way: a gate invisible until you click is a
+  // gate that feels broken. renderSealShop() must ask buySeal() itself so the row
+  // cannot promise a sale the rules will refuse.
+  const src = readFileSync(new URL('../vendor/fru-angler/angler.js', import.meta.url), 'utf8');
+  const fn = src.slice(src.indexOf('function renderSealShop'));
+  const body = fn.slice(0, fn.indexOf('\n}\n'));
+
+  assert.match(body, /buySeal\(/, 'the row must ask buySeal, so it cannot lie');
+  // It has to pass the save: rank alone cannot answer the lake question.
+  assert.match(body, /bestiary[\s\S]{0,200}owned|owned[\s\S]{0,200}bestiary/,
+    'and pass the progress buySeal needs to judge the lake');
+  // And it must use the refusal, rather than only handling it after the click.
+  assert.match(body, /\.reason/, 'the pre-click answer must be shown');
+  assert.match(body, /disabled/, 'and a row that cannot be bought must not be clickable');
+});
+
+test('the row lock blames the lake once rank and coins are out of the way', async () => {
+  // A fresh boot holds zero seal coins and rank 1, so every seal is locked on
+  // something else and a naive "the badge must name the lake" assertion is wrong.
+  // What matters is that the lock tells the truth about WHY. Gate order is rank,
+  // then lake, then price -- deliberately, so the player hears the first thing
+  // they could actually act on.
+  //
+  // The sealed-seal test file walks rank with the coins held out of the way. Here,
+  // walk the LAKE with rank and coins out of the way: a save that has everything
+  // except the later lakes open. Any badge left must name a lake.
+  const { SEALS, AREAS, areaUnlocked } = await import('../vendor/fru-angler/fishing.js');
+
+  // Clear the first three lakes, so Aero/DORFic/Eco are open and the deepest two
+  // are not. The gate is the lake before, so clearing N opens exactly N.
+  const progress = { bestiary: {}, owned: [] };
+  for (const area of AREAS.slice(0, 3)) {
+    for (const id of area.fish) progress.bestiary[id] = 1;
+    for (const id of area.requiredRods) progress.owned.push(id);
+  }
+  // Don't hardcode how many that opens: areaUnlocked() gates a lake on the one
+  // before it, so the count is a fact about the rules, not about this fixture.
+  // Assert what the test actually needs -- that some lakes are open and some are
+  // not, so the badge assertions below run against both kinds of row.
+  const openIds = AREAS.filter((a) => areaUnlocked(a, progress)).map((a) => a.id);
+  const shutIds = AREAS.filter((a) => !areaUnlocked(a, progress)).map((a) => a.id);
+  assert.ok(openIds.length > 0 && shutIds.length > 0,
+    `the fixture must leave some lakes open and some shut, got open=${openIds.length} shut=${shutIds.length}`);
+
+  const ctx = await seedSave({ ...progress, sealCoins: 999999, xp: 999999 }, 912);
+  ctx.doc.getElementById('seal-shop-open').dispatchEvent(
+    new ctx.win.MouseEvent('click', { bubbles: true }));
+  const rows = [...ctx.doc.querySelectorAll('#seal-shop-list .seal')];
+  assert.equal(rows.length, SEALS.length, 'every seal gets a row');
+
+  let sawLakeLock = 0;
+  for (const [n, seal] of SEALS.entries()) {
+    const home = AREAS.find((a) => a.id === seal.home);
+    const badge = rows[n].querySelector('.seal__lock')?.textContent ?? '';
+    const btn = rows[n].querySelector('.seal__equip');
+
+    if (areaUnlocked(home, progress)) {
+      assert.equal(badge, '', `${seal.name}: ${home.name} is open, so nothing should block it`);
+      assert.equal(btn.disabled, false, `${seal.name} must be buyable with ${home.name} open`);
+      assert.match(btn.textContent, /buy/i);
+    } else {
+      assert.match(badge, new RegExp(home.name),
+        `${seal.name}: ${home.name} is shut, so the lock must name it, said "${badge}"`);
+      assert.equal(btn.disabled, true, `${seal.name} must not be clickable`);
+      assert.match(btn.textContent, /locked/i);
+      sawLakeLock += 1;
+    }
+  }
+  assert.ok(sawLakeLock > 0, 'nothing was locked by its lake, so this test proved nothing');
 });

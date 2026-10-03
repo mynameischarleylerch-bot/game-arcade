@@ -1227,8 +1227,17 @@ test('a seal you cannot afford or has not levelled is refused, with a reason', (
 
 test('a seal can be bought exactly when you can afford and qualify', () => {
   const seal = SEALS[SEALS.length - 1];
-  const bought = buySeal({ coins: seal.price }, seal.id, seal.level);
-  assert.equal(bought.ok, true);
+  // Its lake has to be open too -- this used to buy the deepest seal on an empty
+  // save, which is only possible now that the lake gate exists.
+  const home = AREAS.find((a) => a.id === seal.home);
+  const save = { bestiary: {}, owned: [] };
+  for (const id of AREAS) {
+    if (id.id === home.id) break;
+    for (const f of id.fish) save.bestiary[f] = 1;
+    for (const r of id.requiredRods) save.owned.push(r);
+  }
+  const bought = buySeal({ coins: seal.price }, seal.id, seal.level, save);
+  assert.equal(bought.ok, true, `said "${bought.reason}"`);
   assert.equal(bought.sealId, seal.id);
   assert.equal(bought.coins, 0, 'the price must come off the wallet');
 });
@@ -1935,4 +1944,97 @@ test('beads sit on the blank, clear of the grip', () => {
       assert.ok(b < 1, `${rod.id} has a bead at ${b}, past the tip`);
     }
   }
+});
+
+test('a seal is only sold once its own lake is open', () => {
+  // Every seal names a `home` lake and buySeal() ignored it completely -- the
+  // field was read by nothing. So Tangerine, the DORFic Delta seal, could be
+  // bought on day one from Aero Lake for coins you had never earned there.
+  //
+  // Note that "home is unlocked" means what areaUnlocked() says it means: you have
+  // cleared the lake BEFORE it. Aero Lake itself is always open, so Bubbles is
+  // buyable from the start with no progress at all.
+  const OPEN = { bestiary: {}, owned: [] };
+
+  for (const seal of SEALS) {
+    const home = AREAS.find((a) => a.id === seal.home);
+    assert.ok(home, `${seal.id} points at "${seal.home}", which is not a lake`);
+
+    // At high rank and a full wallet, with nothing unlocked: only a seal whose
+    // home is open by default may sell.
+    const bare = buySeal({ coins: 999999 }, seal.id, 99, OPEN);
+    if (areaUnlocked(home, OPEN)) {
+      assert.equal(bare.ok, true, `${seal.id} (${home.name}) should sell from the start`);
+    } else {
+      assert.equal(bare.ok, false, `${seal.id} (${home.name}) sold on an empty save`);
+      assert.match(bare.reason ?? '', new RegExp(home.name),
+        `${seal.id} should name the lake, said "${bare.reason}"`);
+    }
+  }
+});
+
+test('opening the lake opens its seal, and no other', () => {
+  // Build the save that unlocks each lake in turn, by completing the one before.
+  const save = { bestiary: {}, owned: [] };
+  const unlockedNames = () => new Set(
+    AREAS.filter((a) => areaUnlocked(a, save)).map((a) => a.id),
+  );
+
+  for (const seal of SEALS) {
+    const home = AREAS.find((a) => a.id === seal.home);
+    const open = areaUnlocked(home, save);
+    const before = buySeal({ coins: 999999 }, seal.id, 99, save).ok;
+    assert.equal(before, open,
+      `setup: ${seal.id} ${before ? 'sold' : 'refused'} with ${home.name} ${open ? 'open' : 'shut'}`);
+
+    // Clear this lake: every fish landed, every rod it requires owned.
+    for (const id of home.fish) save.bestiary[id] = 1;
+    for (const id of home.requiredRods) if (!save.owned.includes(id)) save.owned.push(id);
+
+    assert.equal(areaUnlocked(home, save), true,
+      `clearing ${home.name} should open it`);
+    const after = buySeal({ coins: 999999 }, seal.id, 99, save);
+    assert.equal(after.ok, true,
+      `${seal.id} should sell once ${home.name} is open, said "${after.reason}"`);
+
+    // And opening it must not open every later seal too.
+    for (const other of SEALS) {
+      if (other.id === seal.id) continue;
+      const oh = AREAS.find((a) => a.id === other.home);
+      if (!unlockedNames().has(oh.id)) {
+        assert.equal(buySeal({ coins: 999999 }, other.id, 99, save).ok, false,
+          `${other.id} (${oh.name}) sold after only ${home.name} was cleared`);
+      }
+    }
+  }
+});
+
+test('the lake gate is checked before the price, so the reason is the lake', () => {
+  // Order matters to the player: broke at a locked lake, the message should be
+  // about the lake, not about money they would have needed anyway.
+  const seal = SEALS.find((s) => !areaUnlocked(AREAS.find((a) => a.id === s.home),
+    { bestiary: {}, owned: [] }));
+  assert.ok(seal, 'need a seal that starts locked');
+  const broke = buySeal({ coins: 0 }, seal.id, 99, { bestiary: {}, owned: [] });
+  assert.equal(broke.ok, false);
+  assert.match(broke.reason ?? '', new RegExp(AREAS.find((a) => a.id === seal.home).name),
+    `a player with no coins and no lake should hear about the lake, said "${broke.reason}"`);
+});
+
+test('the rank gate still applies on top of the lake gate', () => {
+  // Lake open is not enough: the rank cap has to keep working, or opening DORFic
+  // Delta would hand over a rank-12 seal to a rank-1 angler.
+  const seal = SEALS.find((s) => s.level > 1);
+  const home = AREAS.find((a) => a.id === seal.home);
+  const open = { bestiary: {}, owned: [] };
+  for (const id of AREAS) {
+    if (id.id === home.id) break;
+    for (const f of id.fish) open.bestiary[f] = 1;
+    for (const r of id.requiredRods) open.owned.push(r);
+  }
+  assert.equal(areaUnlocked(home, open), true, `${home.name} should be open in this save`);
+  assert.equal(buySeal({ coins: 999999 }, seal.id, 1, open).ok, false,
+    `${seal.name} must still refuse below rank ${seal.level}`);
+  assert.equal(buySeal({ coins: 999999 }, seal.id, seal.level, open).ok, true,
+    `${seal.name} must sell at rank ${seal.level} in its own lake`);
 });

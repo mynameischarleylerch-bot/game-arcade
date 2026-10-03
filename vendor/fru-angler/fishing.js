@@ -1275,11 +1275,23 @@ export function sealComment(seal, fish, { bestiary = {}, personalBest = false, j
  * Buy a seal. Never mutates the wallet: on failure the caller gets the same coins
  * back plus a reason a player can read.
  */
-export function buySeal(wallet, sealId, level = 1) {
+export function buySeal(wallet, sealId, level = 1, progress = { bestiary: {}, owned: [] }) {
   const seal = SEALS.find((s) => s.id === sealId);
   if (!seal) return { ...wallet, ok: false, reason: 'Unknown seal.' };
   if (seal.level > level) {
     return { ...wallet, ok: false, reason: `${seal.name} needs rank ${seal.level}.` };
+  }
+
+  // The seal belongs to a lake, so you open the lake before you buy its seal.
+  // `home` was declared on every seal and read by nothing: Tangerine could be
+  // bought on day one from Aero Lake for coins you had never earned there.
+  //
+  // Checked after rank and before price, because a player who is both broke and
+  // standing nowhere near the lake should hear about the lake -- the coins are a
+  // problem they cannot have solved yet.
+  const home = AREAS.find((a) => a.id === seal.home);
+  if (home && !areaUnlocked(home, progress)) {
+    return { ...wallet, ok: false, reason: `${seal.name} only appears in ${home.name}. Open it first.` };
   }
   if (!Number.isFinite(wallet?.coins) || wallet.coins < seal.price) {
     return { ...wallet, ok: false, reason: `Not enough seal coins for ${seal.name}.` };

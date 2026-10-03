@@ -24,10 +24,10 @@ import {
  levelFrom, xpForCatch, xpForLevel, luckFor, luckFromLevel,
  rollLostItem, lostItemsFor, sellLostItems, lostItemById,
  buySeal, equipSeal, sealComment, sealDuplicates, sealIdleLine,
-} from './fishing.js?v=2026-10-03-u';
+} from './fishing.js?v=2026-10-03-v';
 import {
   reelConfig, stepReel as advance, reelOutcomeFor, isCaught, lineSnapped,
-} from './reel.js?v=2026-10-03-u';
+} from './reel.js?v=2026-10-03-v';
 
 /* ------------------------------------------------------------------ tuning */
 
@@ -1241,14 +1241,26 @@ function renderSealShop() {
   ui.sealList.textContent = '';
   paintFinds();
 
+  // The progress the lake gate is judged against: every fish landed, every rod owned.
+  const progress = { bestiary: state.bestiary, owned: state.owned };
+
   for (const seal of SEALS) {
     const owned = state.ownedSeals.includes(seal.id);
     const active = state.equippedSeal === seal.id;
-    const tooLow = rank.level < seal.level;
     const home = AREAS.find((a) => a.id === seal.home);
 
+    // Ask the real rules whether this can be bought, rather than re-deciding here.
+    // buySeal() knows the rank cap, the lake gate and the price; asking it is the
+    // only way the row cannot promise a sale the click would then refuse.
+    const quote = owned
+      ? { ok: true }
+      : buySeal({ coins: state.sealCoins }, seal.id, rank.level, progress);
+    const locked = !owned && !quote.ok;
+
     const row = document.createElement('div');
-    row.className = 'seal' + (active ? ' seal--active' : '') + (owned ? '' : ' seal--locked');
+    row.className = 'seal'
+      + (active ? ' seal--active' : '')
+      + (owned ? '' : locked ? ' seal--locked' : ' seal--for-sale');
     row.innerHTML = `
       <div class="seal__head">
         <span class="seal__portrait" style="--seal-hue:${seal.hue}" aria-hidden="true"></span>
@@ -1256,7 +1268,7 @@ function renderSealShop() {
           <b class="seal__name">${seal.name}</b>
           <span class="seal__home">${home?.name ?? ''}</span>
         </span>
-        ${tooLow ? `<span class="seal__lock">rank ${seal.level}</span>` : ''}
+        ${locked ? `<span class="seal__lock">${quote.reason}</span>` : ''}
       </div>
       <p class="seal__line">${seal.line}</p>
       <p class="seal__perks">
@@ -1281,9 +1293,13 @@ function renderSealShop() {
         say(`${seal.name} settles onto the dock beside you.`);
       });
     } else {
-      button.textContent = 'Buy';
+      button.textContent = locked ? 'Locked' : 'Buy';
+      if (locked) {
+        button.disabled = true;
+        button.title = quote.reason;
+      }
       button.addEventListener('click', () => {
-        const result = buySeal({ coins: state.sealCoins }, seal.id, rank.level);
+        const result = buySeal({ coins: state.sealCoins }, seal.id, rank.level, progress);
         if (!result.ok) return say(result.reason);
         state.sealCoins = result.coins;
         state.ownedSeals = [...state.ownedSeals, seal.id];
