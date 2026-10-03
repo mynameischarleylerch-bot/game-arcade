@@ -104,10 +104,13 @@
   /* -------------------------------------------------------------- scene */
   .lake {
     position: relative;
-    border-radius: 18px;
-    background: linear-gradient(180deg, var(--sky-top) 0%, var(--sky-mid) 42%, var(--sky-floor) 100%);
-    border: 1px solid rgba(255,255,255,.9);
-    box-shadow: 0 18px 40px rgba(1,87,155,.22), inset 0 1px 0 rgba(255,255,255,.5);
+    border-radius: var(--radius-lg);
+    /* specular sweep across the water, then the sky-to-lake gradient beneath */
+    background:
+      linear-gradient(105deg, rgba(255,255,255,0) 38%, rgba(255,255,255,.22) 50%, rgba(255,255,255,0) 62%),
+      linear-gradient(180deg, var(--sky-top) 0%, var(--sky-mid) 42%, var(--sky-floor) 100%);
+    border: 1px solid var(--hairline-strong);
+    box-shadow: var(--shadow-panel), var(--shadow-edge);
     overflow: hidden;
     min-height: 0;
     cursor: pointer;
@@ -115,19 +118,28 @@
     user-select: none;
   }
 
-  /* Aero sun bloom and a couple of soft clouds, behind the scene. */
+  /* Aero sun bloom, behind the scene. */
   .lake::before {
     content: ""; position: absolute; right: 6%; top: 4%;
     width: 22%; aspect-ratio: 1; border-radius: 50%;
-    background: radial-gradient(circle, var(--sun), rgba(255,249,196,0) 70%);
+    background: radial-gradient(circle, var(--sun), rgba(255, 249, 196, 0) 70%);
+    box-shadow: 0 0 40px rgba(255, 249, 196, .55);
     pointer-events: none;
   }
+
+  /* Soft clouds plus a wide specular highlight drifting over the water. */
   .lake::after {
-    content: ""; position: absolute; left: -5%; right: -5%; top: 30%; height: 22%;
-    background:
-      radial-gradient(60% 100% at 20% 60%, rgba(255,255,255,.9), rgba(255,255,255,0) 70%),
-      radial-gradient(50% 100% at 62% 50%, rgba(255,255,255,.75), rgba(255,255,255,0) 70%);
+    content: ""; position: absolute; left: -5%; right: -5%; top: 22%; height: 28%;
     pointer-events: none;
+    background:
+      radial-gradient(50% 100% at 62% 30%, rgba(255, 255, 255, .5), rgba(255, 255, 255, 0) 70%),
+      radial-gradient(60% 100% at 20% 60%, rgba(255, 255, 255, .55), rgba(255, 255, 255, 0) 70%);
+    opacity: .85;
+    animation: sheen-drift 14s ease-in-out infinite alternate;
+  }
+  @keyframes sheen-drift {
+    from { transform: translateX(-3%); }
+    to   { transform: translateX(3%); }
   }
 
   /* The scenery sits in one SVG at percentage coordinates, so the composition
@@ -407,6 +419,7 @@
 
   @media (prefers-reduced-motion: reduce) {
     *, *::before, *::after { animation: none !important; transition: none !important; }
+    .lake::after { animation: none; opacity: .7; }
   }
 </style>
 </head>

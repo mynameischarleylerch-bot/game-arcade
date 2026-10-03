@@ -394,3 +394,22 @@ test('the hint bar fades in from transparent rather than boxing the lake', () =>
   assert.match(rule, /rgba\([^)]*,\s*0\)/, 'the hint must start fully transparent');
   assert.equal(/border:/.test(rule), false, 'a border would outline the whole lake');
 });
+
+
+test('the lake is layered glass, not a single gradient', () => {
+  const rule = PAGE.match(/\.lake\s*\{([\s\S]*?)\n  \}/)[1];
+  assert.match(rule, /var\(--shadow-panel\)/, 'the lake should use the panel shadow');
+  assert.match(rule, /var\(--hairline/, 'and a hairline edge');
+
+  // Two stacked layers: the specular sweep over the sky-to-lake gradient.
+  const gradients = (rule.match(/gradient/g) || []).length;
+  assert.ok(gradients >= 2, `expected 2+ gradient layers, found ${gradients}`);
+  assert.match(PAGE, /\.lake::after[\s\S]*?radial-gradient/,
+    'a specular sweep belongs in ::after');
+});
+
+test('the sheen drift respects reduced motion', () => {
+  const reduced = PAGE.slice(PAGE.indexOf('@media (prefers-reduced-motion: reduce)'));
+  assert.match(reduced, /\.lake::after\s*\{[^}]*animation:\s*none/,
+    'the drift must stop for users who ask for reduced motion');
+});
