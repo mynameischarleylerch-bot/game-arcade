@@ -6,6 +6,8 @@
  * and there are sixteen avatars because MSN display pictures were a 4x4 grid.
  */
 
+import { versioned } from './build.js?v=2026-10-01-d';
+
 export const SAVE_KEY = 'aero-arcade-profile';
 export const DEFAULT_NICK = 'Karin';
 export const NICK_MAX = 18;      // MSN nicknames were short; so is the header slot
@@ -34,7 +36,7 @@ export const DEFAULT_STATUS = 'online';
  */
 export const AVATARS = Array.from({ length: 16 }, (_, i) => ({
   index: i,
-  src: `./assets/avatars/avatar-${String(i + 1).padStart(2, '0')}.svg`,
+  src: versioned(`./assets/avatars/avatar-${String(i + 1).padStart(2, '0')}.svg`),
   label: `Avatar ${i + 1}`,
 }));
 

@@ -40,7 +40,7 @@ test('offers exactly sixteen avatars, as MSN display pictures did', () => {
 
 test('every avatar has a real, relative file path', () => {
   for (const a of AVATARS) {
-    assert.match(a.src, /^\.\/assets\/avatars\/avatar-\d\d\.svg$/, `bad path: ${a.src}`);
+    assert.match(a.src, /^\.\/assets\/avatars\/avatar-\d\d\.svg\?v=[\w-]+$/, `bad path: ${a.src}`);
     assert.ok(a.label, `avatar ${a.src} needs a label`);
   }
 });

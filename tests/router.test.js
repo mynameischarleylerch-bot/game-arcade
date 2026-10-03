@@ -22,6 +22,8 @@ test('playerUrlFor percent-encodes the slug', () => {
   assert.equal(playerUrlFor('a b'), './play.html?game=a%20b');
 });
 
-test('backUrl returns to the relative index', () => {
-  assert.equal(backUrl(), './index.html');
+test('backUrl returns to the index, cache-stamped', () => {
+  // The stamp is not optional: an unstamped index served from cache is how this
+  // site shipped "no visible change" four times.
+  assert.match(backUrl(), /^\.\/index\.html\?v=[\w-]+$/);
 });

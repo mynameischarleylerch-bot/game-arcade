@@ -63,7 +63,7 @@ test('the avatar SVGs the page references all exist', () => {
   const referenced = new Set();
   for (const page of ['index.html', 'play.html']) {
     const html = readFileSync(new URL(`../${page}`, import.meta.url), 'utf8');
-    for (const m of html.matchAll(/\.\/assets\/avatars\/(avatar-\d\d\.svg)/g)) {
+    for (const m of html.matchAll(/\.\/assets\/avatars\/(avatar-\d\d\.svg)(?:\?v=[\w-]+)?/g)) {
       referenced.add(m[1]);
     }
   }

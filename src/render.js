@@ -1,4 +1,5 @@
 /** Builds HTML strings from registry data. No DOM access — the browser gets a string. */
+import { versioned } from './build.js?v=2026-10-01-d';
 
 const HTML_ESCAPES = { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' };
 
@@ -7,14 +8,14 @@ export function escapeHtml(value) {
 }
 
 export function renderCard(game) {
-  const playHref = `./play.html?game=${encodeURIComponent(game.slug)}`;
+  const playHref = versioned(`./play.html?game=${encodeURIComponent(game.slug)}`);
   const tags = (game.tags ?? [])
     .map((tag) => `<span class="tag">${escapeHtml(tag)}</span>`)
     .join('');
   return `
     <article class="card" data-featured="${game.featured === true}" data-slug="${escapeHtml(game.slug)}">
       <a class="card__cover" href="${escapeHtml(playHref)}" tabindex="-1" aria-hidden="true">
-        <img src="${escapeHtml(game.cover)}" alt="" loading="lazy" width="320" height="180">
+        <img src="${escapeHtml(versioned(game.cover))}" alt="" loading="lazy" width="320" height="180">
       </a>
       <div class="card__body">
         <h3 class="card__title">${escapeHtml(game.title)}</h3>

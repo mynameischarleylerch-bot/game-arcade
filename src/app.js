@@ -1,6 +1,6 @@
 /** Boots the arcade index: load registry, validate, render, wire tag filters. */
-import { validateConfig, filterByTag, allTags } from './config.js';
-import { renderGrid, renderTagFilters } from './render.js';
+import { validateConfig, filterByTag, allTags } from './config.js?v=2026-10-01-d';
+import { renderGrid, renderTagFilters } from './render.js?v=2026-10-01-d';
 
 /*
  * Versioned for the same reason as the script tags: Pages serves

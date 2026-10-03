@@ -6,8 +6,9 @@
  * belongs to the game running inside the iframe. Swallowing them here would
  * break input for every game at once.
  */
-import { findBySlug } from './config.js';
-import { backUrl } from './router.js';
+import { versioned } from './build.js?v=2026-10-01-d';
+import { findBySlug } from './config.js?v=2026-10-01-d';
+import { backUrl } from './router.js?v=2026-10-01-d';
 
 const ESCAPE_KEY = 'Escape';
 
@@ -34,7 +35,7 @@ export function initPlayer({ window, config, slug, onExit = null }) {
   titleEl.textContent = game.title;
   metaEl.textContent = `${game.controls} · ${game.year}`;
   document.title = `${game.title} — Aero Arcade`;
-  frameEl.setAttribute('src', game.playUrl);
+  frameEl.setAttribute('src', versioned(game.playUrl));
   frameEl.setAttribute('title', game.title);
 
   fullscreenEl?.addEventListener('click', () => {

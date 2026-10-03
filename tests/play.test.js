@@ -29,7 +29,12 @@ test('loads the game into the iframe and fills in the chrome', () => {
   const dom = makeDom();
   initPlayer({ window: dom.window, config: { games: [game] }, slug: 'demo-snake' });
   const { document } = dom.window;
-  assert.equal(document.getElementById('frame').getAttribute('src'), './vendor/demo-snake/index.html');
+  // The whole game page is a separate document: without a stamp here the
+  // browser serves the previous version of the game itself.
+  assert.match(
+    document.getElementById('frame').getAttribute('src'),
+    /^\.\/vendor\/demo-snake\/index\.html\?v=[\w-]+$/,
+  );
   assert.equal(document.getElementById('title').textContent, 'Demo Snake');
   assert.match(document.getElementById('meta').textContent, /Arrow keys/);
   assert.equal(document.title, 'Demo Snake — Aero Arcade');
@@ -64,7 +69,8 @@ test('Escape exits to the index', () => {
   // shell's intent (leave the player, go to ./index.html) is what this test owns.
   initPlayer({ window: dom.window, config: { games: [game] }, slug: 'demo-snake', onExit: (url) => exits.push(url) });
   dom.window.document.dispatchEvent(new dom.window.KeyboardEvent('keydown', { key: 'Escape', bubbles: true }));
-  assert.deepEqual(exits, ['./index.html']);
+  assert.equal(exits.length, 1);
+  assert.match(exits[0], /^\.\/index\.html\?v=[\w-]+$/);
 });
 
 test('Escape exits even while focus is inside the game iframe', () => {
@@ -76,7 +82,8 @@ test('Escape exits even while focus is inside the game iframe', () => {
   // Same-origin, so the shell can reach into the game's document.
   const gameDocument = frame.contentDocument;
   gameDocument.dispatchEvent(new dom.window.KeyboardEvent('keydown', { key: 'Escape', bubbles: true }));
-  assert.deepEqual(exits, ['./index.html']);
+  assert.equal(exits.length, 1);
+  assert.match(exits[0], /^\.\/index\.html\?v=[\w-]+$/);
 });
 
 test('the in-iframe Escape handler leaves game keys alone', () => {

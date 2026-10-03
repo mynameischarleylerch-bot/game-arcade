@@ -28,9 +28,11 @@ test('renderCard escapes every text field', () => {
 
 test('renderCard links to the player and the repo', () => {
   const html = renderCard(game);
-  assert.ok(html.includes('href="./play.html?game=demo-snake"'));
+  assert.match(html, /href="\.\/play\.html\?game=demo-snake(&amp;|&)v=[\w-]+"/,
+    'the play link must carry the cache stamp');
   assert.ok(html.includes('href="https://github.com/karin/demo-snake"'));
-  assert.ok(html.includes('src="./assets/covers/demo-snake.svg"'));
+  assert.match(html, /src="\.\/assets\/covers\/demo-snake\.svg\?v=[\w-]+"/,
+    'the cover image is cache-stamped too');
   assert.ok(html.includes('Demo Snake'));
 });
 

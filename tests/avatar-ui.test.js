@@ -57,7 +57,7 @@ test('renders sixteen display pictures and eight statuses', async () => {
 test('starts on avatar 1 and Online', async () => {
   const ctx = await mount(fakeStorage(), 2);
   const face = q(ctx, '[data-msn-face]');
-  assert.match(face.src, /avatar-01\.svg$/);
+  assert.match(face.src, /avatar-01\.svg\?v=/);
   assert.equal(q(ctx, '[data-msn-label]').textContent, 'Online');
   assert.equal(ctx.card.getAttribute('data-status'), 'online');
   assert.equal(q(ctx, '[data-msn-grid] button[aria-pressed="true"]').dataset.index, '0');
@@ -73,7 +73,7 @@ test('picking a display picture updates the face and writes to storage', async (
   const ctx = await mount(fakeStorage(), 4);
   q(ctx, '[data-msn-grid] button[data-index="9"]').click();
 
-  assert.match(q(ctx, '[data-msn-face]').src, /avatar-10\.svg$/);
+  assert.match(q(ctx, '[data-msn-face]').src, /avatar-10\.svg\?v=/);
   assert.equal(q(ctx, '[data-msn-grid] button[data-index="9"]').getAttribute('aria-pressed'), 'true');
   assert.equal(q(ctx, '[data-msn-grid] button[data-index="0"]').getAttribute('aria-pressed'), 'false',
     'only one face is selected');
@@ -148,14 +148,14 @@ test('a saved profile is restored on the next visit', async () => {
     'aero-arcade-profile': JSON.stringify({ avatarIndex: 12, statusId: 'brb', nick: 'Yo Chan' }),
   });
   const ctx = await mount(storage, 10);
-  assert.match(q(ctx, '[data-msn-face]').src, /avatar-13\.svg$/);
+  assert.match(q(ctx, '[data-msn-face]').src, /avatar-13\.svg\?v=/);
   assert.equal(q(ctx, '[data-msn-label]').textContent, 'Yo Chan — Be right back');
 });
 
 test('a corrupt profile falls back to the defaults instead of throwing', async () => {
   const storage = fakeStorage({ 'aero-arcade-profile': '<<broken>>' });
   const ctx = await mount(storage, 11);
-  assert.match(q(ctx, '[data-msn-face]').src, /avatar-01\.svg$/);
+  assert.match(q(ctx, '[data-msn-face]').src, /avatar-01\.svg\?v=/);
   assert.equal(q(ctx, '[data-msn-label]').textContent, 'Online');
 });
 
