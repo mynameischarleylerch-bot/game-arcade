@@ -23,10 +23,10 @@ import {
  levelFrom, xpForCatch, xpForLevel, luckFor, luckFromLevel,
  rollLostItem, lostItemsFor,
  buySeal, equipSeal, sealComment, sealDuplicates,
-} from './fishing.js?v=2026-10-02-a';
+} from './fishing.js?v=2026-10-03-c';
 import {
   reelConfig, stepReel as advance, reelOutcomeFor, isCaught, lineSnapped,
-} from './reel.js?v=2026-10-02-a';
+} from './reel.js?v=2026-10-03-c';
 
 /* ------------------------------------------------------------------ tuning */
 
