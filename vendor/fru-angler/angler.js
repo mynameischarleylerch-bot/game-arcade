@@ -23,10 +23,10 @@ import {
  levelFrom, xpForCatch, xpForLevel, luckFor, luckFromLevel,
  rollLostItem, lostItemsFor, sellLostItems, lostItemById,
  buySeal, equipSeal, sealComment, sealDuplicates, sealIdleLine,
-} from './fishing.js?v=2026-10-03-i';
+} from './fishing.js?v=2026-10-03-j';
 import {
   reelConfig, stepReel as advance, reelOutcomeFor, isCaught, lineSnapped,
-} from './reel.js?v=2026-10-03-i';
+} from './reel.js?v=2026-10-03-j';
 
 /* ------------------------------------------------------------------ tuning */
 
@@ -253,18 +253,42 @@ function sellFinds() {
  * sale or a gift would overwrite the seal's opinion. The bubble belongs to the
  * pet and nothing else competes for it.
  */
-function sealSays(line) {
+function hideBubble() {
   if (!ui.bubble) return;
-  if (!line) {
-    ui.bubble.setAttribute('hidden', '');
+  clearTimeout(state.bubbleTimer);
+  state.bubbleTimer = null;
+  ui.bubble.classList.remove('is-speaking');
+  ui.bubble.setAttribute('hidden', '');
+  ui.bubbleText.textContent = '';
+}
+
+/** How long a line stays up. Long enough to actually read it. */
+const BUBBLE_MS = 4200;
+
+function sealSays(line, ms = BUBBLE_MS) {
+  if (!ui.bubble) return;
+  clearTimeout(state.bubbleTimer);
+  state.bubbleTimer = null;
+
+  // No seal, or nothing to say: the bubble goes away entirely. It must not sit
+  // there empty, and it must not keep the last line on screen.
+  if (!line || !String(line).trim()) {
+    hideBubble();
     return;
   }
-  // The bubble is 25 units wide; SVG has no text wrapping, so long lines are cut
-  // rather than allowed to run off the lake.
-  const text = String(line);
-  const shown = text.length > 42 ? `${text.slice(0, 41)}\u2026` : text;
-  ui.bubbleText.textContent = shown;
+
+  // No truncation any more. The bubble is HTML and wraps, so cutting the words off
+  // at 42 characters was solving a problem that no longer exists -- and it cut off
+  // half the sentence.
+  ui.bubbleText.textContent = String(line);
+  ui.bubble.classList.add('is-speaking');
   ui.bubble.removeAttribute('hidden');
+
+  // It disappears on its own. A bubble that never fades leaves stale words up
+  // long after the seal stopped talking.
+  if (ms > 0) {
+    state.bubbleTimer = setTimeout(hideBubble, ms);
+  }
 }
 
 /**

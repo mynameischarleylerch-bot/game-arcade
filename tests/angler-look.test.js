@@ -756,3 +756,66 @@ test('the readout pills still use the shared pill radius', () => {
   assert.match(rule('.hud__seal-coins'), /border-radius:\s*(999px|var\(--pill\))/);
   assert.match(rule('.hud__group'), /border-radius:\s*(999px|var\(--pill\))/);
 });
+
+test('the speech bubble is sized to fit the words it has to hold', () => {
+  // The bubble was 25 viewBox units wide with font-size 3.1px. SVG has no text
+  // wrapping, so a 42-character line came out ~65 units wide -- 2.6x its own box,
+  // centred at x=14, which put most of it off the LEFT edge of a scene that has
+  // overflow:hidden. The seal looked mute because its words were clipped away.
+  const scene = PAGE.slice(PAGE.indexOf('<svg class="scene"'), PAGE.indexOf('</svg>'));
+  assert.doesNotMatch(scene, /<text[^>]*bubble/,
+    'the bubble must not be SVG text -- SVG cannot wrap, so it runs off the scene');
+
+  // An HTML bubble can wrap, so it just has to be a real element with room.
+  assert.match(PAGE, /<div[^>]*class="bubble"/,
+    'the speech bubble must be an HTML element so long lines can wrap');
+});
+
+test('the bubble appears only while there is something to read', () => {
+  // Appearance must follow the text, not a stale timer: an empty line means no
+  // seal is equipped, or it has nothing to say, and the bubble must be GONE --
+  // not sitting there empty, not still holding the previous sentence.
+  const src = readFileSync(new URL('../vendor/fru-angler/angler.js', import.meta.url), 'utf8');
+
+  const hide = src.slice(src.indexOf('function hideBubble'));
+  assert.match(hide.slice(0, hide.indexOf('\n}\n')),
+    /remove\('is-speaking'\)/, 'hiding must clear the speaking class');
+  assert.match(hide.slice(0, hide.indexOf('\n}\n')),
+    /clearTimeout/, 'and clear the timer, so a stale line cannot reappear');
+
+  const says = src.slice(src.indexOf('function sealSays'));
+  const body = says.slice(0, says.indexOf('\n}\n'));
+  assert.match(body, /if\s*\(\s*!line[\s\S]*?hideBubble\(\)/,
+    'an empty line must go through hideBubble, not just skip setting the text');
+  assert.match(body, /classList\.add\('is-speaking'\)/,
+    'a real line must switch the bubble on');
+  assert.doesNotMatch(body, /slice\(0, 4\d\)/,
+    'the bubble is HTML and wraps now -- truncating the words is a bug');
+});
+
+test('the bubble is never left showing stale words', () => {
+  const src = readFileSync(new URL('../vendor/fru-angler/angler.js', import.meta.url), 'utf8');
+  // Every path that clears the bubble must clear the timer too, or a stale line
+  // can reappear after the seal has stopped talking.
+  for (const point of ['function hideBubble', 'function sealSays']) {
+    const i = src.indexOf(point);
+    assert.notEqual(i, -1, `${point} must exist`);
+  }
+});
+
+test('the bubble is anchored inside the lake, which clips its overflow', () => {
+  // .lake is position:relative and overflow:hidden. An absolutely positioned
+  // bubble needs that as its containing block or it anchors to the page and
+  // floats off the panel -- which is what "it still doesnt talk" looked like.
+  assert.match(rule('.lake'), /position:\s*relative/,
+    'the lake must be the positioning context for the bubble');
+  assert.match(rule('.bubble'), /position:\s*absolute/,
+    'and the bubble must be absolutely positioned within it');
+
+  // The decorative Aero bubbles use a different class, so the speech bubble's
+  // rules cannot accidentally restyle them -- or be restyled by them.
+  const lake = PAGE.slice(PAGE.indexOf('<div class="lake"'));
+  assert.match(lake, /class="bubble"/, 'the speech bubble must be inside the lake');
+  assert.match(rule('.bubble'), /z-index:\s*3/,
+    'and above the scene, or the water paints over it');
+});

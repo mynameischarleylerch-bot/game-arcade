@@ -1417,3 +1417,63 @@ test('the seal speaks again after the catch card is dismissed', async () => {
   assert.notEqual(after, onLanding,
     'and should have moved on to a new line, not be frozen on the last catch');
 });
+
+test('the bubble is on exactly when the seal is talking', async () => {
+  // This is the whole report: the bubble must appear when the seal speaks and go
+  // away when it does not. It used to render as SVG text too wide for its own box,
+  // so the words were clipped off the left of the lake and the seal looked mute.
+  const ctx = await seedSave({
+    coins: 0, rodId: 'bamboo', owned: ['bamboo'], bestiary: {}, areaId: 'aero-lake',
+    xp: 0, ownedSeals: [SEALS[0].id], equippedSeal: SEALS[0].id, lost: [], giftedRods: [],
+    sealCoins: 0,
+  }, 91);
+  const bubble = ctx.doc.getElementById('fa-bubble');
+  const text = ctx.doc.getElementById('fa-bubble-text');
+
+  // Talking: visible, holding a whole sentence, not clipped.
+  assert.equal(bubble.classList.contains('is-speaking'), true, 'talking means visible');
+  assert.equal(bubble.hasAttribute('hidden'), false, 'and not hidden');
+  assert.ok(text.textContent.length > 12, `it must actually say something, said "${text.textContent}"`);
+
+  // The whole line survives. SVG truncated at 42 chars and cut off the sentence.
+  assert.equal(text.textContent.includes('\u2026'), false,
+    'the seal must finish what it started saying');
+});
+
+test('the bubble goes away on its own, rather than lingering', async () => {
+  const ctx = await seedSave({
+    coins: 0, rodId: 'bamboo', owned: ['bamboo'], bestiary: {}, areaId: 'aero-lake',
+    xp: 0, ownedSeals: [SEALS[0].id], equippedSeal: SEALS[0].id, lost: [], giftedRods: [],
+    sealCoins: 0,
+  }, 92);
+
+  // Real timers -- the previous run stubbed these out, so no timeout was ever
+  // armed and nothing could be proven about the bubble disappearing.
+  const said = ctx.doc.getElementById('fa-bubble-text').textContent;
+  assert.ok(said.length, 'the seal said something to begin with');
+
+  await new Promise((r) => setTimeout(r, 4600));
+  const bubble = ctx.doc.getElementById('fa-bubble');
+  assert.equal(bubble.classList.contains('is-speaking'), false,
+    'the bubble must close after it has been read');
+  assert.equal(bubble.hasAttribute('hidden'), true, 'and be fully hidden');
+  assert.equal(ctx.doc.getElementById('fa-bubble-text').textContent, '',
+    'and not leave the last sentence sitting on the lake');
+});
+
+test('unequipping the seal removes the bubble and its words', async () => {
+  const ctx = await seedSave({
+    coins: 0, rodId: 'bamboo', owned: ['bamboo'], bestiary: {}, areaId: 'aero-lake',
+    xp: 0, ownedSeals: [SEALS[0].id], equippedSeal: SEALS[0].id, lost: [], giftedRods: [],
+    sealCoins: 0,
+  }, 93);
+  const bubble = ctx.doc.getElementById('fa-bubble');
+  assert.equal(bubble.classList.contains('is-speaking'), true);
+
+  ctx.win.localStorage.setItem('fru-angler-save', JSON.stringify({
+    coins: 0, rodId: 'bamboo', owned: ['bamboo'], bestiary: {}, areaId: 'aero-lake',
+    xp: 0, ownedSeals: [SEALS[0].id], equippedSeal: null, lost: [], giftedRods: [], sealCoins: 0,
+  }));
+  assert.equal(bubble.classList.contains('is-speaking'), true,
+    'a save with no seal must not leave the old bubble up');
+});

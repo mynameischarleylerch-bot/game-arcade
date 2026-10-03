@@ -655,14 +655,31 @@
   /* ---- the seal's speech bubble -------------------------------------
    * Drawn inside the scene so it sits on the dock with the pet, in the same
    * Aero glass as every other panel. */
-  .bubble__body {
-    fill: #ffffff; fill-opacity: .94;
-    stroke: rgba(1, 87, 155, .45); stroke-width: .4;
+  /* The bubble is HTML so long sentences wrap instead of being clipped off the
+     lake. It sits over the dock where the seal is, and one class drives its whole
+     appearance -- `hidden` on its own let it show up empty on some paths. */
+  .bubble {
+    position: absolute; left: 1.5%; top: 4%; z-index: 3;
+    max-width: 32%; min-width: 7rem;
+    padding: .45rem .7rem .5rem;
+    border-radius: 1rem; border: 1px solid rgba(1, 87, 155, .26);
+    background: linear-gradient(180deg, rgba(255,255,255,.97), rgba(255,255,255,.88));
+    box-shadow: 0 6px 18px rgba(1, 60, 110, .18), inset 0 1px 0 #fff;
+    color: #013a63; font-size: .82rem; line-height: 1.32; font-weight: 600;
+    text-wrap: pretty; overflow-wrap: break-word; hyphens: auto;
+    opacity: 0; transform: translateY(6px) scale(.96);
+    transition: opacity .18s ease, transform .18s ease;
+    pointer-events: none;
   }
-  .bubble__tail { fill: #ffffff; fill-opacity: .94; stroke: none; }
-  .bubble__text {
-    fill: #013a63; font-size: 3.1px; text-anchor: middle;
-    font-family: "Segoe UI", Frutiger, system-ui, sans-serif;
+  .bubble[hidden] { display: none; }
+  .bubble.is-speaking { opacity: 1; transform: translateY(0) scale(1); }
+  /* The tail points down at the seal on the dock. */
+  .bubble__tail {
+    position: absolute; left: 1.7rem; bottom: -7px; width: 12px; height: 12px;
+    background: rgba(255,255,255,.94);
+    border-right: 1px solid rgba(1, 87, 155, .26);
+    border-bottom: 1px solid rgba(1, 87, 155, .26);
+    border-radius: 0 0 3px 0; transform: rotate(45deg);
   }
 
   /* ---- notices -------------------------------------------------------
@@ -904,15 +921,18 @@
           </g>
         </g>
         </g>
-        <!-- What the seal has to say. A tail points back down at it. -->
-        <g id="fa-bubble" hidden>
-          <path class="bubble__tail" d="M14 50 L16.5 45.5 L11.5 45.5 Z" fill="#ffffff"/>
-          <rect class="bubble__body" x="1.5" y="32" width="25" height="14" rx="5"/>
-          <text class="bubble__text" id="fa-bubble-text" x="14" y="41"></text>
-        </g>
-
+        
         <path id="line" d="M60 33 Q61 42 63 52"/>
       </svg>
+        <!-- The speech bubble lives in HTML, not in the scene SVG.
+             SVG text has no wrapping: at font-size 3.1px a 42-character line came
+             out about 65 viewBox units wide in a 25-unit box, and the lake clips
+             overflow -- so most of the sentence ran off the left edge and the
+             seal looked mute. HTML wraps, and it scales with the panel. -->
+        <div class="bubble" id="fa-bubble" role="status" aria-live="polite" hidden>
+          <span class="bubble__text" id="fa-bubble-text"></span>
+          <span class="bubble__tail" aria-hidden="true"></span>
+        </div>
 
       <!-- Aero bubbles over the water. Decorative only. -->
       <div class="lake__bubble lake__bubble--1" aria-hidden="true"></div>
@@ -1055,6 +1075,6 @@
     </div>
   </div>
 
-  <script type="module" src="./angler.js?v=2026-10-03-i"></script>
+  <script type="module" src="./angler.js?v=2026-10-03-j"></script>
 </body>
 </html>
