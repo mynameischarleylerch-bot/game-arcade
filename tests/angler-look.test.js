@@ -707,3 +707,52 @@ test('both currency surfaces name it the same way', () => {
   assert.match(rules, /Not enough seal coins/,
     'being turned away must say which currency was short');
 });
+
+test('the readout pills are opaque enough to read as shapes', () => {
+  // At rgba(255,255,255,.28) the pill was lighter than the Aero bar behind it and
+  // vanished, so the grouping was invisible. The fill is a gradient now, so check
+  // the LOWEST alpha anywhere in it -- the faintest part is what shows least.
+  const body = rule('.hud__group');
+  const fill = /background:\s*([^;]+);/.exec(body)?.[1] ?? '';
+  assert.match(fill, /linear-gradient/, `the pill needs a gradient fill, got "${fill}"`);
+  const alphas = [...fill.matchAll(/rgba\([^)]*,\s*([\d.]+)\s*\)/g)].map((m) => Number(m[1]));
+  assert.ok(alphas.length >= 2, `the gradient needs two stops, found ${alphas.length}`);
+  const faintest = Math.min(...alphas);
+  assert.ok(faintest >= 0.55,
+    `the readout pill must read as a shape, but its faintest stop is only ${faintest} opaque`);
+  assert.match(body, /border:\s*1px solid/, 'and a visible edge, or it is a smudge');
+  assert.match(body, /box-shadow/, 'and a little lift off the bar');
+});
+
+test('each currency gets its own pill, so the two are never one number', () => {
+  // They shared a single wrapper, which made it read as one wallet with two
+  // figures in it. They are separate currencies earned in separate ways.
+  const hud = PAGE.slice(PAGE.indexOf('class="hud"'), PAGE.indexOf('class="lake"'));
+  const groups = hud.match(/class="hud__group[^"]*"/g) || [];
+  assert.ok(groups.length >= 4,
+    `rod coins, Seal coins, rank and rod each want their own pill, found ${groups.length}`);
+
+  // The currency pill must be inside its own group, not sharing one.
+  const rodAt = hud.indexOf('id="coins"');
+  const sealAt = hud.indexOf('id="seal-coins"');
+  assert.ok(rodAt !== -1 && sealAt !== -1, 'both readouts must exist');
+  const between = hud.slice(rodAt, sealAt);
+  assert.match(between, /class="hud__group[^"]*"[^>]*>[^<]*$/m,
+    'the two currencies must be in different pills, not one shared wrapper');
+});
+
+test('the two currencies are visually told apart, not just named', () => {
+  // Colour already separates the Seal coins text; the pill has to differ too, or
+  // the shape says "one wallet" and only the lettering disagrees.
+  const seal = rule('.hud__seal-coins');
+  assert.ok(seal, 'the Seal coins readout must have its own class');
+  assert.match(seal, /background/, 'and its own pill background, not a bare text colour');
+  assert.match(seal, /border-radius:\s*(999px|var\(--pill\))/,
+    'in the same oval as everything else');
+});
+
+test('the readout pills still use the shared pill radius', () => {
+  // Whatever the fill becomes, the shape must not change.
+  assert.match(rule('.hud__seal-coins'), /border-radius:\s*(999px|var\(--pill\))/);
+  assert.match(rule('.hud__group'), /border-radius:\s*(999px|var\(--pill\))/);
+});

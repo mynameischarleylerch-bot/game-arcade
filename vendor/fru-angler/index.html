@@ -639,9 +639,13 @@
   .hud { flex-wrap: wrap; row-gap: .35rem; }
   .hud__group {
     display: inline-flex; align-items: center; gap: .35rem;
-    padding: .12rem .45rem; border-radius: var(--pill);
-    background: rgba(255, 255, 255, .28);
-    border: 1px solid rgba(255, 255, 255, .5);
+    padding: .18rem .55rem; min-height: 2.1rem; box-sizing: border-box;
+    border-radius: var(--pill);
+    /* Opaque enough to read AS a shape. At .28 the pill was lighter than the Aero
+       bar behind it and vanished, so the grouping was invisible. */
+    background: linear-gradient(180deg, rgba(255,255,255,.82), rgba(255,255,255,.62));
+    border: 1px solid rgba(255, 255, 255, .95);
+    box-shadow: inset 0 1px 0 #fff, 0 2px 6px rgba(1, 87, 155, .12);
   }
   .hud__rod { flex-direction: column; align-items: flex-start; gap: 0; }
   .hud__rod #rod-stats { font-size: .72rem; line-height: 1.15; }
@@ -686,7 +690,14 @@
 
   /* The rank readout and the seal rows. Same glass recipe as everything else. */
   /* Seal coins are a separate currency and must read as one at a glance. */
-  .hud__seal-coins { color: var(--accent-line, #0288d1); font-weight: 700; }
+  .hud__seal-coins {
+    font-weight: 700;
+    color: #5b2d91;
+    background: linear-gradient(180deg, rgba(243,237,255,.95), rgba(226,215,251,.82));
+    border: 1px solid rgba(150, 108, 214, .55);
+    border-radius: var(--pill);
+    box-shadow: inset 0 1px 0 #fff, 0 2px 6px rgba(91, 45, 145, .16);
+  }
   .finds {
     display: grid; gap: .4rem; justify-items: start;
     padding: .5rem .6rem; margin: .5rem 0;
@@ -731,9 +742,12 @@
 <body>
   <div class="stage">
     <div class="hud">
-      <span class="hud__group">
-        <span title="Coins from fish. Buy rods with these.">¤ <b id="coins">0</b></span>
-        <span class="hud__seal-coins" title="Seal coins. Earned by selling what you fish up. Buy seals with these.">Seal coins <b id="seal-coins">0</b></span>
+      <span class="hud__group" title="Coins from fish. Buy rods with these.">
+        <span>¤ <b id="coins">0</b></span>
+      </span>
+      <span class="hud__group hud__seal-coins"
+            title="Seal coins. Earned by selling what you fish up. Buy seals with these.">
+        <span>Seal coins <b id="seal-coins">0</b></span>
       </span>
       <span class="hud__group hud__rank">
         <span>rank <b id="level">1</b> <span id="level-title">Deckhand</span></span>
@@ -1041,6 +1055,6 @@
     </div>
   </div>
 
-  <script type="module" src="./angler.js?v=2026-10-03-h"></script>
+  <script type="module" src="./angler.js?v=2026-10-03-i"></script>
 </body>
 </html>
