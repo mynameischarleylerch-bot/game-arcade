@@ -302,3 +302,32 @@ test('no element inside the inventory panel uses an overlay class', () => {
       `${id} must not contain an element with the catch-overlay class`);
   }
 });
+
+
+test('the scene has no orphaned text or unclosed fragments', () => {
+  // A bare path string with no opening tag renders nothing, so it can survive
+  // unnoticed. It is invalid markup and must not come back.
+  const scene = PAGE.slice(PAGE.indexOf('<svg class="scene"'), PAGE.indexOf('</svg>'));
+  assert.equal(/^\s*M[\d.]/m.test(scene), false,
+    'found a bare path fragment with no opening tag');
+
+  // Strip comments, then every d= must belong to a real tag.
+  const stripped = scene.replace(/<!--[\s\S]*?-->/g, '');
+  const openTags = (stripped.match(/<path\b[^>]*>/g) || []).length;
+  assert.ok(openTags >= 3, `expected several paths, found ${openTags}`);
+
+  // The angler comment appears once, in the group that actually contains it.
+  const mentions = (scene.match(/shoulder lobes, no limbs/g) || []).length;
+  assert.equal(mentions, 1, `the angler comment appears ${mentions} times`);
+});
+
+test('the closing group and the line comment are indented with their block', () => {
+  // Both sat at 16 spaces where the surrounding block uses 8.
+  const scene = PAGE.slice(PAGE.indexOf('<svg class="scene"'), PAGE.indexOf('</svg>'));
+  for (const marker of ['</g>', '<!-- The fishing line runs']) {
+    const line = scene.split('\n').find((l) => l.trim().startsWith(marker));
+    assert.ok(line, `${marker} not found`);
+    assert.equal(line.length - line.trimStart().length, 8,
+      `${marker} is indented ${line.length - line.trimStart().length}, expected 8`);
+  }
+});

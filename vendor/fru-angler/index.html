@@ -401,34 +401,29 @@
         <rect class="scene__wood--edge" x="9" y="62" width="5" height="38"/>
         <rect class="scene__wood--edge" x="31" y="62" width="5" height="38"/>
 
-        <!-- the angler: a simple standing figure, silhouetted -->
-        <!-- The angler is the Messenger blob: a head merged into a body with
-             shoulder lobes, no limbs. Drawn flat so it reads at this size. -->
-        M33.2 38.6 C35.6 38.6 37.5 40.5 37.5 42.9 C37.5 44.6 36.8 45.9 35.6 46.8 C36.8 47.1 37.7 47.6 38.6 48.4 C39.8 49.4 40.7 50.8 40.7 52.3 C40.7 55.8 37.4 58 33.2 58 C29 58 25.7 55.8 25.7 52.3 C25.7 50.8 26.6 49.4 27.8 48.4 C28.7 47.6 29.6 47.1 30.8 46.8 C29.6 45.9 28.9 44.6 28.9 42.9 C28.9 40.5 30.8 38.6 33.2 38.6 Z/>
-        <!-- the Aero gloss: a highlight on the head and a soft one on the shoulder -->
-        <!-- the angler is the Messenger blob: a head merged into a body with
-             shoulder lobes, no limbs. Its base meets the deck at y=58. -->
-        <!-- The angler, rod and lure live in one group. The scene uses
+          <!-- The angler, rod and lure live in one group. The scene uses
              preserveAspectRatio="none", so angler.js counter-scales this group to
              keep the blob round instead of stretched to the lake's shape. -->
         <g id="angler-fit">
           <!-- The angler is the Messenger blob: a head merged into a body with
                shoulder lobes, no limbs. Its base meets the deck at y=58. -->
           <path class="scene__figure" d="M33.2 38.6 C35.6 38.6 37.5 40.5 37.5 42.9 C37.5 44.6 36.8 45.9 35.6 46.8 C36.8 47.1 37.7 47.6 38.6 48.4 C39.8 49.4 40.7 50.8 40.7 52.3 C40.7 55.8 37.4 58 33.2 58 C29 58 25.7 55.8 25.7 52.3 C25.7 50.8 26.6 49.4 27.8 48.4 C28.7 47.6 29.6 47.1 30.8 46.8 C29.6 45.9 28.9 44.6 28.9 42.9 C28.9 40.5 30.8 38.6 33.2 38.6 Z"/>
-        <ellipse class="scene__shine" cx="31.4" cy="41.2" rx="1.5" ry="1.1"
-                 transform="rotate(-24 31.4 41.2)"/>
-        <ellipse class="scene__shine" cx="36.4" cy="49.9" rx="1.2" ry=".9"
-                 transform="rotate(20 36.4 49.9)"/>
+          <ellipse class="scene__shine" cx="31.4" cy="41.2" rx="1.5" ry="1.1"
+                   transform="rotate(-24 31.4 41.2)"/>
+          <ellipse class="scene__shine" cx="36.4" cy="49.9" rx="1.2" ry=".9"
+                   transform="rotate(20 36.4 49.9)"/>
 
-        <!-- the rod, angled up and to the right, with the lure at the tip -->
-        <path class="scene__rod" id="rod-shaft" d="M40.7 52 L58 31"
-              stroke="#4a6b7c" stroke-width="1.9"/>
-        <circle class="scene__lure" id="rod-tip" cx="58.6" cy="30.4" r="1.4"/>
-                </g>
+          <!-- the rod, angled up and to the right, with the lure at the tip.
+               The stroke and fill are written inline because paintRod() rewrites
+               them per equipped rod; a stylesheet rule would be overridden. -->
+          <path class="scene__rod" id="rod-shaft" d="M40.7 52 L58 31"
+                stroke="#4a6b7c" stroke-width="1.9"/>
+          <circle class="scene__lure" id="rod-tip" cx="58.6" cy="30.4" r="1.4"/>
+        </g>
 
-                <!-- The fishing line runs from the measured rod tip to the bobber. It sits
-                     outside the fitted group so it is not counter-warped. -->
-                <path id="line" d="M60 33 Q61 42 63 52"/>
+        <!-- The fishing line runs from the measured rod tip to the bobber. It sits
+             outside the fitted group so it is not counter-warped. -->
+        <path id="line" d="M60 33 Q61 42 63 52"/>
       </svg>
 
       <div class="lake__splash" id="splash"></div>
