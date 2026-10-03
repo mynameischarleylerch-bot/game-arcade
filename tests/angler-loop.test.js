@@ -13,7 +13,7 @@ import { readFileSync } from 'node:fs';
 import { JSDOM } from 'jsdom';
 import { FISH, RARITY_ORDER, fishIndex, hookLineFor, AREAS,
          RODS, RODS_BY_PRICE, SEALS, startingLoadout, TIMES, WEATHER, LOST_ITEMS,
-} from '../vendor/fru-angler/fishing.js?v=2026-10-03-z';
+} from '../vendor/fru-angler/fishing.js?v=2026-10-04-a';
 
 const PAGE = readFileSync(
   new URL('../vendor/fru-angler/index.html', import.meta.url),
@@ -2421,4 +2421,46 @@ test('the ui lookup has no duplicate keys', () => {
   // And both panels must be present under distinct names.
   assert.ok(keys.includes('bagPanel'), 'the fish bag needs its own name');
   assert.ok(keys.includes('inventory'), 'the inventory needs its own name');
+});
+
+test('the finds bag sells one item, not only the lot', async () => {
+  // The fish bag has had per-row Sell and Feed since it was a creel. The FINDS bag
+  // -- the lost items that pay Seal coins -- had a single "Sell 7 for 210" button
+  // and no way to part with one. Each distinct find now gets its own row.
+  const { LOST_ITEMS } = await import('../vendor/fru-angler/fishing.js');
+  const gumball = LOST_ITEMS.find((i) => i.id === 'gumball');
+  const ctx = await seedSave({
+    coins: 0, rodId: 'bamboo', owned: ['bamboo'], bestiary: {}, areaId: 'aero-lake',
+    xp: 0, ownedSeals: [], equippedSeal: null, giftedRods: [], sealCoins: 0,
+    lost: ['gumball', 'gumball', 'sunhat'],
+  }, 1200);
+  ctx.doc.getElementById('seal-shop-open').dispatchEvent(
+    new ctx.win.MouseEvent('click', { bubbles: true }));
+
+  const rows = ctx.doc.querySelectorAll('#finds-rows .find');
+  assert.equal(rows.length, 2, `one row per distinct find, got ${rows.length}`);
+
+  // Sell one gumball: that item's value is paid and TWO stay behind.
+  const before = Number(ctx.doc.getElementById('seal-shop-coins').textContent);
+  const row = [...rows].find((r) => /Gumball/.test(r.textContent));
+  assert.ok(row, 'the gumball row must exist');
+  row.querySelector('.find__sell').click();
+
+  const after = Number(ctx.doc.getElementById('seal-shop-coins').textContent);
+  assert.equal(after - before, gumball.value,
+    `selling one must pay exactly that item: ${before} -> ${after}, want +${gumball.value}`);
+  // One of three is gone and two are left -- the count, not the name: the
+  // item is "Gumball Globe", so the multiplier follows the whole name.
+  assert.match(ctx.doc.getElementById('finds-list').textContent,
+    /^2 found: Gumball Globe, Sun Hat/,
+    `the other two must stay, got "${ctx.doc.getElementById('finds-list').textContent}"`);
+  assert.equal(ctx.doc.querySelectorAll('#finds-rows .find').length, 2,
+    'both rows remain, the sun hat was untouched');
+
+  // And selling the lot must still work.
+  ctx.doc.getElementById('sell-finds').click();
+  assert.equal(ctx.doc.getElementById('seal-shop-coins').textContent,
+    String(after + gumball.value + LOST_ITEMS.find((i) => i.id === 'sunhat').value),
+    'sell-all must still clear the bag');
+  assert.equal(ctx.doc.getElementById('finds-list').textContent, 'Nothing in the bag yet. Fish a while.');
 });

@@ -26,10 +26,10 @@ import {
  addToBag, fishEntrySpec, bagWorth, bagEntryValue,
  sellFromBag, feedToBond, bondLuck, bondCount,
  buySeal, equipSeal, sealComment, sealDuplicates, sealIdleLine,
-} from './fishing.js?v=2026-10-03-z';
+} from './fishing.js?v=2026-10-04-a';
 import {
   reelConfig, stepReel as advance, reelOutcomeFor, isCaught, lineSnapped,
-} from './reel.js?v=2026-10-03-z';
+} from './reel.js?v=2026-10-04-a';
 
 /* ------------------------------------------------------------------ tuning */
 
@@ -88,6 +88,7 @@ const ui = {
   sealShopCoins: el('seal-shop-coins'),  // inside the seal shop
   sealHint: el('seal-shop-hint'),  // only shown with an empty dock
   findsList: el('finds-list'), sellFinds: el('sell-finds'),
+  findsRows: el('finds-rows'),
   pet: el('fa-pet'),
   sealPanel: el('seal-shop-panel'), sealList: el('seal-shop-list'),
   sealCoins: el('seal-shop-coins'),
@@ -426,6 +427,7 @@ function paintFinds() {
   if (!ui.findsList || !ui.sellFinds) return;
   const bag = Array.isArray(state.lost) ? state.lost : [];
   const worth = bag.reduce((sum, id) => sum + (lostItemById(id)?.value ?? 0), 0);
+  paintFindRows(bag);
 
   if (bag.length === 0) {
     ui.findsList.textContent = 'Nothing in the bag yet. Fish a while.';
@@ -441,10 +443,75 @@ function paintFinds() {
     .join(', ');
   ui.findsList.textContent = `${bag.length} found: ${list}. Worth ${worth} seal coins.`;
   ui.sellFinds.disabled = false;
-  ui.sellFinds.textContent = `Sell ${bag.length} for ${worth} seal coins`;
+  ui.sellFinds.textContent = `Sell all ${bag.length} for ${worth} seal coins`;
 }
 
 /** Sell the whole bag into Seal coins. Rod coins are never touched. */
+/**
+ * One row per distinct find, so a bag of seven of something can part with one.
+ * There was a single button for the whole bag, so the only choice on offer was
+ * sell everything or sell nothing.
+ */
+function paintFindRows(bag) {
+  if (!ui.findsRows) return;
+  ui.findsRows.textContent = '';
+
+  const tally = new Map();
+  for (const id of bag) tally.set(id, (tally.get(id) ?? 0) + 1);
+
+  for (const [id, n] of tally) {
+    const item = lostItemById(id);
+    if (!item) continue;
+
+    const row = document.createElement('div');
+    row.className = 'find';
+
+    const what = document.createElement('div');
+    what.className = 'find__what';
+
+    const name = document.createElement('span');
+    name.className = 'find__name';
+    name.textContent = item.name;
+    what.appendChild(name);
+
+    if (n > 1) {
+      const count = document.createElement('span');
+      count.className = 'find__count';
+      count.textContent = `\u00d7${n}`;
+      what.appendChild(count);
+    }
+
+    const value = document.createElement('span');
+    value.className = 'find__value';
+    value.textContent = `${item.value} each`;
+    what.appendChild(value);
+
+    const sell = document.createElement('button');
+    sell.className = 'btn btn--small btn--tiny find__sell';
+    sell.textContent = 'Sell one';
+    sell.addEventListener('click', () => sellOne(id, item));
+
+    row.append(what, sell);
+    ui.findsRows.appendChild(row);
+  }
+}
+
+/** Sell a single find, leaving the rest of the bag alone. */
+function sellOne(id, item) {
+  // The FIRST of that item, so the count on its row stays honest.
+  const at = state.lost.indexOf(id);
+  if (at === -1) return;
+  const sold = sellLostItems(state.lost.slice(at, at + 1), 1);
+  if (!sold.ok) return say(sold.reason);
+  state.sealCoins += sold.sealCoins;
+  state.lost = [...state.lost.slice(0, at), ...state.lost.slice(at + 1)];
+  say(`Sold one ${item.name} for ${sold.sealCoins} seal coins.`);
+  save();
+  paintFinds();
+  paintChrome();
+  renderSealShop();
+}
+
 function sellFinds() {
   const sold = sellLostItems(state.lost);
   if (sold.count === 0) return;

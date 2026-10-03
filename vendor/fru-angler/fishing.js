@@ -1129,17 +1129,40 @@ export function lostItemById(id) {
  *
  * An id that is not in the table pays nothing but is still cleared, so a
  * long-dead save cannot accumulate unpayable junk forever.
+ *
+ * `count` sells that many and keeps the rest. It sold all-or-nothing, which meant
+ * a bag of seven identical finds could not part with one -- you either sold the
+ * lot or kept the lot.
  */
-export function sellLostItems(held) {
+export function sellLostItems(held, count = Infinity) {
   if (!Array.isArray(held) || held.length === 0) {
-    return { sealCoins: 0, held: [], count: 0 };
+    return { ok: false, reason: 'Nothing to sell.', sealCoins: 0, held: [], sold: 0, count: 0 };
   }
+
+  // How many to sell. Selling the lot is the default; `count` sells that many and
+  // leaves the rest, so a bag of seven identical things can part with one.
+  const wanted = count === Infinity ? held.length : Math.floor(Number(count));
+  if (!Number.isFinite(wanted) || wanted < 1) {
+    return { ok: false, reason: 'Nothing to sell.', sealCoins: 0, held: [...held], sold: 0, count: 0 };
+  }
+  // More than is in the bag is a refusal, never a short sale: quietly selling
+  // three when four were asked for would leave the player short without knowing.
+  if (wanted > held.length) {
+    return { ok: false, reason: 'The bag does not hold that many.', sealCoins: 0, held: [...held], sold: 0, count: 0 };
+  }
+
   let sealCoins = 0;
-  for (const id of held) {
+  for (const id of held.slice(0, wanted)) {
     const item = lostItemById(id);
     if (item) sealCoins += item.value;
   }
-  return { sealCoins, held: [], count: held.length };
+  return {
+    ok: true,
+    sealCoins,
+    held: held.slice(wanted),
+    sold: wanted,
+    count: wanted,
+  };
 }
 
 /** The junk a given lake can turn up, cheapest first. */

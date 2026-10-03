@@ -962,6 +962,25 @@
   .finds__list{
     margin: 0; font-size: .85rem; color: var(--ink-soft, #0e6ea8);
   }
+  /* One row per distinct find. The whole bag can still go at once, below these. */
+  .finds__rows { display: grid; gap: .3rem; width: 100%; }
+  .find {
+    display: flex; align-items: center; justify-content: space-between;
+    gap: .6rem; padding: .3rem .55rem;
+    border-radius: var(--pill);
+    background: linear-gradient(180deg, rgba(255,255,255,.7), rgba(255,255,255,.5));
+    border: 1px solid rgba(255,255,255,.75);
+  }
+  .find__what { display: flex; align-items: baseline; gap: .45rem; min-width: 0; }
+  .find__name { font-weight: 600; font-size: .9rem; }
+  .find__count {
+    font-size: .74rem; font-weight: 700; color: var(--ink-soft, #0e6ea8);
+    background: rgba(255,255,255,.75); border-radius: var(--pill); padding: .05rem .45rem;
+  }
+  .find__value { font-size: .78rem; color: var(--ink-soft, #0e6ea8); white-space: nowrap; }
+  .find__sell { flex: none; }
+  .btn--tiny { padding: .22rem .6rem; font-size: .78rem; }
+
   .hud__rank {
     color: var(--accent-line, #0288d1); font-weight: 700;
     display: inline-flex; align-items: center; gap: .4rem;
@@ -1430,6 +1449,9 @@
           <p class="shop__wallet">Sell what you fish up to get them. Rod coins will not do.</p>
           <div class="finds">
             <p class="finds__list" id="finds-list">Nothing in the bag yet.</p>
+          <!-- One row per distinct find, so a bag of seven of something can
+               part with one instead of all or nothing. -->
+          <div class="finds__rows" id="finds-rows"></div>
             <button class="btn" id="sell-finds" type="button" disabled>Sell your finds</button>
           </div>
           <p class="shop__wallet">One seal can sit with you at a time.</p>
@@ -1458,6 +1480,6 @@
     </div>
   </div>
 
-  <script type="module" src="./angler.js?v=2026-10-03-z"></script>
+  <script type="module" src="./angler.js?v=2026-10-04-a"></script>
 </body>
 </html>

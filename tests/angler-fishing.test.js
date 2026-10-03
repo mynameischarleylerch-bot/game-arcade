@@ -2228,3 +2228,28 @@ test('every body shape survives a round trip through the silhouette', () => {
   const ghost = fishSilhouette({ id: 'ghost', draw: 'sausage', hue: 1, rarity: 'Mythical' });
   assert.match(ghost, /^<svg/, 'an unknown shape must still draw something');
 });
+
+test('you can sell one find out of the bag, not only all of them', () => {
+  // The finds bag sold everything or nothing: one button, "Sell 7 for 210". A bag
+  // of seven identical Bubble Wafers gave you no way to sell one and keep six.
+  const one = sellLostItems(['gumball', 'gumball', 'gumball'], 1);
+  assert.equal(one.ok, true, 'selling one must work');
+  assert.equal(one.sold, 1, 'exactly one leaves');
+  assert.equal(one.held.length, 2, 'the rest stay in the bag');
+  assert.equal(one.sealCoins, LOST_ITEMS.find((i) => i.id === 'gumball').value,
+    'and it pays that one item, not the lot');
+
+  // Selling the whole bag must still work, unchanged.
+  const all = sellLostItems(['gumball', 'gumball']);
+  assert.equal(all.sold, 2);
+  assert.equal(all.held.length, 0);
+
+  // Asking for more than is there is a refusal, not a negative sale.
+  const tooMany = sellLostItems(['gumball'], 2);
+  assert.equal(tooMany.ok, false, 'cannot sell what is not there');
+  assert.equal(tooMany.sold, 0);
+  assert.equal(tooMany.held.length, 1, 'and the bag is untouched');
+
+  assert.equal(sellLostItems([], 1).ok, false, 'an empty bag sells nothing');
+  assert.equal(sellLostItems(['gumball'], 0).ok, false, 'nor does zero of them');
+});
