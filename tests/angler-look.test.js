@@ -195,7 +195,9 @@ test('the shop styles the inventory sections', () => {
 });
 
 test('the perfect band is lime, the Aero "go" colour', () => {
-  assert.match(PAGE, /\.cast__band\s*\{[^}]*background:[^;]*163,\s*230,\s*53/);
+  // Now a gradient built from the --lime token rather than a literal.
+  assert.match(PAGE, /\.cast__band\s*\{[^}]*background:[^;]*var\(--lime\)/);
+  assert.match(PAGE, /--lime:\s*#a3e635/, '--lime must stay the Aero lime');
 });
 
 test('rarity is shown as blocks under the name', () => {
@@ -362,4 +364,33 @@ test('panels use the shared glass and shadow tokens', () => {
     assert.match(rule[1], /var\(--shadow-/, `${sel} should use a --shadow-* token`);
     assert.match(rule[1], /var\(--hairline/, `${sel} should use a --hairline token`);
   }
+});
+
+
+test('the flat UI pieces have all gained gradients and gloss', () => {
+  const need = {
+    '.cast__band':    [/box-shadow/],
+    '.reel__progress':[/gradient/, /box-shadow/],
+    '.rod':           [/gradient|var\(--shine/, /box-shadow/],
+    '.message':       [/gradient/, /box-shadow/],
+  };
+  for (const [sel, patterns] of Object.entries(need)) {
+    const rule = PAGE.match(new RegExp(`${sel.replace('.', '\\.')}\\s*\\{([\\s\\S]*?)\\n  \\}`));
+    assert.ok(rule, `${sel} must have a rule`);
+    for (const p of patterns) assert.match(rule[1], p, `${sel} is missing ${p}`);
+  }
+
+  // The hover lift is a sibling rule, which is where a :hover belongs.
+  assert.match(PAGE, /\.rod:not\(:disabled\):hover[^}]*translateY/,
+    'rod rows must lift on hover');
+  assert.match(PAGE, /\.rod:not\(:disabled\):hover[^}]*var\(--shadow-lift\)/,
+    'and deepen their shadow while lifted');
+});
+
+test('the hint bar fades in from transparent rather than boxing the lake', () => {
+  // .message covers the whole lake, so a solid background would draw a visible
+  // frame around the entire play area.
+  const rule = PAGE.match(/\.message\s*\{([^}]*)\}/)[1];
+  assert.match(rule, /rgba\([^)]*,\s*0\)/, 'the hint must start fully transparent');
+  assert.equal(/border:/.test(rule), false, 'a border would outline the whole lake');
 });

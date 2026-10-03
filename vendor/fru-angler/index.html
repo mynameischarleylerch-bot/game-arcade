@@ -197,8 +197,12 @@
     box-shadow: inset 0 1px 3px rgba(0,0,0,.35);
   }
   .cast[hidden] { display: none; }
-  /* The perfect band is lime, the Aero accent for "go". */
-  .cast__band { position: absolute; top: 0; bottom: 0; left: 45%; width: 10%; background: rgba(163,230,53,.9); }
+  /* The perfect band is lime, the Aero accent for "go": a lit box, not a swatch. */
+  .cast__band {
+    position: absolute; top: 0; bottom: 0; left: 45%; width: 10%;
+    background: linear-gradient(180deg, rgba(220, 252, 168, .95), var(--lime));
+    box-shadow: inset 0 1px 0 rgba(255, 255, 255, .85), 0 0 10px rgba(163, 230, 53, .55);
+  }
   .cast__fill { position: absolute; inset: 0 auto 0 0; width: 0; border-radius: 999px; background: linear-gradient(90deg, #4fc3f7, #01579b); }
 
   /* ------------------------------------------------------ SHAKE prompt */
@@ -241,7 +245,11 @@
 
   .reel__progress {
     position: relative; height: 16px; margin-top: .6rem; border-radius: 8px;
-    background: var(--deepest); border: 1px solid rgba(255,255,255,.3); overflow: hidden;
+    background: linear-gradient(180deg, var(--deepest), #1d5b80);
+    border: 1px solid var(--hairline);
+    /* an inner lip, so the track reads as recessed rather than painted on */
+    box-shadow: inset 0 2px 5px rgba(0, 0, 0, .45), inset 0 -1px 0 rgba(255, 255, 255, .18);
+    overflow: hidden;
   }
   .reel__fill { position: absolute; inset: 0 auto 0 0; width: 0; border-radius: 8px;
     background: linear-gradient(90deg, #a3e635, #2e9e5b); }
@@ -322,11 +330,15 @@
 
   .rod {
     display: grid; gap: .2rem; text-align: left;
-    padding: .6rem .7rem; border-radius: 12px;
-    border: 1px solid rgba(1,87,155,.18);
+    padding: .6rem .7rem; border-radius: var(--radius);
+    border: 1px solid rgba(1, 87, 155, .18);
     background: var(--shine);
     color: var(--deep); font: inherit; cursor: pointer;
+    box-shadow: 0 2px 6px rgba(1, 87, 155, .14), inset 0 1px 0 #fff;
+    transition: transform 160ms var(--ease), box-shadow 160ms var(--ease);
   }
+  /* Aero lift: the row rises and its shadow deepens. */
+  .rod:not(:disabled):hover { transform: translateY(-1px); box-shadow: var(--shadow-lift); }
   .rod:disabled { cursor: not-allowed; opacity: .55; }
   .rod--equipped {
     border-color: var(--deep);
@@ -381,11 +393,15 @@
   .btn--primary { background: var(--shine-on); color: #fff; }
   .btn:focus-visible, .rod:focus-visible, .shake:focus-visible { outline: 2px solid var(--deep); outline-offset: 2px; }
 
+  /* Fades in from transparent: this covers the whole lake, so a solid fill or a
+     border would draw a frame around the entire play area. */
   .message {
     position: absolute; inset: 0; z-index: 6;
     display: grid; place-items: center; text-align: center;
     padding: 2rem; color: #fff; font-size: 1.05rem;
-    text-shadow: 0 2px 8px rgba(1,40,70,.6); pointer-events: none;
+    text-shadow: 0 2px 8px rgba(1, 40, 70, .6); pointer-events: none;
+    background: linear-gradient(180deg, rgba(1, 87, 155, 0), rgba(1, 58, 99, .62) 60%);
+    box-shadow: inset 0 1px 0 rgba(255, 255, 255, .18);
   }
   .message[hidden] { display: none; }
 
