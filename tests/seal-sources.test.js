@@ -196,6 +196,8 @@ test('the site shell loads its entry points with cache-busting queries', () => {
   const indexHtml = readFileSync(new URL('index.html', root), 'utf8');
   const playHtml = readFileSync(new URL('play.html', root), 'utf8');
   assert.match(indexHtml, /src="\.\/src\/app\.js\?v=[^"]+"/);
+  assert.match(indexHtml, /href="\.\/styles\.css\?v=[^"]+"/, 'the stylesheet must be versioned');
+  assert.match(playHtml, /href="\.\/styles\.css\?v=[^"]+"/, 'the stylesheet must be versioned');
   assert.match(indexHtml, /from '\.\/src\/theme-ui\.js\?v=[^"]+'/);
   assert.match(playHtml, /from '\.\/src\/play\.js\?v=[^"]+'/);
   assert.match(playHtml, /from '\.\/src\/router\.js\?v=[^"]+'/);

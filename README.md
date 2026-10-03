@@ -133,6 +133,38 @@ non-commercial display only.
 The repository is public because GitHub Pages only serves public repositories on the free
 plan. That is a hosting constraint, not an invitation to reuse the code.
 
+## Frutiger Angler
+
+A fishing game built on the same loop as Roblox's Fisch: hold to fill a cast meter and
+release in the green band, wait through `SHAKE` prompts to shorten the bite, then keep the
+moving fish line inside your bar until the progress bar fills. Empty progress snaps the line.
+
+Selling fish at `base ¤/kg × weight × mutation` funds rods, and rods are the progression:
+**Control** widens your bar, **Resilience** damps how hard the fish fights, **Luck** shifts the
+weight table toward rarer fish, and each rod has a weight ceiling that can genuinely snap a
+line on a heavy catch.
+
+The six fish are original and named for the Frutiger-Family aesthetics — Glidefin, Aero Minnow,
+Metro Trout, DORFic Dab, Eco Gar, Glacier Char — deliberately not real species or Fisch names.
+Rarity order follows Fisch's (Common → Uncommon → Rare → Legendary → Mythical) so the
+difficulty curve reads the same.
+
+All rules are pure functions in `vendor/fru-angler/fishing.js` (rods, casts, fish, economy)
+and `vendor/fru-angler/reel.js` (the minigame maths), so both are unit-tested without a
+browser. `angler.js` only turns their output into pixels.
+
+## MSN Messenger profile card
+
+The header carries a Messenger-style contact card: your avatar with a status dot, the classic
+status list (Online, Busy, Be right back, Away, On the phone, Out to lunch, Appear offline,
+Offline) and an editable nickname. Open it and pick any of **sixteen display pictures** from
+the 4x4 grid Messenger used. It is Aero glass, so it follows whichever theme is active, and
+the choice persists in `localStorage`.
+
+Rules live in `src/messenger.js` (statuses, the avatar table, storage repair), rendering in
+`src/avatar-ui.js`. The sixteen avatars are generated once by `scripts/gen-avatars.mjs` and
+committed, so the site still has no build step — re-run that script to restyle them.
+
 ## Themes
 
 The **Theme:** button in the header cycles the page between five Frutiger-Family looks:
