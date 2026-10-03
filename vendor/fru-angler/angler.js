@@ -8,6 +8,7 @@
 import {
   RODS, FISH, RARITY_ORDER, RARITY_COLOURS,
   castQuality, castDistance, biteDelayFor, rollFish, rollMutation,
+  skyFor, luckFromSky,
   fishWeight, canCatch, catchValue, startingLoadout, buyRod, recordCatch,
   startingInventory, ownsRod, addRodToInventory, equipRod, rodArt, RODS_BY_PRICE,
   fishById, fishSvg,
@@ -23,10 +24,10 @@ import {
  levelFrom, xpForCatch, xpForLevel, luckFor, luckFromLevel,
  rollLostItem, lostItemsFor, sellLostItems, lostItemById,
  buySeal, equipSeal, sealComment, sealDuplicates, sealIdleLine,
-} from './fishing.js?v=2026-10-03-n';
+} from './fishing.js?v=2026-10-03-o';
 import {
   reelConfig, stepReel as advance, reelOutcomeFor, isCaught, lineSnapped,
-} from './reel.js?v=2026-10-03-n';
+} from './reel.js?v=2026-10-03-o';
 
 /* ------------------------------------------------------------------ tuning */
 
@@ -55,6 +56,7 @@ const ui = {
   catch: el('catch'), catchName: el('catch-name'), catchMeta: el('catch-meta'),
   catchValue: el('catch-value'), catchAgain: el('catch-again'),
   catchArt: el('catch-art'), catchWeight: el('catch-weight'), catchWorth: el('catch-worth'),
+  catchMutation: el('catch-mutation'),
   shopPanel: el('shop-panel'), shopList: el('shop-list'), shopCoins: el('shop-coins'),
   shopOpen: el('shop-open'), shopClose: el('shop-close'),
   bag: el('inventory-panel'), bagRods: el('inventory-rods'), bagFish: el('inventory-fish'),
@@ -64,6 +66,7 @@ const ui = {
   indexOpen: el('index-open'), indexClose: el('index-close'),
   lakePicker: el('lake-picker'), lakePanel: el('lake-panel'),
   lakeList: el('lake-list'), lakeName: el('lake-name'),
+  skyName: el('sky-name'),
   lakeClose: el('lake-close'),
   coins: el('coins'), rod: el('rod'), rodStats: el('rod-stats'), bestiary: el('bestiary'),
   message: el('message'),
@@ -605,7 +608,7 @@ function paintRarity(rarity) {
   ui.rarity.setAttribute('aria-label', `Rarity ${level} of ${RARITY_ORDER.length}: ${rarity}`);
 }
 
-function showResult(name, meta, value, rarity, art = null, stats = null) {
+function showResult(name, meta, value, rarity, art = null, stats = null, mutation = null) {
   ui.catchName.textContent = name;
   // Colour carries the rarity at a glance; the pips below give the exact tier.
   ui.catchName.style.color = rarity ? RARITY_COLOURS[rarity] : '#e07b2a';
@@ -618,6 +621,22 @@ function showResult(name, meta, value, rarity, art = null, stats = null) {
   if (ui.catchArt) ui.catchArt.innerHTML = art ?? '';
   if (ui.catchWeight) ui.catchWeight.textContent = stats?.weight ?? '—';
   if (ui.catchWorth) ui.catchWorth.textContent = art ? `¤ ${value}` : '—';
+
+  // The mutation is the headline when there is one. A Crowned fish is 5x value and
+  // used to show only as the word "Crowned" buried in the meta line, which reads
+  // like part of the fish's name.
+  if (ui.catchMutation) {
+    if (mutation && mutation.id !== 'none' && mutation.name) {
+      ui.catchMutation.textContent = `${mutation.name} \u00d7${mutation.multiplier}`;
+      ui.catchMutation.style.setProperty('--mutation-tint', mutation.colour ?? 'rgba(255,255,255,.85)');
+      ui.catchMutation.removeAttribute('hidden');
+    } else {
+      // A plain catch shows nothing at all. An always-present badge teaches nothing.
+      ui.catchMutation.setAttribute('hidden', '');
+      ui.catchMutation.textContent = '';
+      ui.catchMutation.style.removeProperty('--mutation-tint');
+    }
+  }
 
   setPhase('result');
   ui.catchAgain.focus();
@@ -651,7 +670,7 @@ function landFish() {
   showResult(
     mutation.name ? `${mutation.name} ${fish.name}` : fish.name,
     meta, value, fish.rarity,
-    fishSvg(fish), { weight: `${kg} kg` },
+    fishSvg(fish), { weight: `${kg} kg` }, mutation,
   );
 
   // Rank, then junk, then the seal. Order matters only for the message: the seal
@@ -818,6 +837,19 @@ function renderInventory() {
  * picks them up, rather than restating every gradient in JS. The SVG stops inside
  * the scene still use their own defs, so the water ramp is retinted here too.
  */
+/** Wash the scene with the hour and the weather. Called on every visit. */
+function paintSky(sky) {
+  if (!ui.lake || !sky) return;
+  const { time, weather } = sky;
+  ui.lake.style.setProperty('--sky-wash', time.tint);
+  ui.lake.style.setProperty('--sky-depth', String(time.depth));
+  ui.lake.style.setProperty('--veil', weather.tint);
+  ui.lake.style.setProperty('--veil-alpha', String(weather.veil));
+  ui.lake.dataset.sky = time.id;
+  ui.lake.dataset.weather = weather.id;
+  if (ui.skyName) ui.skyName.textContent = sky.label;
+}
+
 function paintArea(area) {
   const { skyTop, skyMid, skyFloor, water, accent, haze, sun } = area.palette;
   ui.lake.style.setProperty('--sky-top', skyTop);
@@ -922,6 +954,7 @@ function renderLakes() {
         state.giftedRods = moved.giftedRods;
         state.rodId = moved.rodId;
         paintArea(area);
+        paintSky(skyFor(area.id));
         paintChrome();
         save();
         renderLakes();
@@ -1316,6 +1349,8 @@ setPhase('idle');
 // Paint the starting lake before the first frame, so the scene is never
 // showing the default palette for a frame.
 paintArea(AREAS.find((a) => a.id === state.areaId) ?? AREAS[0]);
+// Every visit gets its own sky, so one lake is a different place each time.
+paintSky(skyFor(state.areaId));
 // Paint the HUD too. Without this the rank, the rod name and the wallet sat on
 // their markup defaults until the first catch, so a returning player's rank and
 // rod were simply wrong on the screen they opened the game to.

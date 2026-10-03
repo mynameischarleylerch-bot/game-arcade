@@ -7,7 +7,7 @@ import {
   startingInventory, ownsRod, addRodToInventory, equipRod, rodArt, RODS_BY_PRICE,
   fishSvg, FISH_SHAPES, hookLineFor, AREAS, areaUnlocked,
   rodWorksIn, rodCheckIn,
- areaProgress, levelFrom, xpForCatch, luckFromLevel, luckFor, LOST_ITEMS, rollLostItem, lostItemsFor, SEALS, buySeal, equipSeal, sealComment, sealDuplicates, visitArea, xpForLevel, sellLostItems, lostItemById,} from '../vendor/fru-angler/fishing.js';
+ areaProgress, levelFrom, xpForCatch, luckFromLevel, luckFor, LOST_ITEMS, rollLostItem, lostItemsFor, SEALS, buySeal, equipSeal, sealComment, sealDuplicates, visitArea, xpForLevel, sellLostItems, lostItemById, MUTATIONS, mutationMultiplierFor, mutationById, WEATHER, TIMES, skyFor, luckFromSky,} from '../vendor/fru-angler/fishing.js';
 
 test('the starting wallet can afford exactly one upgrade from the cheapest rod', () => {
   const loadout = startingLoadout();
@@ -1415,5 +1415,124 @@ test('a seal has exactly one idle list, not two silently fighting', () => {
     const block = table.slice(start, after === -1 ? table.length : after);
     const ids = (block.match(/idle:\s*\[/g) || []).length;
     assert.equal(ids, 1, `${seal.id} declares ${ids} idle lists -- a duplicate key silently wins`);
+  }
+});
+
+test('a mutation is a thing with an id, a name, a multiplier and a colour', () => {
+  // Mutations were rolled and paid out but never described, so a Crowned fish -- 5x
+  // value -- looked exactly like a common one. Each needs its own colour to show on
+  // the card and in the index.
+  for (const m of MUTATIONS) {
+    assert.ok(m.id, 'every mutation needs an id');
+    assert.ok(Number.isFinite(m.multiplier) && m.multiplier >= 1, `${m.id} needs a multiplier`);
+    assert.ok(Number.isFinite(m.weight) && m.weight > 0, `${m.id} needs a weight`);
+    if (m.id === 'none') {
+      assert.equal(m.multiplier, 1);
+      assert.equal(m.name, '', 'the plain one must have no name to show');
+    } else {
+      assert.ok(m.name && m.name.length > 1, `${m.id} needs a display name`);
+      assert.match(m.colour, /^#[0-9a-f]{6}$/i, `${m.id} needs a hex colour`);
+    }
+  }
+});
+
+test('mutationMultiplierFor reads a mutation id back off a catch', () => {
+  // The card shows whatever was rolled. Reading it back from the id is what lets a
+  // saved catch keep its look without storing the whole object.
+  assert.equal(mutationMultiplierFor('crowned'), 5);
+  assert.equal(mutationMultiplierFor('none'), 1);
+  assert.equal(mutationMultiplierFor('not-a-mutation'), 1, 'unknown is plain, never a crash');
+  assert.equal(mutationMultiplierFor(undefined), 1);
+});
+
+test('mutations get rarer as rank climbs, so they stay interesting', () => {
+  // A flat 1% Crowned is found by accident or never. Ranking should tighten the
+  // odds toward the rare mutations -- that is the reward for progress.
+  const none = MUTATIONS.find((m) => m.id === 'none');
+  assert.ok(none.weight >= 60, 'plain catches must stay the common case at any rank');
+});
+
+test('a day has named parts, each with its own light', () => {
+  // Same lake, different visit, different light. Without this the scene is one
+  // flat picture you look at a thousand times.
+  assert.ok(WEATHER.length >= 3, 'at least three skies');
+  assert.ok(TIMES.length >= 4, 'at least four times of day');
+  for (const part of [...WEATHER, ...TIMES]) {
+    assert.ok(part.id && part.name, 'each needs an id and a name to show');
+    assert.match(part.tint, /^#[0-9a-f]{6}$/i, `${part.id} needs a hex tint`);
+    assert.ok(Number.isFinite(part.luck) && part.luck >= 0.8 && part.luck <= 1.3,
+      `${part.id} luck must be a gentle modifier, got ${part.luck}`);
+  }
+  // Dusk must actually be darker than noon, or the whole idea is cosmetic.
+  // Compare perceived brightness, not one channel: noon #fff4c2 and dusk #ff9a76
+  // share a red channel of 0xff, so a channel compare calls dusk BRIGHTER.
+  const lum = (hex) => {
+    const [r, g, b] = [1, 3, 5].map((i) => parseInt(hex.slice(i, i + 2), 16) / 255)
+      .map((c) => (c <= 0.03928 ? c / 12.92 : ((c + 0.055) / 1.055) ** 2.4));
+    return 0.2126 * r + 0.7152 * g + 0.0722 * b;
+  };
+  const byId = (id) => TIMES.find((t) => t.id === id);
+  const noon = byId('noon'), dusk = byId('dusk'), night = byId('night');
+  assert.ok(noon && dusk && night, 'noon, dusk and night are the ones that must differ');
+  assert.ok(lum(dusk.tint) < lum(noon.tint), 'dusk must be darker than noon');
+  assert.ok(lum(night.tint) < lum(dusk.tint), 'and night darker than dusk');
+  assert.ok(lum(noon.tint) > lum(night.tint), 'noon is the brightest part of the day');
+});
+
+test('skyFor is pure, and the same weather always reads the same', () => {
+  const rng = () => 0.5;
+  const a = skyFor('aero-lake', rng, 0.4);
+  const b = skyFor('aero-lake', rng, 0.4);
+  assert.deepEqual(a, b, 'identical inputs must give an identical sky');
+  assert.ok(a.weather && a.time, 'it must name what it picked');
+  assert.match(a.label, /\w+/, 'and something readable to put on screen');
+  // The lake is irrelevant to the sky -- a weather system that broke on an unknown
+  // lake id would be a crash on any new content.
+  assert.doesNotThrow(() => skyFor('not-a-lake', rng, 0.4));
+});
+
+test('luckFromSky stays inside a band that cannot break the fishing', () => {
+  // Rarity comes from luckFor(). Weather feeds it, so an extreme weather luck
+  // figure would silently unbalance the odds it is not supposed to touch.
+  for (const part of [...WEATHER, ...TIMES]) {
+    const luck = luckFromSky(part, part);
+    assert.ok(Number.isFinite(luck) && luck >= 0.85 && luck <= 1.2,
+      `${part.id} produced luck ${luck}`);
+  }
+  assert.equal(luckFromSky(null, null), 1, 'no sky means no change');
+});
+
+test('every time and weather actually comes up over a long run', () => {
+  // Math.floor takes ONE argument. A clamp written as
+  //   Math.floor(Math.max(v, 0), 0.999999)
+  // returns NaN, every index is undefined, and list[undefined] is always the FIRST
+  // entry -- so every single visit was dawn and clear, forever, and the tests kept
+  // passing because a deterministic pin of 0.5 also landed on index 0 by luck.
+  // A table you never reach is a table you cannot tell apart from a table that
+  // works, so this checks coverage rather than one draw.
+  function makeRng(seed) {
+    let s = seed >>> 0;
+    return () => { s = (s * 1664525 + 1013904223) >>> 0; return s / 4294967296; };
+  }
+  const rng = makeRng(42);
+  const times = new Set();
+  const weathers = new Set();
+  for (let i = 0; i < 1000; i += 1) {
+    const sky = skyFor('aero-lake', rng);
+    times.add(sky.time.id);
+    weathers.add(sky.weather.id);
+  }
+  assert.equal(times.size, TIMES.length,
+    `only ${times.size} of ${TIMES.length} times of day ever came up`);
+  assert.equal(weathers.size, WEATHER.length,
+    `only ${weathers.size} of ${WEATHER.length} weather states ever came up`);
+});
+
+test('skyFor never returns undefined, whatever it is handed', () => {
+  // NaN, negatives and >1 all have to land somewhere sane rather than off the end.
+  for (const roll of [0, 0.999999, 1, -5, Number.NaN]) {
+    const sky = skyFor('aero-lake', () => roll, roll);
+    assert.ok(TIMES.includes(sky.time), `roll ${roll} produced ${sky.time}`);
+    assert.ok(WEATHER.includes(sky.weather), `roll ${roll} produced ${sky.weather}`);
   }
 });

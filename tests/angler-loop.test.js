@@ -12,7 +12,8 @@ import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
 import { JSDOM } from 'jsdom';
 import { FISH, RARITY_ORDER, fishIndex, hookLineFor, AREAS,
-         RODS, RODS_BY_PRICE, SEALS, startingLoadout } from '../vendor/fru-angler/fishing.js?v=2026-10-02-a';
+         RODS, RODS_BY_PRICE, SEALS, startingLoadout, TIMES, WEATHER,
+} from '../vendor/fru-angler/fishing.js?v=2026-10-03-o';
 
 const PAGE = readFileSync(
   new URL('../vendor/fru-angler/index.html', import.meta.url),
@@ -1519,4 +1520,75 @@ test('the finds bag stays visible in the shop, since that is the way in', async 
     'the shop must keep saying where Seal coins come from');
   assert.ok(ctx.doc.getElementById('sell-finds'),
     'and the sell action must be in the shop, not somewhere else');
+});
+
+test('the sky is painted on load, and the HUD says what it is', async () => {
+  // Source-grepping for paintSky proved nothing -- removing the call passed. This
+  // asserts the DOM actually shows it, which is the thing the player sees.
+  const ctx = await seedSave({
+    coins: 0, rodId: 'bamboo', owned: ['bamboo'], bestiary: {}, areaId: 'aero-lake',
+    xp: 0, ownedSeals: [], equippedSeal: null, lost: [], giftedRods: [], sealCoins: 0,
+  }, 87);
+
+  const lake = ctx.doc.getElementById('lake');
+  // boot() pins Math.random to 0.1 and skyFor draws the hour then the weather from
+  // it. Derive both from that, rather than hardcoding an index that would only
+  // happen to match today.
+  const at = (list) => list[Math.floor(Math.min(Math.max(0.1, 0), 0.999999) * list.length)];
+  const wantTime = at(TIMES).id;
+  const wantWeather = at(WEATHER).id;
+  assert.equal(lake.dataset.sky, wantTime, 'the hour must be recorded on the lake');
+  assert.equal(lake.dataset.weather, wantWeather, 'and the weather');
+  assert.match(lake.style.getPropertyValue('--sky-wash'), /^#[0-9a-f]{6}$/i,
+    'the light of the hour must actually be written');
+  assert.notEqual(lake.style.getPropertyValue('--sky-depth'), '',
+    'and how far it dims');
+  assert.ok(ctx.doc.querySelector('.lake__sky'), 'the overlay must exist');
+
+  const label = ctx.doc.getElementById('sky-name').textContent;
+  assert.ok(label.length > 4, `the HUD must name the sky, said "${label}"`);
+  assert.match(label, new RegExp(TIMES.find((t) => t.id === wantTime).name, 'i'),
+    'and name the hour');
+});
+
+test('travelling to a lake repaints the sky, not just keeps the old one', async () => {
+  // Two earlier guards for this passed while paintSky was gone from the travel
+  // path. Both were checking that the sky was VALID, which it always is -- boot
+  // already painted one, and with Math.random pinned the new draw would be the
+  // same value anyway. So neither could tell "repainted" from "left alone".
+  //
+  // Count the draws instead: skyFor() consumes randomness twice, so the counter
+  // only moves if the sky is actually rolled again for the new lake.
+  const here = AREAS.find((a) => a.id === 'aero-lake');
+  const bestiary = Object.fromEntries(here.fish.map((id) => [id, 1]));
+  const owned = [...here.requiredRods];
+
+  const ctx = await seedSave({
+    coins: 0, rodId: 'willow', owned, bestiary, areaId: 'aero-lake',
+    xp: 0, ownedSeals: [], equippedSeal: null, lost: [], giftedRods: [], sealCoins: 0,
+  }, 86);
+  const lake = ctx.doc.getElementById('lake');
+
+  ctx.doc.getElementById('lake-picker').dispatchEvent(
+    new ctx.win.MouseEvent('click', { bubbles: true }));
+  const open = [...ctx.doc.querySelectorAll('.lake-row')]
+    .filter((r) => r.getAttribute('aria-disabled') === 'false');
+  assert.ok(open.length > 1, `the save must be able to travel, only ${open.length} open`);
+
+  // Count randomness from here on.
+  const real = ctx.win.Math.random;
+  let draws = 0;
+  ctx.win.Math.random = () => { draws += 1; return real(); };
+  globalThis.Math.random = ctx.win.Math.random;
+
+  const target = open.find((r) => !r.getAttribute('aria-current'));
+  target.dispatchEvent(new ctx.win.MouseEvent('click', { bubbles: true }));
+
+  assert.notEqual(lake.dataset.area, 'aero-lake', 'we must actually have moved');
+  assert.ok(draws >= 2,
+    `the sky must be rolled again for the new lake, saw ${draws} random draws`);
+  assert.ok(TIMES.some((t) => t.id === lake.dataset.sky),
+    `and painted, got "${lake.dataset.sky}"`);
+  assert.ok(WEATHER.some((w) => w.id === lake.dataset.weather),
+    `both parts, got "${lake.dataset.weather}"`);
 });

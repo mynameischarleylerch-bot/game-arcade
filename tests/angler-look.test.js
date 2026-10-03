@@ -933,3 +933,65 @@ test('every SVG group that JS toggles has a matching hidden rule', () => {
     assert.ok(covered, `<g id="${id}" hidden> has no CSS rule to hide it`);
   }
 });
+
+test('a mutated fish gets a badge, not a footnote', () => {
+  // A Crowned fish is 5x value. It was showing as the word "Crowned" buried in the
+  // meta line, which looks like a fish name, not a 5x catch.
+  assert.match(PAGE, /id="catch-mutation"/,
+    'the catch card needs somewhere to show the mutation properly');
+  assert.match(PAGE, /\.catch__mutation/, 
+    'and it needs a style, or it is just more grey text');
+});
+
+test('the mutation badge is hidden for a plain catch', () => {
+  // Most catches are plain. A badge that is always there teaches nothing, and an
+  // empty badge wastes the space the good ones need.
+  assert.match(PAGE, /\.catch__mutation\[hidden\]\s*\{\s*display:\s*none/,
+    'the mutation badge must hide itself for a plain fish');
+});
+
+test('the fish index records mutations too, so the trophy is the good one', () => {
+  const src = readFileSync(new URL('../vendor/fru-angler/fishing.js', import.meta.url), 'utf8');
+  assert.match(src, /mutationById/, 'the rules module must expose a mutation lookup');
+  const fn = src.slice(src.indexOf('export function mutationById'));
+  assert.match(fn.slice(0, fn.indexOf('\n}\n')), /id !== 'none'/,
+    "and plain must never come back as a mutation to display");
+});
+
+test('the sky is driven by CSS variables, not by swapping classes', () => {
+  // One set of variables means one write per visit and no combinatorial CSS.
+  for (const v of ['--sky-wash', '--sky-depth', '--veil']) {
+    assert.ok(PAGE.includes(v + ':'), `the stylesheet must define ${v}`);
+  }
+  assert.match(PAGE, /\.lake\[data-sky/,
+    'and the lake must react to a data attribute the controller sets');
+});
+
+test('the sky sits behind the fish but above the water', () => {
+  const sky = rule('.lake__sky');
+  const z = Number(/z-index:\s*(\d+)/.exec(sky)?.[1] ?? 0);
+  assert.ok(z < 3, `the sky must not cover the bubble or the bobber (z ${z})`);
+});
+test('the sky overlay and the HUD readout are both really in the page', () => {
+  // Removing either element passed every other test, because nothing asserted they
+  // existed at runtime -- the CSS rules for them are still satisfiable in source
+  // when the elements are gone from the markup.
+  assert.match(PAGE, /<div class="lake__sky"/,
+    'the wash element must be in the markup, not only in the stylesheet');
+  assert.match(PAGE, /id="sky-name"/,
+    'and the HUD must have somewhere to name the sky');
+  assert.match(PAGE, /class="hud__sky"/,
+    'with a style, or it is unstyled text');
+});
+
+test('the mutation badge is driven at runtime, not just declared', () => {
+  // Same problem: the CSS for the badge exists, so a look test passes whether or
+  // not the controller ever shows one.
+  const src = readFileSync(new URL('../vendor/fru-angler/angler.js', import.meta.url), 'utf8');
+  assert.match(src, /catchMutation\.removeAttribute\('hidden'\)/,
+    'a mutated fish must unhide the badge');
+  assert.match(src, /catchMutation\.setAttribute\('hidden'/,
+    'and a plain one must hide it again');
+  assert.match(src, /mutation\.colour/,
+    'using the mutation\'s own colour, or every badge is the same');
+});

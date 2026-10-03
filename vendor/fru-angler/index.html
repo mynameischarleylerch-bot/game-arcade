@@ -115,6 +115,38 @@
   }
 
   
+  /* Sky and weather, written from JS per visit, so one visit of a lake can look
+     completely different from the last without a class per combination. */
+  .lake {
+    --sky-wash: transparent;   /* the light of the hour */
+    --sky-depth: 0;           /* how far it dims */
+    --veil: transparent;       /* the weather on top */
+  }
+  .lake__sky {
+    position: absolute; inset: 0; z-index: 1; pointer-events: none;
+    border-radius: inherit;
+    background:
+      linear-gradient(180deg, rgba(10, 24, 48, calc(var(--sky-depth) * .55)), transparent 70%),
+      linear-gradient(180deg, var(--veil), transparent 78%),
+      linear-gradient(180deg, var(--sky-wash), transparent 62%);
+  }
+  /* Warmth at the horizon at dusk and by lantern at night, so those read as evening
+     rather than as the same grey wash at two strengths. */
+  .lake[data-sky="dusk"] .lake__sky {
+    background-image:
+      radial-gradient(70% 42% at 22% 8%, rgba(255, 178, 118, .5), transparent 72%),
+      linear-gradient(180deg, rgba(10, 24, 48, calc(var(--sky-depth) * .5)), transparent 70%),
+      linear-gradient(180deg, var(--veil), transparent 78%),
+      linear-gradient(180deg, var(--sky-wash), transparent 62%);
+  }
+  .lake[data-sky="night"] .lake__sky {
+    background-image:
+      radial-gradient(38% 30% at 78% 12%, rgba(255, 226, 150, .55), transparent 70%),
+      linear-gradient(180deg, rgba(8, 18, 42, calc(var(--sky-depth) * .7)), transparent 74%),
+      linear-gradient(180deg, var(--veil), transparent 78%),
+      linear-gradient(180deg, var(--sky-wash), transparent 62%);
+  }
+
   .lake::before {
     content: ""; position: absolute; right: 6%; top: 4%;
     width: 22%; aspect-ratio: 1; border-radius: 50%;
@@ -358,6 +390,21 @@
     margin: 0; font-size: 1.15rem; font-weight: 700; color: var(--deep);
     font-variant-numeric: tabular-nums;
   }
+
+  /* A Crowned fish is 5x value. It used to be the word "Crowned" buried in the
+     meta line, which reads like part of the fish's name. This is a badge instead. */
+  .catch__mutation {
+    display: inline-flex; align-items: center; gap: .35rem;
+    margin: .1rem auto .35rem; padding: .18rem .7rem;
+    border-radius: var(--pill);
+    font-size: .78rem; font-weight: 800; letter-spacing: .04em;
+    color: #4a2478; text-transform: uppercase;
+    background: var(--mutation-tint, rgba(255, 255, 255, .8));
+    border: 1px solid rgba(74, 36, 120, .35);
+    box-shadow: inset 0 1px 0 rgba(255, 255, 255, .9), 0 2px 6px rgba(74, 36, 120, .18);
+  }
+  .catch__mutation[hidden] { display: none; }
+  .catch__mutation::before { content: '\2726'; }
 
   .catch__name{
     font-size: 1.5rem; font-weight: 700;
@@ -807,6 +854,18 @@
 
   
   
+  /* The sky readout: a readout, not a button. */
+  .hud__sky {
+    display: inline-flex; align-items: center; gap: .3rem;
+    padding: .18rem .6rem; min-height: 2.1rem; box-sizing: border-box;
+    border-radius: var(--pill);
+    background: linear-gradient(180deg, rgba(255,255,255,.78), rgba(226,240,252,.62));
+    border: 1px solid rgba(255, 255, 255, .9);
+    box-shadow: inset 0 1px 0 #fff;
+    color: #1c5678; font-size: .8rem; font-weight: 700; white-space: nowrap;
+  }
+  .hud__sky::before { content: '\2600'; font-size: .95rem; }
+
   .hud__seal-coins {
     font-weight: 700;
     color: #5b2d91;
@@ -938,6 +997,7 @@
                 aria-haspopup="dialog" aria-expanded="false">
           Lake <b id="lake-name" class="hud__badge">Aero Lake</b>
         </button>
+        <span class="hud__sky" id="sky-name" title="Today at this lake">Clear, midday</span>
       </span>
     </div>
 
@@ -945,7 +1005,11 @@
       <!-- The sketched scene, in Aero: shore rising to the right, lake, pier on
            the left with deck and legs, the angler and his rod, and a line running
            from the rod tip to wherever the bobber lands. -->
-      <svg class="scene" viewBox="0 0 100 100" preserveAspectRatio="none" aria-hidden="true" focusable="false">
+      <!-- The sky for this visit. paintArea() sets the lake palette once, so every
+     visit looked identical; this is the light on top of it, driven by
+     --sky-wash and --sky-depth from the controller. -->
+        <div class="lake__sky" aria-hidden="true"></div>
+        <svg class="scene" viewBox="0 0 100 100" preserveAspectRatio="none" aria-hidden="true" focusable="false">
         <defs>
           <linearGradient id="fa-water" x1="0" y1="0" x2="0" y2="1">
             <stop offset="0" stop-color="#5aa6cf"/>
@@ -1128,6 +1192,7 @@
           <p class="catch__kicker">Caught!</p>
           <!-- The fish itself, drawn from its hue and body shape. -->
           <div class="catch__art" id="catch-art"></div>
+          <span class="catch__mutation" id="catch-mutation" hidden></span>
           <div class="catch__name" id="catch-name">—</div>
           <div class="catch__rarity" id="catch-rarity" role="img" aria-label="Rarity"></div>
           <div class="catch__meta" id="catch-meta"></div>
@@ -1232,6 +1297,6 @@
     </div>
   </div>
 
-  <script type="module" src="./angler.js?v=2026-10-03-n"></script>
+  <script type="module" src="./angler.js?v=2026-10-03-o"></script>
 </body>
 </html>

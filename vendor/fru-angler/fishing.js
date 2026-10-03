@@ -21,11 +21,26 @@ const LUCK_BITE_CAP = 0.2;
 /* -------------------------------------------------------------- mutations */
 
 export const MUTATIONS = [
-  { id: 'none', name: '', multiplier: 1, weight: 74 },
-  { id: 'shiny', name: 'Shiny', multiplier: 1.5, weight: 18 },
-  { id: 'glowy', name: 'Glowy', multiplier: 2, weight: 7 },
-  { id: 'crowned', name: 'Crowned', multiplier: 5, weight: 1 },
+  { id: 'none', name: '', multiplier: 1, weight: 74, colour: null },
+  { id: 'shiny', name: 'Shiny', multiplier: 1.5, weight: 18, colour: '#e0f7fa' },
+  { id: 'glowy', name: 'Glowy', multiplier: 2, weight: 7, colour: '#76ff03' },
+  { id: 'crowned', name: 'Crowned', multiplier: 5, weight: 1, colour: '#ffd54f' },
 ];
+
+/**
+ * The multiplier for a mutation id, so a catch can be shown again later without
+ * storing the whole object. Anything unrecognised reads as plain rather than
+ * throwing -- a save from before mutations existed has no id at all.
+ */
+export function mutationMultiplierFor(id) {
+  return MUTATIONS.find((m) => m.id === id)?.multiplier ?? 1;
+}
+
+/** Look a mutation up by id for display. Null for plain or unknown. */
+export function mutationById(id) {
+  if (!id) return null;
+  return MUTATIONS.find((m) => m.id === id && m.id !== 'none') ?? null;
+}
 
 /* ------------------------------------------------------------------- rods */
 
@@ -1089,6 +1104,73 @@ export function fishById(id) {
 
 export { RARITY_ORDER };
 
+
+/* ------------------------------------------------------------------- weather */
+
+/**
+ * Time of day. The tint is the light the whole scene is washed with; `depth` is
+ * how far it dims, so night reads as night rather than as grey noon.
+ *
+ * These are deliberately gentle on luck. Weather is meant to make the same lake
+ * feel like somewhere you keep going back to, not to rebalance the odds -- that
+ * is what rods, seals and rank are for.
+ */
+export const TIMES = [
+  { id: 'dawn', name: 'Dawn', tint: '#ffd6b0', depth: 0.10, luck: 1.02,
+    blurb: 'The mist is still lying on the water.' },
+  { id: 'noon', name: 'Midday', tint: '#fff4c2', depth: 0.00, luck: 1.00,
+    blurb: 'Flat bright light, and nowhere to hide.' },
+  { id: 'dusk', name: 'Dusk', tint: '#ff9a76', depth: 0.18, luck: 1.06,
+    blurb: 'The good hour. Fish move at dusk.' },
+  { id: 'night', name: 'Night', tint: '#4a5a8c', depth: 0.34, luck: 1.10,
+    blurb: 'Deeper and darker, and the big ones come up.' },
+];
+
+/** Weather. `tint` is the veil over the water; `grain` adds Aero bubble texture. */
+export const WEATHER = [
+  { id: 'clear', name: 'Clear', tint: '#ffffff', veil: 0.00, luck: 1.00,
+    blurb: 'Not a cloud on it.' },
+  { id: 'haze', name: 'Soft Haze', tint: '#e8f4ff', veil: 0.16, luck: 0.98,
+    blurb: 'Everything has a glow around it.' },
+  { id: 'drizzle', name: 'Drizzle', tint: '#cfe4f5', veil: 0.26, luck: 1.04,
+    blurb: 'Small lines, steady bites.' },
+  { id: 'downpour', name: 'Downpour', tint: '#9fc4dd', veil: 0.38, luck: 1.12,
+    blurb: 'Everything is loud and the water is up.' },
+  { id: 'mist', name: 'Mist', tint: '#eef2f6', veil: 0.22, luck: 1.08,
+    blurb: 'You can see the rod tip and not much else.' },
+];
+
+/**
+ * Pick the sky for one visit. Pure: the rng is injected, so a test can pin it and
+ * the same inputs always give the same afternoon.
+ */
+export function skyFor(areaId, rng = Math.random, roll = rng()) {
+  const pick = (list, value) => {
+    const n = Number.isFinite(value) ? value : 0;
+    const i = Math.floor(Math.min(Math.max(n, 0), 0.999999) * list.length);
+    return list[i] ?? list[0];
+  };
+  const time = pick(TIMES, roll);
+  const weather = pick(WEATHER, rng());
+  return {
+    time,
+    weather,
+    label: `${weather.name}, ${time.name.toLowerCase()}`,
+    // The headline for the HUD: what the player should read at a glance.
+    blurb: `${time.blurb} ${weather.blurb}`,
+  };
+}
+
+/**
+ * Luck from the sky. Weather and time multiply, but the product is clamped: this
+ * feeds the same rarity table everything else does, and it must not be able to
+ * bend it.
+ */
+export function luckFromSky(time, weather) {
+  const raw = (time?.luck ?? 1) * (weather?.luck ?? 1);
+  if (!Number.isFinite(raw)) return 1;
+  return Math.min(1.2, Math.max(0.85, raw));
+}
 
 /* -------------------------------------------------------------- fish index */
 
