@@ -72,97 +72,97 @@ export const RODS = {/* ---- three more ordinary rods --------------------------
    * the player is paying for access rather than for power.
    */
 
-  bamboo: {
+  bamboo: { level: 1,
     id: 'bamboo', name: 'Splinter', price: 40,
     control: 0.20, resilience: 0.30, luck: 0, lureSpeed: 1, maxKg: 3,
     traits: [],
     blurb: 'Splinters. Still better than nothing.',
   },
-  willow: {
+  willow: { level: 1,
     id: 'willow', name: 'Greenstalk', price: 120,
     control: 0.28, resilience: 0.42, luck: 0.4, lureSpeed: 1.6, maxKg: 8,
     traits: [],
     blurb: 'Bends without complaining.',
   },
-  carbon: {
+  carbon: { level: 2,
     id: 'carbon', name: 'Graphite Whisper', price: 450,
     control: 0.34, resilience: 0.55, luck: 0.8, lureSpeed: 2.4, maxKg: 20,
     traits: [],
     blurb: 'Light, springy, slightly smug.',
   },
-  oak: {
+  oak: { level: 3,
     id: 'oak', name: 'Deeproot', price: 2400,
     control: 0.40, resilience: 0.70, luck: 1.2, lureSpeed: 3.2, maxKg: 45,
     traits: [],
     blurb: 'Heavy enough to feel the water.',
   },
-  titan: {
+  titan: { level: 4,
     id: 'titan', name: 'Cloudlance', price: 9500,
     control: 0.46, resilience: 0.85, luck: 1.8, lureSpeed: 4.2, maxKg: 120,
     traits: [],
     blurb: 'Absorbs thrashing like a rumour.',
   },
-  zephyr: {
+  zephyr: { level: 5,
     id: 'zephyr', name: 'Zephyr Spindle', price: 14500,
     control: 0.47, resilience: 0.80, luck: 1.9, lureSpeed: 4.4, maxKg: 150,
     traits: [],
     blurb: 'Weighs nothing. Catches nothing. Catches plenty, actually.',
   },
-  quicksilver: {
+  quicksilver: { level: 6,
     id: 'quicksilver', name: 'Quicksilver Ribbon', price: 20000,
     control: 0.48, resilience: 0.82, luck: 2.0, lureSpeed: 4.6, maxKg: 185,
     traits: [],
     blurb: 'Bends like it is apologising. Returns like it is not.',
   },
-  horizon: {
+  horizon: { level: 7,
     id: 'horizon', name: 'Horizon Curve', price: 26500,
     control: 0.49, resilience: 0.84, luck: 2.1, lureSpeed: 4.8, maxKg: 220,
     traits: [],
     blurb: 'Long enough that you forget you are holding it.',
   },
-  canopy: {
+  canopy: { level: 8,
     id: 'canopy', name: 'Fernwhisper', price: 34000,
     control: 0.50, resilience: 0.86, luck: 2.2, lureSpeed: 5.1, maxKg: 240,
     traits: ['flex'],
     blurb: 'Reaches over the reeds without touching them.',
   },
-  channel: {
+  channel: { level: 9,
     id: 'channel', name: 'Straightwater', price: 39000,
     control: 0.52, resilience: 0.88, luck: 2.3, lureSpeed: 5.3, maxKg: 265,
     traits: ['channel'],
     blurb: 'Finds the one straight line through a maze of channels.',
   },
-  understory: {
+  understory: { level: 10,
     id: 'understory', name: 'Understory', price: 42000,
     control: 0.55, resilience: 0.90, luck: 2.4, lureSpeed: 5.5, maxKg: 285,
     traits: ['flex'],
     blurb: 'Goes under the canopy rather than over it, which the reeds prefer.',
   },
-  spillway: {
+  spillway: { level: 11,
     id: 'spillway', name: 'Spillway', price: 49000,
     control: 0.56, resilience: 0.91, luck: 2.5, lureSpeed: 5.7, maxKg: 300,
     traits: ['channel'],
     blurb: 'Reads the whole channel system at once and drops into the right one.',
   },
-  glacier: {
+  glacier: { level: 12,
     id: 'glacier', name: 'Glacier Lance', price: 58000,
     control: 0.57, resilience: 0.93, luck: 2.6, lureSpeed: 5.9, maxKg: 330,
     traits: ['ice'],
     blurb: 'Bored through the ice. Useless anywhere warm.',
   },
-  glacierwall: {
+  glacierwall: { level: 14,
     id: 'glacierwall', name: 'Glacierwall', price: 69000,
     control: 0.58, resilience: 0.93, luck: 2.7, lureSpeed: 6.1, maxKg: 330,
     traits: ['ice'],
     blurb: 'Bored a shaft straight down through two hundred metres of shelf.',
   },
-  abyss: {
+  abyss: { level: 17,
     id: 'abyss', name: 'Abyssal Rig', price: 108000,
     control: 0.60, resilience: 0.97, luck: 3.0, lureSpeed: 6.4, maxKg: 440,
     traits: ['reinforced'],
     blurb: 'Built for pressure. Heavy enough to be a nuisance on the bank.',
   },
-  trenchline: {
+  trenchline: { level: 19,
     id: 'trenchline', name: 'Trenchline', price: 132000,
     control: 0.62, resilience: 0.98, luck: 3.2, lureSpeed: 6.6, maxKg: 460,
     traits: ['reinforced'],
@@ -580,9 +580,37 @@ export function startingLoadout() {
  * Attempt a purchase. Never mutates the wallet: on failure the caller gets the
  * same coins and rod back plus a reason.
  */
-export function buyRod(wallet, rodId) {
+export function buyRod(wallet, rodId, { areaId = null, level = 1 } = {}) {
   const rod = RODS[rodId];
   if (!rod) return { ...wallet, ok: false, reason: 'Unknown rod.' };
+
+  // A traited rod is only bought where its trait means something. Buying a
+  // Glacier Lance from Aero Lake gave you a rod you could not use and a lesson
+  // nobody had asked for.
+  if (rod.traits.length) {
+    const here = AREAS.find((a) => a.id === areaId);
+    const wanted = AREAS.filter((a) => a.trait && rod.traits.includes(a.trait));
+    const fits = here?.trait && rod.traits.includes(here.trait);
+    if (!fits) {
+      const names = wanted.map((a) => a.name).join(' or ');
+      return {
+        ...wallet,
+        ok: false,
+        reason: here?.trait
+          ? `${rod.name} is a ${here.name} rod. Buy it from ${names}.`
+          : `${rod.name} can only be bought at ${names}.`,
+      };
+    }
+  }
+
+  // Rank gate. Rods had none, so luck went from the starting pole to the best rod
+  // in the game with nothing between but coins -- while seals were gated by rank
+  // all along, which is why a lucky rod felt like a lottery.
+  const rank = Number.isFinite(level) ? level : 1;
+  if (rank < rod.level) {
+    return { ...wallet, ok: false, reason: `${rod.name} needs rank ${rod.level}.` };
+  }
+
   if (wallet.coins < rod.price) {
     return { ...wallet, ok: false, reason: 'Not enough coins.' };
   }

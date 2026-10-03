@@ -13,7 +13,7 @@ import { readFileSync } from 'node:fs';
 import { JSDOM } from 'jsdom';
 import { FISH, RARITY_ORDER, fishIndex, hookLineFor, AREAS,
          RODS, RODS_BY_PRICE, SEALS, startingLoadout, TIMES, WEATHER, LOST_ITEMS,
-} from '../vendor/fru-angler/fishing.js?v=2026-10-03-s';
+} from '../vendor/fru-angler/fishing.js?v=2026-10-03-t';
 
 const PAGE = readFileSync(
   new URL('../vendor/fru-angler/index.html', import.meta.url),
@@ -1853,4 +1853,81 @@ test('the panel follows the rod, rank and seal you actually have', async () => {
   assert.equal(Number(ctx.doc.getElementById('boost-total').textContent),
     Math.round(sum * 100) / 100,
     'and the total must still add up');
+});
+
+test('the rod shop tells you a rod is locked, and why, before you click it', async () => {
+  // makeRodRow() called buyRod(state, id) with no area and no rank, so every gate
+  // was invisible: the row looked buyable and only told you "needs rank 12" AFTER
+  // you clicked. The lock has to be on the row.
+  const ctx = await seedSave({
+    coins: 0, rodId: 'bamboo', owned: ['bamboo'], bestiary: {}, areaId: 'aero-lake',
+    xp: 0, ownedSeals: [], equippedSeal: null, lost: [], giftedRods: [], sealCoins: 0,
+  }, 218);
+  ctx.doc.getElementById('shop-open').click();
+
+  const rows = [...ctx.doc.querySelectorAll('#shop-list .rod')];
+  assert.ok(rows.length > 8, `the shop must list every rod, found ${rows.length}`);
+
+  // At rank 1 in Aero Lake, nothing past the first few is buyable.
+  const locked = rows.filter((r) => r.dataset.locked === 'true');
+  assert.ok(locked.length > 0, 'some rods must be locked for a new angler');
+  for (const row of locked) {
+    assert.equal(row.disabled, true, 'a locked rod must not be clickable');
+    const state = row.querySelector('.rod__state').textContent;
+    assert.ok(state.length > 3, `a locked row must say why, said "${state}"`);
+  }
+
+  // And a traited rod must say which LAKE, not just "locked".
+  const glacier = rows.find((r) => r.dataset.rod === 'glacier');
+  assert.ok(glacier, 'the shop must list the Glacier Lance');
+  assert.match(glacier.querySelector('.rod__state').textContent, /Glacier Fjord/,
+    'a traited rod must name the lake to buy it in');
+});
+
+test('the shop unlocks a rod once you are in the right lake at the right rank', async () => {
+  // A save cannot simply claim a lake: entering one needs every fish in the
+  // previous lake in the bestiary, or load() falls back to Aero Lake. The first
+  // version of this test set areaId and got a legitimately locked rod.
+  const previous = AREAS.find((a) => a.id === 'aero-lake');
+  const bestiary = Object.fromEntries(previous.fish.map((id) => [id, 1]));
+  const ctx = await seedSave({
+    coins: 500000, rodId: 'bamboo', owned: [...previous.requiredRods], bestiary,
+    areaId: 'doric-delta', xp: 900000,
+    ownedSeals: [], equippedSeal: null, lost: [], giftedRods: [], sealCoins: 0,
+  }, 219);
+  assert.equal(ctx.doc.getElementById('lake').dataset.area, 'doric-delta',
+    'sanity: the save must actually load into DORFic Delta');
+
+  ctx.doc.getElementById('shop-open').click();
+  // DORFic Delta is the channel lake, so its first rod is the one to check.
+  const channel = [...ctx.doc.querySelectorAll('#shop-list .rod')].find((r) => r.dataset.rod === 'channel');
+  assert.equal(channel.dataset.locked, 'false',
+    `Straightwater must be buyable in DORFic Delta at a high rank, row says "${channel.querySelector('.rod__state').textContent}"`);
+  assert.equal(channel.disabled, false, 'and must be clickable');
+
+  // The Glacier Lance, whose lake is nowhere near here, stays locked.
+  const glacier = [...ctx.doc.querySelectorAll('#shop-list .rod')].find((r) => r.dataset.rod === 'glacier');
+  assert.equal(glacier.dataset.locked, 'true', 'but an ice rod must not be');
+  assert.match(glacier.querySelector('.rod__state').textContent, /Glacier Fjord/,
+    'and must say which lake');
+});
+
+test('an owned rod is equippable from the inventory whatever lake you are in', async () => {
+  // The gate is on BUYING. Once a rod is yours -- bought, or handed to you on
+  // arrival as the free trait rod -- taking it out is a choice with a clear
+  // message, not a wall. The shop only sells; owned rods live in the inventory.
+  const ctx = await seedSave({
+    coins: 0, rodId: 'bamboo',
+    owned: ['bamboo', 'glacier'], bestiary: {}, areaId: 'aero-lake',
+    xp: 0, ownedSeals: [], equippedSeal: null, lost: [], giftedRods: [], sealCoins: 0,
+  }, 220);
+  ctx.doc.getElementById('inventory-open').click();
+  const glacier = [...ctx.doc.querySelectorAll('#inventory-rods .rod')]
+    .find((r) => r.dataset.rod === 'glacier');
+  assert.ok(glacier, 'the inventory must list the owned ice rod');
+  assert.notEqual(glacier.dataset.locked, 'true',
+    'an owned rod is not locked by lake -- you already own it');
+  glacier.dispatchEvent(new ctx.win.MouseEvent('click', { bubbles: true }));
+  assert.equal(ctx.doc.getElementById('rod').textContent.trim(), 'Glacier Lance',
+    'and equipping it must work from the wrong lake');
 });

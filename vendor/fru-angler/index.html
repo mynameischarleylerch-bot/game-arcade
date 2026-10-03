@@ -511,6 +511,22 @@
     cursor: not-allowed; opacity: .55;
   }
   .rod--equipped {
+  /* A rod you cannot buy yet: locked, but still readable and still saying WHY.
+     Grey-on-white at .55 was how "not enough coins" looked, and a rank gate or a
+     wrong lake must not be mistaken for one. */
+  .rod--locked {
+    border-style: dashed;
+    border-color: rgba(1, 87, 155, .3);
+    background: linear-gradient(180deg, rgba(255,255,255,.6), rgba(233,243,250,.5));
+  }
+  .rod--locked:disabled { opacity: .85; }
+  .rod--locked .rod__state {
+    justify-self: start;
+    padding: .1rem .5rem; border-radius: var(--pill);
+    background: rgba(255,255,255,.8); border: 1px solid rgba(1, 87, 155, .2);
+    color: #1c5678; font-weight: 700; font-size: .74rem;
+  }
+  .rod--locked .rod__name, .rod--locked .rod__swatch { opacity: .6; }
     border-color: var(--deep);
     box-shadow: 0 0 0 2px rgba(1,87,155,.18) inset;
   }
@@ -1381,6 +1397,6 @@
     </div>
   </div>
 
-  <script type="module" src="./angler.js?v=2026-10-03-s"></script>
+  <script type="module" src="./angler.js?v=2026-10-03-t"></script>
 </body>
 </html>

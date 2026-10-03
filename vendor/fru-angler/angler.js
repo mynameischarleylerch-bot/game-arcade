@@ -24,10 +24,10 @@ import {
  levelFrom, xpForCatch, xpForLevel, luckFor, luckFromLevel,
  rollLostItem, lostItemsFor, sellLostItems, lostItemById,
  buySeal, equipSeal, sealComment, sealDuplicates, sealIdleLine,
-} from './fishing.js?v=2026-10-03-s';
+} from './fishing.js?v=2026-10-03-t';
 import {
   reelConfig, stepReel as advance, reelOutcomeFor, isCaught, lineSnapped,
-} from './reel.js?v=2026-10-03-s';
+} from './reel.js?v=2026-10-03-t';
 
 /* ------------------------------------------------------------------ tuning */
 
@@ -886,14 +886,26 @@ function makeRodRow(id, { owned, onDone }) {
   const art = rodArt(id);
   const affordable = state.coins >= spec.price;
 
+  // Ask the rules what the gate is BEFORE the click. It used to be asked on click
+  // with no area and no rank, so every gate was invisible: the row looked buyable
+  // and only said "needs rank 12" after you pressed it. Owned rods are exempt --
+  // the gate is on buying, and a gift rod has to stay usable.
+  const rank = levelFrom({ xp: state.xp }).level;
+  const gate = owned ? { ok: true } : buyRod(state, id, { areaId: state.areaId, level: rank });
+  const locked = !gate.ok;
+
   const button = document.createElement('button');
   button.type = 'button';
-  button.className = `rod${equipped ? ' rod--equipped' : ''}`;
+  button.className = `rod${equipped ? ' rod--equipped' : ''}${locked ? ' rod--locked' : ''}`;
   button.dataset.rod = id;
+  button.dataset.locked = String(locked);
   button.dataset.state = equipped ? 'equipped' : owned ? 'owned' : 'unowned';
-  button.disabled = equipped || (!owned && !affordable);
+  button.disabled = equipped || (!owned && (!affordable || locked));
 
-  const tag = equipped ? 'equipped' : owned ? 'equip' : affordable ? 'buy' : 'not enough coins';
+  const tag = equipped ? 'equipped'
+    : owned ? 'equip'
+    : locked ? gate.reason
+    : affordable ? 'buy' : 'not enough coins';
   button.innerHTML =
     `<span class="rod__row"><span>${spec.name}</span>`
     + `<span>${owned ? '<i class="rod__swatch" style="background:' + art.colour + '"></i>' : '¤' + spec.price}</span></span>`
@@ -916,7 +928,7 @@ function makeRodRow(id, { owned, onDone }) {
       if (!result.ok) return;
       state.rodId = result.rodId;
     } else {
-      const result = buyRod(state, id);
+      const result = buyRod(state, id, { areaId: state.areaId, level: rank });
       if (!result.ok) {
         button.querySelector('.rod__state').textContent = result.reason;
         return;

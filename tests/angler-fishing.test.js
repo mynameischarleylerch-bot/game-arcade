@@ -1731,3 +1731,122 @@ test('sealComment routes each kind of cast to its own line', () => {
     'with junk and a record on one cast, the junk line is the one that plays');
   assert.equal(sealComment(null, myth, {}), '', 'no seal means no line, never a throw');
 });
+
+test('every rod has a level cap, and the caps rise with the price', () => {
+  // Rods had no level gate at all: luck went straight from the starting pole to
+  // the best rod in the game with nothing in between but coins. Seals have rank
+  // gates and rods do not, which is why a lucky rod felt like a lottery.
+  for (const rod of Object.values(RODS)) {
+    assert.ok(Number.isInteger(rod.level) && rod.level >= 1,
+      `${rod.id} needs a level cap`);
+  }
+  // Ordered by price, the cap must never go backwards -- otherwise the dearest
+  // rod is also the one you can buy soonest.
+  let last = 1;
+  for (const rod of RODS_BY_PRICE) {
+    assert.ok(RODS[rod].level >= last,
+      `${rod} needs rank ${RODS[rod].level}, below the cheaper rod's ${last}`);
+    last = RODS[rod].level;
+  }
+  // And the ladder must actually span something, not sit all at one number.
+  const caps = new Set(RODS_BY_PRICE.map((r) => RODS[r].level));
+  assert.ok(caps.size >= 4,
+    `caps should climb through the game, found only ${[...caps].join(', ')}`);
+});
+
+test('a traited rod can only be bought while you stand in its lake', () => {
+  // You could buy the Glacier Lance from Aero Lake and never use it, or buy it
+  // and equip it somewhere it does not work. The rod only means something where
+  // its trait does.
+  const TOP = 99;   // rank above every cap, so only the lake gate is under test
+  for (const rod of Object.values(RODS)) {
+    if (!rod.traits.length) continue;
+    for (const area of AREAS) {
+      if (!area.trait) continue;
+      const result = buyRod({ coins: 999999 }, rod.id, { areaId: area.id, level: TOP });
+      if (rod.traits.includes(area.trait)) {
+        assert.equal(result.ok, true,
+          `${rod.id} must be buyable in ${area.name}, its own trait lake`);
+      } else {
+        assert.equal(result.ok, false, `${rod.id} must NOT be buyable in ${area.name}`);
+        assert.match(result.reason ?? '', new RegExp(area.name),
+          `the refusal must name the lake to go to, got "${result.reason}"`);
+      }
+    }
+    // And out of Aero Lake, which has no trait at all.
+    const none = AREAS.find((a) => !a.trait);
+    assert.equal(buyRod({ coins: 999999 }, rod.id, { areaId: none.id, level: TOP }).ok, false,
+      `${rod.id} must not be buyable at ${none.name}, which has no trait`);
+  }
+});
+
+test('an ordinary rod is buyable anywhere', () => {
+  // Only TRAITED rods are tied to a lake. Gating plain rods too would turn the
+  // shop into a maze for the eight rods that open Aero Lake in the first place.
+  const TOP = 99;
+  for (const rod of Object.values(RODS)) {
+    if (rod.traits.length) continue;
+    for (const area of AREAS) {
+      assert.equal(buyRod({ coins: 999999 }, rod.id, { areaId: area.id, level: TOP }).ok, true,
+        `${rod.id} must be buyable in ${area.name}`);
+    }
+  }
+});
+
+test('an owned traited rod can still be equipped from anywhere', () => {
+  // The restriction is on BUYING. Once it is in your bag it is yours, and taking
+  // it out at the wrong lake is a choice with a clear message, not a wall.
+  const rod = Object.values(RODS).find((r) => r.traits.length);
+  const wrong = AREAS.find((a) => a.trait && !rod.traits.includes(a.trait));
+  assert.ok(wrong, 'there must be a lake this rod does not fit');
+  assert.equal(equipRod([rod.id], rod.id).ok, true,
+    'equipping an owned rod must not be blocked by location');
+});
+
+test('a rank at or above a rod\'s cap still buys it, in its own lake', () => {
+  // Belt and braces: the cap must be read as a RANK, not as a price or a rod id.
+  // Buying every rod at rank 99 must only ever be refused for the lake it is not
+  // in -- never for rank.
+  const TOP = 99;
+  for (const rod of Object.values(RODS)) {
+    // Find somewhere this rod could legitimately be bought: a trait lake it fits,
+    // or anywhere for a plain rod.
+    const home = rod.traits.length
+      ? AREAS.find((a) => a.trait && rod.traits.includes(a.trait))
+      : AREAS[0];
+    const result = buyRod({ coins: 999999 }, rod.id, { areaId: home.id, level: TOP });
+    assert.equal(result.ok, true,
+      `${rod.id} refused at rank 99 in its own lake: "${result.reason}"`);
+  }
+});
+
+test('a rod below your rank is refused on rank, whatever lake you stand in', () => {
+  // The rank gate had no test of its own: a guard that deleted it passed, because
+  // the location tests all bought at rank 99 and the shop tests only checked that
+  // SOME rows were locked. So the gate the player feels most was unprotected.
+  for (const rod of Object.values(RODS)) {
+    const home = rod.traits.length
+      ? AREAS.find((a) => a.trait && rod.traits.includes(a.trait))
+      : AREAS[0];
+
+    if (rod.level > 1) {
+      const short = buyRod({ coins: 999999 }, rod.id, { areaId: home.id, level: 1 });
+      assert.equal(short.ok, false, `${rod.id} (rank ${rod.level}) must not sell at rank 1`);
+      assert.match(short.reason ?? '', /rank/i,
+        `and must say it is a rank problem, said "${short.reason}"`);
+      // The lake must NOT be what stopped it.
+      assert.doesNotMatch(short.reason ?? '', /bought at/i,
+        'standing in the right lake must not produce a lake complaint');
+    }
+
+    // At its own rank, in its own lake, it sells.
+    const exact = buyRod({ coins: 999999 }, rod.id, { areaId: home.id, level: rod.level });
+    assert.equal(exact.ok, true, `${rod.id} must sell at exactly its rank: "${exact.reason}"`);
+
+    // And one rank short, it does not.
+    if (rod.level > 1) {
+      assert.equal(buyRod({ coins: 999999 }, rod.id, { areaId: home.id, level: rod.level - 1 }).ok, false,
+        `${rod.id} must not sell one rank below its cap`);
+    }
+  }
+});
