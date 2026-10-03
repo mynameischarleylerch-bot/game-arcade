@@ -282,6 +282,76 @@ const ROD_LOOKS = {
  * How far along the rod the grip runs, as fractions of the whole blank. Shared so a
  * rod is never drawn with a grip hanging off the end of its own shaft.
  */
+/**
+ * The Frutiger Aero finish for each rod.
+ *
+ * A colour swap is not a design, so every rod declares its own finish and no two
+ * may share one. What makes a rod read as Frutiger rather than as fishing
+ * equipment at this size is the wet gloss down the blank, the beads caught along
+ * it, and chrome -- so those are data, not decoration baked into the drawing.
+ *
+ *   material  one of a fixed vocabulary, so finishes cannot drift into "wood-ish"
+ *   accent    the rod's own second colour: bindings, bead, reel hub
+ *   sheen     how wet the blank looks, 0 matte to 1 mirror. Deepens with price.
+ *   beads     fractions along the blank where an Aero bubble sits, 0.4-1
+ *   chrome    whether the blank picks up a chrome highlight. The Frutiger tell.
+ *
+ * Sheen and bead count both climb with price, so the ladder is legible as
+ * progress: the rod you can afford looks less finished than the one you cannot.
+ */
+const ROD_FINISHES = {
+  // ---- eight ordinary rods ------------------------------------------------
+  bamboo: {
+    material: 'bamboo', accent: '#7fc4a4', sheen: 0.08, beads: [0.55], chrome: false,
+  },
+  willow: {
+    material: 'wood', accent: '#c9e58a', sheen: 0.16, beads: [0.52, 0.74], chrome: false,
+  },
+  carbon: {
+    material: 'carbon', accent: '#8fd8ff', sheen: 0.26, beads: [0.5, 0.7, 0.86], chrome: false,
+  },
+  oak: {
+    material: 'wood', accent: '#ffd07a', sheen: 0.34, beads: [0.48, 0.66, 0.82], chrome: false,
+  },
+  titan: {
+    material: 'alloy', accent: '#dfeef8', sheen: 0.46, beads: [0.46, 0.64, 0.8, 0.92], chrome: true,
+  },
+  zephyr: {
+    material: 'alloy', accent: '#a8f0ff', sheen: 0.55, beads: [0.45, 0.62, 0.78, 0.91], chrome: true,
+  },
+  quicksilver: {
+    material: 'alloy', accent: '#eaf6ff', sheen: 0.66, beads: [0.44, 0.6, 0.76, 0.9], chrome: true,
+  },
+  horizon: {
+    material: 'carbon', accent: '#9adcff', sheen: 0.74, beads: [0.43, 0.59, 0.75, 0.89], chrome: true,
+  },
+
+  // ---- trait rods ---------------------------------------------------------
+  canopy: {
+    material: 'composite', accent: '#b6f06a', sheen: 0.78, beads: [0.44, 0.6, 0.76, 0.9], chrome: true,
+  },
+  channel: {
+    material: 'alloy', accent: '#ffb457', sheen: 0.8, beads: [0.43, 0.59, 0.75, 0.89], chrome: true,
+  },
+  understory: {
+    material: 'composite', accent: '#d4ff7a', sheen: 0.82, beads: [0.43, 0.59, 0.75, 0.89], chrome: true,
+  },
+  spillway: {
+    material: 'glass', accent: '#ffd9a0', sheen: 0.85, beads: [0.42, 0.58, 0.74, 0.88], chrome: true,
+  },
+  glacier: {
+    material: 'glass', accent: '#c8f2ff', sheen: 0.88, beads: [0.42, 0.58, 0.74, 0.88], chrome: true,
+  },
+  glacierwall: {
+    material: 'crystal', accent: '#eafaff', sheen: 0.91, beads: [0.41, 0.57, 0.73, 0.88], chrome: true,
+  },
+  abyss: {
+    material: 'composite', accent: '#6f8cff', sheen: 0.94, beads: [0.41, 0.57, 0.73, 0.88], chrome: true,
+  },
+  trenchline: {
+    material: 'crystal', accent: '#9fb6ff', sheen: 0.97, beads: [0.4, 0.56, 0.72, 0.87], chrome: true,
+  },
+};
 const GRIP_FROM = 0.1;
 const GRIP_TO = 0.36;
 
@@ -339,7 +409,10 @@ function withTip(look) {
 }
 
 export const ROD_ART = Object.fromEntries(
-  Object.entries(ROD_LOOKS).map(([id, look]) => [id, withTip(look)]),
+  Object.entries(ROD_LOOKS).map(([id, look]) => [
+    id,
+    withTip({ ...look, finish: ROD_FINISHES[id] ?? ROD_FINISHES.bamboo }),
+  ]),
 );
 
 /** The scene art for a rod, falling back to the starting rod for anything unknown. */

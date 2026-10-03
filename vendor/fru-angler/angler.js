@@ -24,10 +24,10 @@ import {
  levelFrom, xpForCatch, xpForLevel, luckFor, luckFromLevel,
  rollLostItem, lostItemsFor, sellLostItems, lostItemById,
  buySeal, equipSeal, sealComment, sealDuplicates, sealIdleLine,
-} from './fishing.js?v=2026-10-03-t';
+} from './fishing.js?v=2026-10-03-u';
 import {
   reelConfig, stepReel as advance, reelOutcomeFor, isCaught, lineSnapped,
-} from './reel.js?v=2026-10-03-t';
+} from './reel.js?v=2026-10-03-u';
 
 /* ------------------------------------------------------------------ tuning */
 
@@ -86,6 +86,7 @@ const ui = {
   rodShaft: el('rod-shaft'), rodTipDot: el('rod-tip'),
   rodHeel: el('rod-heel'), rodGloss: el('rod-gloss'), rodStripe: el('rod-stripe'),
   rodGrip: el('rod-grip'), rodGuides: el('rod-guides'), rodReel: el('rod-reel'),
+  rodChrome: el('rod-chrome'), rodBeads: el('rod-beads'),
   rodReelBody: el('rod-reel-body'), rodReelHub: el('rod-reel-hub'), rodReelArm: el('rod-reel-arm'),
   rarity: el('catch-rarity'),
 };
@@ -225,13 +226,28 @@ function paintRod() {
   ui.rodShaft?.setAttribute('stroke', art.colour);
   ui.rodShaft?.setAttribute('stroke-width', String(art.width));
 
-  // The wet gloss down the top of the blank, and the accent the rod is named for.
+  // The Frutiger finish: how wet the blank looks, whether it picks up a chrome
+  // highlight, and the beads caught along it. This is what makes two rods read as
+  // different OBJECTS rather than the same stick in two colours.
+  const finish = art.finish ?? {};
+  const sheen = Number.isFinite(finish.sheen) ? finish.sheen : 0;
+  const accent = finish.accent ?? '#ffffff';
+
   ui.rodGloss?.setAttribute('d', seg(0.18, 0.98));
-  ui.rodGloss?.setAttribute('stroke-width', String(Math.max(art.width * 0.3, 0.4)));
+  ui.rodGloss?.setAttribute('stroke-width', String(Math.max(art.width * (0.18 + sheen * 0.32), 0.4)));
+  // A mirror-finish rod gets a hard white line; a matte one barely catches light.
+  ui.rodGloss?.setAttribute('stroke-opacity', String(0.12 + sheen * 0.62));
 
   const styles = art.blank ?? [];
+  ui.rodChrome?.setAttribute('d', finish.chrome ? seg(0.3, 0.94) : '');
+  if (finish.chrome) {
+    ui.rodChrome.setAttribute('stroke', '#ffffff');
+    ui.rodChrome.setAttribute('stroke-opacity', String(0.35 + sheen * 0.5));
+    ui.rodChrome.setAttribute('stroke-width', String(Math.max(art.width * 0.16, 0.22)));
+  }
+
   ui.rodStripe?.setAttribute('d', seg(0.2, 0.96));
-  ui.rodStripe?.setAttribute('stroke', styles.includes('stripe') ? '#ffd54f' : '#ffffff');
+  ui.rodStripe?.setAttribute('stroke', styles.includes('stripe') ? accent : '#ffffff');
   ui.rodStripe?.setAttribute('stroke-opacity', styles.includes('stripe') ? '.75' : '.3');
   ui.rodStripe?.setAttribute('stroke-width', String(Math.max(art.width * 0.26, 0.35)));
 
@@ -239,6 +255,34 @@ function paintRod() {
   ui.rodGrip?.setAttribute('d', seg(art.gripFrom, art.gripTo));
   ui.rodGrip?.setAttribute('stroke', art.gripColour);
   ui.rodGrip?.setAttribute('stroke-width', String(art.width * 1.55));
+
+  // Beads. More of them and brighter as the rod gets dearer, so the ladder reads.
+  if (ui.rodBeads) {
+    ui.rodBeads.textContent = '';
+    const r0 = Math.max(art.width * 0.34, 0.42);
+    for (const t of finish.beads ?? []) {
+      const at2 = at(t);
+      const bead = document.createElementNS('http://www.w3.org/2000/svg', 'circle');
+      bead.setAttribute('cx', String(at2.x));
+      bead.setAttribute('cy', String(at2.y));
+      bead.setAttribute('r', String(r0));
+      // A bubble: pale centre, accent rim, one specular dot.
+      bead.setAttribute('fill', '#ffffff');
+      bead.setAttribute('fill-opacity', String(0.35 + sheen * 0.45));
+      bead.setAttribute('stroke', accent);
+      bead.setAttribute('stroke-opacity', String(0.4 + sheen * 0.45));
+      bead.setAttribute('stroke-width', String(Math.max(r0 * 0.28, 0.12)));
+      ui.rodBeads.appendChild(bead);
+
+      const spark = document.createElementNS('http://www.w3.org/2000/svg', 'circle');
+      spark.setAttribute('cx', String(at2.x - r0 * 0.3));
+      spark.setAttribute('cy', String(at2.y - r0 * 0.3));
+      spark.setAttribute('r', String(r0 * 0.28));
+      spark.setAttribute('fill', '#ffffff');
+      spark.setAttribute('fill-opacity', String(0.5 + sheen * 0.45));
+      ui.rodBeads.appendChild(spark);
+    }
+  }
 
   // Line guides, bigger at the butt and finer toward the tip, as they are fitted.
   if (ui.rodGuides) {
@@ -272,7 +316,7 @@ function paintRod() {
       ui.rodReelHub?.setAttribute('cx', String(x));
       ui.rodReelHub?.setAttribute('cy', String(y));
       ui.rodReelHub?.setAttribute('r', String(art.reelR * 0.28));
-      ui.rodReelHub?.setAttribute('fill', art.colour);
+      ui.rodReelHub?.setAttribute('fill', finish.accent ?? art.colour);
       // A crank arm, so the reel turns rather than sitting there as a ring.
       ui.rodReelArm?.setAttribute('d',
         `M${x} ${y} L${x + art.reelR * 0.9} ${y + art.reelR * 0.5}`);

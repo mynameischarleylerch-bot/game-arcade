@@ -11,6 +11,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { readFileSync, readdirSync } from 'node:fs';
+import { JSDOM } from 'jsdom';
 
 const GAME = new URL('../vendor/fru-angler/', import.meta.url);
 const PAGE = readFileSync(new URL('index.html', GAME), 'utf8');
@@ -1070,4 +1071,53 @@ test('the boost panel names every source, and the zero ones honestly', () => {
 test('the panel does not need a click to be useful', () => {
   assert.match(PAGE, /aria-live="off"|aria-hidden="true"/,
     'a constantly-changing readout should not announce itself to a screen reader');
+});
+
+test('the scene has the elements a Frutiger finish is drawn with', () => {
+  // The finish data is useless if there is nothing to draw it into. Beads and the
+  // chrome highlight each need a place in the scene.
+  const scene = PAGE.slice(PAGE.indexOf('<svg class="scene"'), PAGE.indexOf('</svg>'));
+  assert.match(scene, /id="rod-beads"/, 'beads need somewhere to go');
+  assert.match(scene, /id="rod-chrome"/, 'and so does the chrome highlight');
+});
+
+test('paintRod draws the beads and the chrome, not just the blank', () => {
+  const src = readFileSync(new URL('../vendor/fru-angler/angler.js', import.meta.url), 'utf8');
+  const fn = src.slice(src.indexOf('function paintRod'));
+  const body = fn.slice(0, fn.indexOf('\n}\n'));
+  assert.match(body, /finish\.beads/, 'the beads must be painted');
+  assert.match(body, /rodBeads/, 'into their own element');
+  assert.match(body, /finish\.accent/, 'the accent colour must be used');
+  assert.match(body, /finish\.sheen/, 'and the sheen, or the gloss is identical on every rod');
+  assert.match(body, /finish\.chrome/, 'chrome rods need the highlight');
+  assert.match(body, /sheen/, 'and matte ones must not get it');
+});
+
+test('the scene markup parses, which presence checks cannot tell', () => {
+  // A line-based insert split the heel's opening tag in half. Every id was still
+  // in the file and every existence check passed, while the DOM was broken from
+  // that point on -- nine tests failed at once for a reason none could name.
+  //
+  // jsdom recovers rather than throwing, so this asserts the DAMAGE the split
+  // caused rather than that an exception happened: the heel loses its stroke,
+  // and everything after the split escapes its group.
+  const scene = PAGE.slice(PAGE.indexOf('<svg class="scene"'), PAGE.indexOf('</svg>') + 6);
+  const doc = new JSDOM(scene).window.document;
+
+  const heel = doc.getElementById('rod-heel');
+  assert.ok(heel, 'the heel must survive parsing');
+  assert.ok(heel.getAttribute('d'), 'the heel keeps its path');
+  assert.ok(heel.getAttribute('stroke'), 'the heel keeps its colour -- a split tag loses it');
+  assert.ok(heel.getAttribute('stroke-width'), 'and its thickness');
+
+  // Everything in the rig must actually be inside the rig.
+  for (const id of ['rod-gloss', 'rod-stripe', 'rod-grip', 'rod-chrome', 'rod-guides',
+                    'rod-reel', 'rod-beads', 'rod-shaft']) {
+    const node = doc.getElementById(id);
+    assert.ok(node, `${id} must exist`);
+    assert.ok(node.closest('#rod-blank'),
+      `${id} escaped the rod rig -- the markup around it is split`);
+  }
+  assert.equal(doc.getElementById('rod-blank')?.tagName.toLowerCase(), 'g',
+    'the rig must be a group, not a stray path');
 });

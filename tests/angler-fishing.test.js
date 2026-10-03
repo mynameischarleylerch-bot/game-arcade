@@ -1850,3 +1850,89 @@ test('a rod below your rank is refused on rank, whatever lake you stand in', () 
     }
   }
 });
+
+test('every rod has a Frutiger finish, and no two share one', () => {
+  // Every rod was the same object: a tapered line in a different colour. A colour
+  // swap is not a design. A Frutiger Aero rod has CHROME, wet gloss, translucent
+  // colour, beads and bubbles -- and the only way that reads at this size is if
+  // each rod declares its own finish rather than borrowing one.
+  const finishes = new Map();
+  for (const rod of Object.values(RODS)) {
+    const look = rodArt(rod.id);
+    assert.ok(look.finish, `${rod.id} needs a finish`);
+    const f = look.finish;
+    for (const key of ['accent', 'sheen', 'beads', 'chrome']) {
+      assert.ok(f[key] !== undefined, `${rod.id}.finish is missing ${key}`);
+    }
+    assert.match(f.accent, /^#[0-9a-f]{6}$/i, `${rod.id} needs a hex accent`);
+    assert.ok(Number.isFinite(f.sheen) && f.sheen >= 0 && f.sheen <= 1,
+      `${rod.id} sheen must be 0-1`);
+    assert.ok(Array.isArray(f.beads), `${rod.id} needs beads`);
+    // Chrome is what makes it Frutiger rather than merely fishing equipment.
+    assert.equal(typeof f.chrome, 'boolean', `${rod.id} needs a chrome flag`);
+
+    // No two rods may share an identical finish. Compare the WHOLE object: the
+    // first version built a signature from accent, sheen, beads, chrome and
+    // material -- and a rod cloned down to just its accent and sheen still passed,
+    // so the test could not see the duplication it existed to prevent.
+    const sig = JSON.stringify(f, Object.keys(f).sort());
+    assert.ok(!finishes.has(sig), `${rod.id} has the same finish as ${finishes.get(sig)}`);
+    finishes.set(sig, rod.id);
+  }
+  assert.equal(finishes.size, Object.keys(RODS).length,
+    'every rod must be visually distinct from every other');
+});
+
+test('materials are drawn from a real vocabulary, not invented per rod', () => {
+  // Free-text materials would drift into "wood-ish", "metallic". Constrain them.
+  const MATERIALS = new Set(['bamboo', 'wood', 'carbon', 'alloy', 'glass', 'crystal', 'composite']);
+  for (const rod of Object.values(RODS)) {
+    const f = rodArt(rod.id).finish;
+    assert.ok(MATERIALS.has(f.material),
+      `${rod.id} uses material "${f.material}", which is not in the vocabulary`);
+  }
+  // And the vocabulary should actually be used -- a set nobody draws from is a set
+  // nobody meant.
+  const used = new Set(Object.values(RODS).map((r) => rodArt(r.id).finish.material));
+  assert.ok(used.size >= 5, `only ${used.size} materials in play: ${[...used].join(', ')}`);
+  // And every material in the vocabulary must be reachable, or the set is
+  // decoration that will drift as rods are added.
+  for (const m of MATERIALS) {
+    assert.ok(used.has(m), `${m} is in the vocabulary but no rod uses it`);
+  }
+});
+
+test('the finish deepens along the price ladder', () => {
+  // A Frutiger design should also be legible as progress: the dearer the rod, the
+  // wetter the gloss and the more beads on the blank.
+  let lastSheen = -1;
+  let lastBeads = -1;
+  for (const rod of RODS_BY_PRICE) {
+    const f = rodArt(rod).finish;
+    assert.ok(f.sheen >= lastSheen - 0.001,
+      `${rod} sheen ${f.sheen} dips below the cheaper rod's ${lastSheen}`);
+    assert.ok(f.beads.length >= lastBeads,
+      `${rod} has ${f.beads.length} beads, fewer than the cheaper rod's ${lastBeads}`);
+    lastSheen = f.sheen;
+    lastBeads = f.beads.length;
+  }
+  // The top rod must be visibly shinier than the cheapest.
+  assert.ok(rodArt(RODS_BY_PRICE.at(-1)).finish.sheen >
+            rodArt(RODS_BY_PRICE[0]).finish.sheen + 0.3,
+    'the dearest rod must be visibly glossier than the cheapest');
+});
+
+test('beads sit on the blank, clear of the grip', () => {
+  // A bead at 0.1 is drawn on the cork, which looks like a mistake. The bound is
+  // the grip, not a round number: the first version asserted > 0.4 and then had
+  // to be widened when a legitimate 0.40 bead failed it.
+  for (const rod of Object.values(RODS)) {
+    const art = rodArt(rod.id);
+    const gripEnd = Math.max(art.gripFrom, art.gripTo);
+    for (const b of art.finish.beads) {
+      assert.ok(b > gripEnd,
+        `${rod.id} has a bead at ${b}, on or inside the grip which ends ${gripEnd}`);
+      assert.ok(b < 1, `${rod.id} has a bead at ${b}, past the tip`);
+    }
+  }
+});
