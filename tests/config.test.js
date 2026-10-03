@@ -89,3 +89,19 @@ test('the README does not send people to a path that no longer exists', async ()
   assert.match(readme, /mynameischarleylerch-bot\.github\.io\//,
     'README should state the real address');
 });
+
+test('block blast is registered and points at a real game directory', async () => {
+  const config = JSON.parse(
+    await readFile(new URL('../games.config.json', import.meta.url), 'utf8'),
+  );
+  const game = config.games.find((g) => g.slug === 'block-blast');
+  assert.ok(game, 'block-blast is missing from games.config.json');
+  assert.equal(game.playUrl, './vendor/block-blast/index.html');
+  assert.equal(game.cover, './assets/covers/block-blast.svg');
+  // A slug must be lowercase kebab-case (src/config.js enforces this).
+  assert.match(game.slug, /^[a-z0-9]+(-[a-z0-9]+)*$/);
+  // Path keys must be relative or an absolute URL, never bare.
+  for (const key of ['playUrl', 'cover']) {
+    assert.match(game[key], /^(\.\/|https:\/\/)/);
+  }
+});

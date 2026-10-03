@@ -23,7 +23,9 @@
       "repoUrl": "https://github.com/mynameischarleylerch-bot",
       "playUrl": "./vendor/demo-blocks/index.html",
       "cover": "./assets/covers/demo-blocks.svg",
-      "tags": ["puzzle"],
+      "tags": [
+        "puzzle"
+      ],
       "controls": "Arrows move, up rotates, space drops",
       "year": 2026,
       "featured": false
@@ -50,8 +52,26 @@
       "repoUrl": "https://github.com/mynameischarleylerch-bot",
       "playUrl": "./vendor/seal-scroller/index.html",
       "cover": "./assets/covers/seal-scroller.svg",
-      "tags": ["scroller", "photography"],
+      "tags": [
+        "scroller",
+        "photography"
+      ],
       "controls": "Scroll or arrow keys",
+      "year": 2026,
+      "featured": false
+    },
+    {
+      "slug": "block-blast",
+      "title": "Block Blast",
+      "summary": "Drag the blocks in, clear the lines, do not fill the board.",
+      "repoUrl": "https://github.com/mynameischarleylerch-bot",
+      "playUrl": "./vendor/block-blast/index.html",
+      "cover": "./assets/covers/block-blast.svg",
+      "tags": [
+        "puzzle",
+        "drag"
+      ],
+      "controls": "Drag a block onto the grid, or click it then click a cell",
       "year": 2026,
       "featured": false
     }
