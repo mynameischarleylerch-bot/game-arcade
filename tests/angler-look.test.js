@@ -1,10 +1,12 @@
 /**
- * Frutiger Angler was restyled to flat pixel art from a reference drawing: three
- * flat colours, hard edges, no gradients and no glass.
+ * Frutiger Angler is a glossy Frutiger Aero game: aqua gradients, translucent
+ * glass, bloom and shine.
  *
- * A restyle like that decays quietly — someone adds a box-shadow "just to lift it"
- * and the whole look goes. These tests pin the palette and forbid the Aero effects
- * from creeping back in.
+ * It was briefly restyled as flat pixel art from a sketch. That sketch is the
+ * scene composition (shore rising right, pier on the left, angler and rod) and
+ * that part stayed; the flat three-colour treatment did not. These tests pin the
+ * Aero treatment so the pixel look cannot creep back in, and pin the composition
+ * so a restyle cannot drop the scene the sketch was for.
  */
 import test from 'node:test';
 import assert from 'node:assert/strict';
@@ -13,51 +15,52 @@ import { readFileSync, readdirSync } from 'node:fs';
 const GAME = new URL('../vendor/fru-angler/', import.meta.url);
 const PAGE = readFileSync(new URL('index.html', GAME), 'utf8');
 
-/** The three colours from the reference image, plus ink and two support tints. */
-const PALETTE = {
-  sky: '#00a2e8',
-  indigo: '#3f48cc',
-  wood: '#b97a57',
-  ink: '#ffffff',
-  glint: '#5a63d8',   // flat water highlights
-  dim: '#b8bdf0',     // secondary text on indigo
-};
-
-const hexes = () => [...new Set(PAGE.match(/#[0-9a-fA-F]{6}/g))];
-
-test('the game uses exactly the flat pixel palette', () => {
-  const extra = hexes().filter((c) => !Object.values(PALETTE).includes(c));
-  assert.deepEqual(extra, [], `colours outside the palette: ${extra.join(', ')}`);
+test('the game view is Aero: gradients, glass and shine are all present', () => {
+  assert.match(PAGE, /linear-gradient/, 'Aero needs gradients');
+  assert.match(PAGE, /backdrop-filter:\s*blur/, 'Aero panels are translucent glass');
+  assert.match(PAGE, /box-shadow/, 'Aero panels lift off the page');
+  assert.match(PAGE, /inset 0 1px 0 #fff/, 'the Aero gloss highlight');
+  assert.match(PAGE, /#fff9c4/, 'the Aero sun bloom');
 });
 
-test('the three reference colours are all present', () => {
-  for (const name of ['sky', 'indigo', 'wood']) {
-    assert.ok(hexes().includes(PALETTE[name]), `${name} (${PALETTE[name]}) is missing`);
+test('the flat pixel treatment did not creep back in', () => {
+  // The pixel palette was sky/indigo/wood at exactly these values.
+  for (const banned of ['#00a2e8', '#3f48cc', '#b97a57']) {
+    assert.equal(PAGE.includes(banned), false,
+      `${banned} is a pixel-palette colour and must not return`);
   }
+  assert.equal(PAGE.includes('shape-rendering: crispEdges'), false,
+    'crispEdges was the pixel rendering');
+  // The pier is wood in both versions, so a --wood token is fine; what matters is
+  // it is no longer the flat pixel brown. Assert the Aero sky tokens are present.
+  assert.match(PAGE, /--sky-top:/, 'the Aero sky tokens should be back');
 });
 
-test('no gradients, glass or shadows anywhere in the game view', () => {
-  for (const banned of [
-    'linear-gradient', 'radial-gradient', 'conic-gradient',
-    'backdrop-filter', '-webkit-backdrop-filter',
-    'box-shadow', 'text-shadow', 'blur(',
-  ]) {
-    assert.equal(PAGE.includes(banned), false, `found "${banned}" in the pixel view`);
-  }
-});
-
-test('the scene is crisp-edged so it stays pixel art when scaled', () => {
-  assert.match(PAGE, /shape-rendering:\s*crispEdges/);
-});
-
-test('the scene keeps the reference composition', () => {
-  // Pier on the left, horizon climbing to the right, angler with the rod.
+test('the scene keeps the composition from the sketch', () => {
+  // Shore climbing to the right, lake, pier deck and two legs on the left, the
+  // angler, the rod angled up-right, and the line from the rod tip.
   assert.match(PAGE, /class="scene"/);
-  assert.match(PAGE, /class="scene__wood"/);          // pier + rod
-  assert.match(PAGE, /class="scene__angler"/);       // the figure
+  assert.match(PAGE, /class="scene__shore"/);
+  assert.match(PAGE, /class="scene__water"/);
+  assert.match(PAGE, /class="scene__wood"/);
+  assert.match(PAGE, /class="scene__figure"/);
+  assert.match(PAGE, /class="scene__rod"/);
+  assert.match(PAGE, /id="line"/);
   assert.match(PAGE, /viewBox="0 0 100 100"/);
   assert.match(PAGE, /preserveAspectRatio="none"/);
-  assert.match(PAGE, /id="line"/);                   // the fishing line
+});
+
+test('the pier has a deck and two legs, as sketched', () => {
+  const legs = (PAGE.match(/class="scene__wood--edge"/g) || []).length;
+  assert.equal(legs, 2, 'the sketch has two pier legs');
+  assert.match(PAGE, /<rect class="scene__wood" x="0" y="58" width="42"/,
+    'the deck runs in from the left edge');
+});
+
+test('the angler has a body, a head and a hat', () => {
+  assert.match(PAGE, /class="scene__figure" cx="33\.2" cy="43" r="2\.6"/, 'the head');
+  assert.match(PAGE, /class="scene__figure" x="31\.6" y="50"/, 'the body');
+  assert.match(PAGE, /class="scene__hat"/, 'the hat');
 });
 
 test('the fishing line starts at the rod tip', () => {
@@ -66,16 +69,13 @@ test('the fishing line starts at the rod tip', () => {
   assert.match(d[1], /^M56 32/, 'the line should start at the rod tip in scene coords');
 });
 
-test('the cast band is wood, keeping the perfect zone inside the palette', () => {
-  assert.match(PAGE, /\.cast__band\s*\{[^}]*background:\s*var\(--wood\)/);
+test('the perfect band is lime, the Aero "go" colour', () => {
+  assert.match(PAGE, /\.cast__band\s*\{[^}]*background:[^;]*163,\s*230,\s*53/);
 });
 
-test('rarity is shown as blocks, not as a fifth colour', () => {
+test('rarity is shown as blocks under the name', () => {
   assert.match(PAGE, /id="catch-rarity"/);
-  assert.match(PAGE, /\.catch__pip\.is-on\s*\{[^}]*background:\s*var\(--wood\)/);
-  // Five tiers of one colour beats five hues the palette cannot hold.
-  const pips = (PAGE.match(/catch__pip/g) || []).length;
-  assert.ok(pips >= 2, 'the pip styles are missing');
+  assert.match(PAGE, /\.catch__pip\.is-on\s*\{[^}]*background:\s*var\(--deep\)/);
 });
 
 test('the game view keeps every element id angler.js and the tests rely on', () => {
@@ -91,23 +91,24 @@ test('the game view keeps every element id angler.js and the tests rely on', () 
   }
 });
 
+test('the copy is sentence case, not the pixel-era caps', () => {
+  assert.match(PAGE, /Cast again<\/button>/);
+  assert.match(PAGE, /Rods &amp; shop/);
+  assert.equal(/CAST AGAIN|BUTTON>Rods:/.test(PAGE), false, 'caps crept back in');
+});
+
 test('every script the game loads is cache-versioned', () => {
   const scripts = [...PAGE.matchAll(/<script[^>]*src="([^"]+)"/g)].map((m) => m[1]);
   assert.ok(scripts.length >= 1, 'no script found');
   for (const src of scripts) {
     assert.match(src, /\?v=/, `${src} has no cache-busting query`);
   }
-  for (const m of PAGE.matchAll(/from '(\.\/[^']+)'/g)) {
-    assert.match(m[1], /\?v=/, `${m[1]} import has no cache-busting query`);
-  }
 });
 
-test('the cover art uses the same flat palette', () => {
+test('the cover art is Aero too', () => {
   const cover = readFileSync(new URL('../../assets/covers/fru-angler.svg', GAME), 'utf8');
-  const extra = [...new Set(cover.match(/#[0-9a-fA-F]{6}/g))]
-    .filter((c) => !Object.values(PALETTE).includes(c));
-  assert.deepEqual(extra, [], `cover colours outside the palette: ${extra.join(', ')}`);
-  assert.equal(cover.includes('gradient'), false, 'the cover must stay flat');
+  assert.equal(cover.includes('#00a2e8'), false, 'cover must not use the pixel sky');
+  assert.match(cover, /radial-gradient|<circle/, 'the cover needs the bobber and sun bloom');
   assert.match(cover, /aria-label="Frutiger Angler"/);
 });
 

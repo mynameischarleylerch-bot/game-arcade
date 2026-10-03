@@ -1,30 +1,48 @@
 <svg xmlns="http://www.w3.org/2000/svg" width="320" height="180" viewBox="0 0 160 90" role="img" aria-label="Frutiger Angler">
-  <!-- The game's flat pixel palette: sky, indigo, wood. -->
-  <rect width="160" height="90" fill="#00a2e8"/>
+  <defs>
+    <linearGradient id="fa-cover-water" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#5aa6cf"/><stop offset="0.4" stop-color="#2f81c4"/><stop offset="1" stop-color="#1b5e9c"/>
+    </linearGradient>
+    <radialGradient id="fa-cover-sun" cx="0.5" cy="0.5" r="0.5">
+      <stop offset="0" stop-color="#fff9c4" stop-opacity=".95"/><stop offset="1" stop-color="#fff9c4" stop-opacity="0"/>
+    </radialGradient>
+    <radialGradient id="fa-cover-bob" cx="0.35" cy="0.3" r="0.7">
+      <stop offset="0" stop-color="#ffffff"/><stop offset="0.62" stop-color="#e53935"/><stop offset="1" stop-color="#a3231f"/>
+    </radialGradient>
+  </defs>
 
-  <!-- stepped indigo horizon, climbing to the right -->
-  <path fill="#3f48cc" d="M0 66 L10 64 L18 67 L28 61 L38 64 L48 57 L58 60 L68 53 L78 56 L88 50 L98 53 L108 46 L118 49 L128 43 L138 46 L148 40 L160 38 L160 90 L0 90 Z"/>
-  <rect fill="#5a63d8" x="6" y="80" width="16" height="2"/>
-  <rect fill="#5a63d8" x="92" y="84" width="20" height="2"/>
-  <rect fill="#5a63d8" x="44" y="87" width="12" height="2"/>
+  <rect width="160" height="90" fill="url(#fa-cover-water)"/>
+  <circle cx="140" cy="14" r="20" fill="url(#fa-cover-sun)"/>
 
-  <!-- pier deck and legs -->
-  <rect fill="#b97a57" x="0" y="50" width="58" height="4"/>
-  <rect fill="#b97a57" x="12" y="54" width="6" height="36"/>
-  <rect fill="#b97a57" x="40" y="54" width="6" height="36"/>
+  <!-- soft clouds, Aero style -->
+  <ellipse cx="34" cy="20" rx="22" ry="7" fill="#ffffff" opacity=".55"/>
+  <ellipse cx="58" cy="26" rx="16" ry="5" fill="#ffffff" opacity=".4"/>
 
-  <!-- the angler: dome body, round head -->
-  <path fill="#3f48cc" d="M22 44 a6 6 0 0 1 12 0 z"/>
-  <rect fill="#3f48cc" x="26" y="44" width="4" height="6"/>
-  <circle fill="#3f48cc" cx="28" cy="30" r="4.5"/>
+  <!-- far shore, rising to the right -->
+  <path fill="#5aa6cf" d="M0 60 L16 57 L32 60 L48 54 L64 57 L80 51 L96 54 L112 47 L128 50 L144 43 L160 40 L160 90 L0 90 Z"/>
+  <rect x="0" y="64" width="160" height="26" fill="url(#fa-cover-water)"/>
+  <rect x="10" y="72" width="20" height="1.6" rx="0.8" fill="#ffffff" opacity=".3"/>
+  <rect x="104" y="78" width="26" height="1.6" rx="0.8" fill="#ffffff" opacity=".3"/>
 
-  <!-- rod up and to the right, lure at the tip, line down to the bobber -->
-  <path stroke="#b97a57" stroke-width="2" fill="none" d="M31 42 L58 18"/>
-  <rect fill="#b97a57" x="57" y="15" width="4" height="4"/>
-  <path stroke="#3f48cc" stroke-width="1.2" fill="none" d="M59 19 Q70 34 88 56"/>
-  <rect fill="#b97a57" x="84" y="52" width="8" height="8"/>
-  <rect fill="#3f48cc" x="86" y="54" width="4" height="4"/>
+  <!-- pier: deck with a lit top edge, two legs -->
+  <rect x="0" y="46" width="64" height="5" fill="#a9714a"/>
+  <rect x="0" y="46" width="64" height="1.6" fill="#c68a5e"/>
+  <rect x="13" y="51" width="6" height="39" fill="#7d4f2e"/>
+  <rect x="44" y="51" width="6" height="39" fill="#7d4f2e"/>
 
-  <!-- splash ring where it entered -->
-  <rect fill="none" stroke="#ffffff" stroke-width="2" x="80" y="60" width="18" height="8"/>
+  <!-- the angler, silhouetted with a red hat -->
+  <rect x="47" y="35" width="4" height="11" rx="2" fill="#013a63"/>
+  <circle cx="49" cy="28" r="4" fill="#013a63"/>
+  <rect x="43" y="25" width="12" height="2.4" rx="1.2" fill="#e53935"/>
+
+  <!-- rod, lure, line and bobber -->
+  <path stroke="#7d4f2e" stroke-width="2.2" fill="none" stroke-linecap="round" d="M52 37 L78 16"/>
+  <circle cx="79" cy="15" r="2.2" fill="#e53935"/>
+  <path stroke="#ffffff" stroke-width="1" fill="none" opacity=".85" d="M80 17 Q92 32 110 58"/>
+  <circle cx="113" cy="61" r="5.5" fill="url(#fa-cover-bob)"/>
+  <ellipse cx="111" cy="59" rx="1.8" ry="1.4" fill="#ffffff" opacity=".8"/>
+  <ellipse cx="113" cy="68" rx="9" ry="2.4" fill="none" stroke="#ffffff" stroke-width="1.4" opacity=".7"/>
+
+  <text x="10" y="14" fill="#ffffff" font-family="Segoe UI, sans-serif" font-size="11" font-weight="600"
+        style="paint-order:stroke;stroke:#01579b;stroke-width:3px">frutiger angler</text>
 </svg>

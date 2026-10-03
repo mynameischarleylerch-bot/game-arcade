@@ -6,7 +6,7 @@
  * only part that touches the DOM.
  */
 import {
-  RODS, FISH, RARITY_ORDER,
+  RODS, FISH, RARITY_ORDER, RARITY_COLOURS,
   castQuality, castDistance, biteDelayFor, rollFish, rollMutation,
   fishWeight, canCatch, catchValue, startingLoadout, buyRod, recordCatch,
 } from './fishing.js?v=2026-10-01-a';
@@ -22,7 +22,7 @@ const SHAKE_BONUS_MS = 420;   // bite delay removed per shake pressed
 const SHAKE_MAX_ON_SCREEN = 3;
 const REEL_DT = 1 / 60;
 const SAVE_KEY = 'fru-angler-save';
-const IDLE_HINT = 'HOLD SPACE TO CHARGE, RELEASE IN THE WOOD BAND.';
+const IDLE_HINT = 'Hold Space or press and hold, then release in the green band.';
 
 /* --------------------------------------------------------------------- dom */
 
@@ -226,10 +226,11 @@ function paintRarity(rarity) {
 }
 
 function showResult(name, meta, value, rarity) {
-  // The UI is set in caps for the pixel look; case it here once, not at each call site.
-  ui.catchName.textContent = name.toUpperCase();
+  ui.catchName.textContent = name;
+  // Colour carries the rarity at a glance; the pips below give the exact tier.
+  ui.catchName.style.color = rarity ? RARITY_COLOURS[rarity] : '#e07b2a';
   paintRarity(rarity);
-  ui.catchMeta.textContent = meta.toUpperCase();
+  ui.catchMeta.textContent = meta;
   ui.catchValue.textContent = `¤ ${value}`;
   setPhase('result');
   ui.catchAgain.focus();

@@ -168,8 +168,8 @@ test('a tracking player lands the fish, is paid, and the bestiary updates', asyn
   const name = text(ctx, 'catch-name');
   const meta = text(ctx, 'catch-meta');
   assert.ok(name.length > 0, 'the catch card names the fish');
-  assert.doesNotMatch(name, /LINE SNAPPED/, 'a tracked fish is not snapped: ' + name);
-  assert.match(meta, /(COMMON|UNCOMMON|RARE|LEGENDARY|MYTHICAL) · [0-9.]+ KG/,
+  assert.doesNotMatch(name, /Line snapped/, 'a tracked fish is not snapped: ' + name);
+  assert.match(meta, /(Common|Uncommon|Rare|Legendary|Mythical) · [0-9.]+ kg/,
     'the card states rarity and weight: ' + meta);
   assert.match(text(ctx, 'catch-value'), /^¤ \d+$/);
   assert.ok(Number(text(ctx, 'coins')) > before, 'landing a fish pays out');
@@ -187,8 +187,8 @@ test('ignoring the fish drains the bar and snaps the line', async () => {
   run(ctx, 60 * 60);
 
   assert.equal(ctx.doc.getElementById('catch').hidden, false, 'the attempt resolved');
-  assert.equal(text(ctx, 'catch-name'), 'LINE SNAPPED');
-  assert.match(text(ctx, 'catch-meta'), /GOT AWAY|LINE SNAPPED/);
+  assert.equal(text(ctx, 'catch-name'), 'Line snapped');
+  assert.match(text(ctx, 'catch-meta'), /got away|Line snapped/);
   assert.equal(text(ctx, 'catch-value'), '¤ 0');
 });
 
@@ -200,7 +200,7 @@ test('casting again returns to the idle prompt', async () => {
   ctx.doc.getElementById('catch-again').click();
   assert.equal(ctx.doc.getElementById('catch').hidden, true);
   assert.equal(ctx.doc.getElementById('reel').hidden, true);
-  assert.match(text(ctx, 'message'), /HOLD SPACE/);
+  assert.match(text(ctx, 'message'), /Hold Space/);
 });
 
 test('the shop lists every rod and a purchase upgrades the equipped one', async () => {
