@@ -19,5 +19,5 @@ export function playerUrlFor(slug) {
 }
 
 export function backUrl() {
-  return './index.html?v=2026-10-04-r';
+  return './index.html?v=2026-10-04-s';
 }

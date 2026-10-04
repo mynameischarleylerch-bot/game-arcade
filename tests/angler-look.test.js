@@ -1209,40 +1209,6 @@ test('the face sits on the right, so the seal is still facing that way', () => {
     `both eyes must be right of centre, got ${Math.min(...eyeX)} vs ${mid.toFixed(1)}`);
 });
 
-test('the :3 is big and bold enough to actually read', () => {
-  // "do the :3 because it didn't work". The last pass drew eyes of radius 0.7 and
-  // a mouth stroke of 0.3 across 3.7 units. The seal counter-scales to about a
-  // third of its drawn width on screen, so that face came out as a couple of grey
-  // pixels -- correct geometry, illegible result.
-  //
-  // So the sizes are pinned, not just the arrangement.
-  const pet = petGroup();
-  const eye = pet.slice(pet.indexOf('<g id="pet-eye">'), pet.indexOf('</g>', pet.indexOf('<g id="pet-eye">')));
-  const pupils = [...eye.matchAll(/r="([\d.]+)"/g)].map((m) => Number(m[1])).filter((r) => r > 0.7);   // above the 0.45 glints, which are not pupils
-  assert.equal(pupils.length, 2, 'two dot eyes');
-  assert.ok(Math.min(...pupils) >= 0.95,
-    `the eyes must be big enough to see, smallest is ${Math.min(...pupils)}`);
-  // The highlights are pinned too: without them it reads as two dots, which
-  // is exactly what it looked like when the user said the face did not work.
-  const glints = [...eye.matchAll(/r="(\.[\d.]+)"/g)];
-  assert.equal(glints.length, 2, 'each eye carries a highlight');
-
-  const mouthTag = pet.match(/<path id="pet-mouth"[^>]*>/)[0];
-  const width = Number(/stroke-width="([\d.]+)"/.exec(mouthTag)?.[1] ?? 0);
-  assert.ok(width >= 0.45,
-    `the mouth must be thick enough to see, stroke-width is ${width}`);
-
-  const mouth = pet.match(/<path id="pet-mouth"\s+d="([^"]+)"/)[1];
-  const [mw, mh] = extent(mouth);
-  assert.ok(mw >= 4, `the smile must be wide enough to read, got ${mw.toFixed(1)} units`);
-  assert.ok(mh >= 1.2, `and deep enough to look like a smile, got ${mh.toFixed(1)} units`);
-
-  // Ends level, middle down: a smile, not a frown.
-  const c = coords(mouth);
-  assert.ok(Math.abs(c[0][1] - c[c.length - 1][1]) < 0.6, 'a :3 mouth starts and ends level');
-  assert.ok(Math.max(...ys(mouth)) > Math.max(c[0][1], c[c.length - 1][1]) + 0.8,
-    'and the curve bows DOWNWARD into a smile');
-});
 
 test('the coat is still ringed, and the flipper still tucked low', () => {
   const pet = petGroup();
@@ -1343,58 +1309,6 @@ test('the seal bubble moves clear of the boost stack', () => {
   assert.ok(bz > sz, `the bubble (z=${bz}) must sit above the stack (z=${sz})`);
 });
 
-test('the :3 is unmistakable, not merely present', () => {
-  // "please fix the face to :3 more than anything". The squeeze fix made the face
-  // render at the size it was drawn, and it still did not read: on a body that has
-  // since been lengthened, a 7.6-unit smile is a third of the animal and reads as
-  // a crease rather than a mouth.
-  //
-  // So this pins the proportions that make a :3 legible -- big round eyes, set
-  // apart, and a smile that is both wide and deep enough to have a shape.
-  const pet = petGroup();
-  const body = bodyOf(pet);
-  const bTop = Math.min(...ys(body));
-  const bBot = Math.max(...ys(body));
-  const bodyH = bBot - bTop;
-
-  const eyeStart = pet.indexOf('<g id="pet-eye">');
-  const eye = pet.slice(eyeStart, pet.indexOf('</g>', eyeStart));
-  const pupils = [...eye.matchAll(/r="([\d.]+)"/g)].map((m) => Number(m[1])).filter((r) => r > 0.7);
-  // Eye SIZE is pinned by the :3 ratio test instead. An earlier version here
-  // demanded r >= 1.6 on the reasoning that "bigger must read better"; four
-  // rounds of that produced a generic smiley rather than a :3, because in
-  // ":3" the eyes are small dots and the MOUTH is the big character. The two
-  // contracts contradicted each other and this one was the wrong one.
-  const eyeR = Math.min(...pupils);
-  assert.equal(pupils.length, 2, 'two dot eyes');
-
-  const cxs = [...eye.matchAll(/cx="([\d.]+)"[^>]*fill="#12212e"/g)].map((m) => Number(m[1]));
-  assert.equal(cxs.length, 2, 'two pupil positions');
-  const gap = Math.abs(cxs[1] - cxs[0]) - eyeR * 2;
-  assert.ok(gap >= 1.8, 'the eyes must be set apart, gap is ' + gap.toFixed(2));
-
-  const mouth = pet.match(/<path id="pet-mouth"\s+d="([^"]+)"/)[1];
-  const [mw, mh] = extent(mouth);
-  // Width is governed by the ratio against the eye, not by an absolute floor:
-  // the old floor of 9 was measured against eyes of radius 1.75, and the
-  // whole problem was that those eyes were too big in the first place.
-  // A shallow arc reads as a line. Depth is what makes it a smile.
-  assert.ok(mh >= 3.5, 'and deep enough to have a shape, got ' + mh.toFixed(1) + ' units');
-  const tag = pet.match(/<path id="pet-mouth"[^>]*>/)[0];
-  const stroke = Number(/stroke-width="([\d.]+)"/.exec(tag)[1]);
-  assert.ok(stroke >= 0.7, 'and thick enough to see, stroke-width ' + stroke);
-
-  // Placement: eyes in the upper half, mouth below them, neither at the very edge.
-  const eyeMidY = [...eye.matchAll(/cy="([\d.]+)"[^>]*fill="#12212e"/g)].map((m) => Number(m[1]));
-  const eY = eyeMidY.reduce((s, v) => s + v, 0) / eyeMidY.length;
-  const mouthTop = Math.min(...ys(mouth));
-  const mouthLow = Math.max(...ys(mouth));
-  assert.ok(eY < bTop + bodyH * 0.5, 'the eyes sit in the upper half of the face');
-  assert.ok(mouthTop > eY, 'the smile sits below the eyes');
-  assert.ok(mouthLow < bBot - bodyH * 0.06,
-    'and the smile does not run into the belly, it ends at y ' + mouthLow.toFixed(1)
-    + ' of ' + bBot.toFixed(1));
-});
 
 test('the body is as long as asked, filling the pier', () => {
   const pet = petGroup();
@@ -1433,10 +1347,11 @@ test('the face is a :3 -- small dot eyes and a DOMINANT mouth', () => {
   // margin. This is the ratio that makes it read as ":3" rather than as a smiley.
   assert.ok(mw > eyeR * 2 * 2.5,
     `the mouth must dominate the eyes: mouth ${mw.toFixed(1)} against eyes ${(eyeR * 2).toFixed(1)} wide`);
-  // Deep as well as wide, or it is a crease.
-  assert.ok(mh >= 3.5, 'the mouth must be deep, got ' + mh.toFixed(1));
+  // Depth is bounded by the wide-gentle-arc test, which is where the 3.5 floor
+  // belonged: it is exactly what turned the smile into a bowl.
+  assert.ok(mh >= 1.6, 'the mouth must be curved, got ' + mh.toFixed(1));
   // The glints stay small: they are a highlight on a dot, not a second feature.
-  const glints = [...eye.matchAll(/r="(\.[\d.]+)"/g)];
+  const glints = [...eye.matchAll(/r="(\.[\d.]+)"[^>]*fill="#ffffff"/g)];
   assert.equal(glints.length, 2, 'a highlight on each eye');
   assert.ok(Number(glints[0][1]) < eyeR * 0.7, 'and smaller than the dot it sits on');
 });
@@ -1453,4 +1368,69 @@ test('the coat markings stay off the face', () => {
     assert.ok(Number(m[1]) < faceLeft - 0.5,
       `a marking at x=${m[1]} sits on the face, which starts at ${faceLeft}`);
   }
+});
+
+test('the mouth is a wide gentle arc, not a bowl', () => {
+  // Vision read the rendered face as "two dark horizontally flattened oval marks"
+  // and "one broad, thick U-SHAPED curved line". The elements were there and the
+  // face was still not a :3, because I had the mouth's proportions inverted.
+  //
+  // Four rounds of "make the smile deeper" drove it to 7.6 wide by 6.4 deep --
+  // nearly a semicircle. A :3 mouth is the opposite: a smile is WIDE and only
+  // gently curved. A deep bowl reads as an open mouth, which is a different
+  // emoticon.
+  const pet = petGroup();
+  const mouth = pet.match(/<path id="pet-mouth"\s+d="([^"]+)"/)[1];
+  const [mw, mh] = extent(mouth);
+  const ratio = mw / mh;
+  assert.ok(ratio >= 2.2,
+    `a smile is wide and gently curved: ${mw.toFixed(1)} wide by ${mh.toFixed(1)} deep is `
+    + `a ${ratio.toFixed(2)}:1 bowl, not a smile`);
+  assert.ok(mw >= 6, 'and wide enough to read, got ' + mw.toFixed(1));
+  assert.ok(mh <= 3.2, 'and not scooped out, got ' + mh.toFixed(1) + ' deep');
+  // Still a smile, not a line: there has to be some curve.
+  assert.ok(mh >= 1.6, 'but visibly curved, got ' + mh.toFixed(1));
+  // And thick enough to survive the seal's on-screen size. This floor lived in a
+  // test that was removed as superseded, and with it went the only check on
+  // stroke weight -- a hairline mouth passed everything else.
+  const tag = pet.match(/<path id="pet-mouth"[^>]*>/)[0];
+  assert.ok(Number(/stroke-width="([\d.]+)"/.exec(tag)[1]) >= 0.6,
+    'the mouth must be thick enough to see');
+  // Ends level, middle down.
+  const c = coords(mouth);
+  assert.ok(Math.abs(c[0][1] - c[c.length - 1][1]) < 0.6, 'the ends are level');
+  assert.ok(Math.max(...ys(mouth)) > Math.max(c[0][1], c[c.length - 1][1]) + 0.8,
+    'and the middle bows down');
+});
+
+test('the eyes are two round dots set close together', () => {
+  // "Horizontally flattened oval marks, not perfectly round dots" -- the dots must
+  // read as round, which means the glint sits inside them and off to one side
+  // rather than cutting a crescent out of the disc.
+  const pet = petGroup();
+  const start = pet.indexOf('<g id="pet-eye">');
+  const eye = pet.slice(start, pet.indexOf('</g>', start));
+  const pupils = [...eye.matchAll(/r="([\d.]+)"/g)].map((m) => Number(m[1])).filter((r) => r > 0.7);
+  assert.equal(pupils.length, 2, 'two dots');
+  assert.ok(Math.max(...pupils) <= 1.2, 'small dots, largest ' + Math.max(...pupils));
+
+  // Drawn as circles, so the X counter-scale and its inverse leave them round
+  // rather than oval.
+  assert.equal((eye.match(/<circle /g) ?? []).length, 4, 'two pupils and two glints, all circles');
+  assert.doesNotMatch(eye, /<ellipse/, 'nothing here may be an ellipse -- that is an oval dot');
+
+  // Set close together. :3 is a compact face; mine were spread across a third of
+  // the animal, which is what made it read as a generic cartoon smiley.
+  const cx = [...eye.matchAll(/cx="([\d.]+)"[^>]*fill="#12212e"/g)].map((m) => Number(m[1]));
+  const spread = Math.abs(cx[1] - cx[0]);
+  assert.ok(spread <= 3.6, 'the dots must sit close together, spread is ' + spread.toFixed(1));
+  const eyeR = Math.max(...pupils);
+  assert.ok(spread - eyeR * 2 >= 0.9,
+    'with a clear gap between them, not merged and not far apart');
+
+  // The glint stays well inside its dot.
+  const glints = [...eye.matchAll(/r="(\.[\d.]+)"[^>]*fill="#ffffff"/g)].map((m) => Number(m[1]));
+  assert.equal(glints.length, 2, 'a highlight on each dot');
+  assert.ok(Math.max(...glints) <= eyeR * 0.45,
+    'and small enough not to cut a crescent out of the dot');
 });

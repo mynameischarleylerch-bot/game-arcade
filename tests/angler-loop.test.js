@@ -13,7 +13,7 @@ import { readFileSync } from 'node:fs';
 import { JSDOM } from 'jsdom';
 import { FISH, RARITY_ORDER, fishIndex, hookLineFor, AREAS,
          RODS, RODS_BY_PRICE, SEALS, startingLoadout, TIMES, WEATHER, LOST_ITEMS,
-} from '../vendor/fru-angler/fishing.js?v=2026-10-04-r';
+} from '../vendor/fru-angler/fishing.js?v=2026-10-04-s';
 
 const PAGE = readFileSync(
   new URL('../vendor/fru-angler/index.html', import.meta.url),
@@ -2934,6 +2934,6 @@ test('the face is pre-compensated for the counter-scale, or it cannot be seen', 
     .map((m) => Number(m[1]));
   const faceCentre = mx.reduce((t, v) => t + v, 0) / mx.length;
   const declared = Number(/const FACE_X = ([\d.]+);/.exec(body)[1]);
-  assert.ok(Math.abs(declared - faceCentre) < 0.6,
+  assert.ok(Math.abs(declared - faceCentre) < 0.2,
     `FACE_X is ${declared} but the face is centred at ${faceCentre.toFixed(2)}`);
 });
