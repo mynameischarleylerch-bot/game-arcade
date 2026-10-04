@@ -883,18 +883,6 @@
      only hides HTML elements, so on an SVG <g> it does nothing at all --
      the seal was painted on the dock with no seal equipped, over a bubble
      that correctly stayed silent. It needs its own rule. */
-  /* The pet seal, drawn from photographs. Its own classes so the coat reads: the
-     spots sit UNDER the gloss and the whiskers OVER it, which is the layering the
-     references show. */
-  #fa-pet .pet__spot { pointer-events: none; }
-  #fa-pet .pet__whisker {
-    stroke: #f2f8fb; stroke-opacity: .62; stroke-width: .1;
-    fill: none; stroke-linecap: round;
-  }
-  /* The whiskers are the single most identifying feature, so they must not
-     disappear at small sizes the way a thinner stroke would. */
-  #fa-pet .pet__claw { pointer-events: none; }
-
   /* The bag's two tabs: Fish and Bond. */
   .bag__tabs { display: flex; gap: .35rem; margin: .1rem 0 .7rem; }
   .bag__tab {

@@ -1192,3 +1192,56 @@ test('the seal is big enough to read, and clear of the angler', () => {
   assert.ok(Math.max(...ys) < 58, `and its belly must sit on the deck at y=58`);
 });
 
+
+test('every element the JS reaches for has a rule in the stylesheet', () => {
+  // Deleting dead seal CSS took the whole Bond tab stylesheet with it -- the dead
+  // rules sat directly above it -- and 607 tests stayed green, because they only
+  // ever checked that the MARKUP existed. An unstyled Bond tab renders as bare
+  // text in a dialog and no assertion noticed.
+  //
+  // So: for each id the controller looks up, there must be a matching class rule.
+  // The reverse pairing here is deliberate -- the panel element and the class its
+  // markup uses.
+  for (const [id, cls] of [
+    ['bag-tab-bond', '.bag__tab'],
+    ['bag-tab-bag', '.bag__tab'],
+    ['bond-fill', '.bond__fill'],
+    ['bond-timeline', '.bond__timeline'],
+    ['bond-head', '.bond__head'],
+  ]) {
+    assert.match(PAGE, new RegExp(`id="${id}"`),
+      `${id} must exist in the markup`);
+    assert.match(PAGE, new RegExp(`${cls.replace('.', '\\.')}\\s*\\{`),
+      `${cls} has no rule in the stylesheet -- ${id} would render unstyled`);
+  }
+  // And the states the Bond tab sets, which are what make it readable at all.
+  // Built with a plain string, not a template literal: escaping through one
+  // doubled every backslash, so the regex searched for a literal
+  // '\.bond__fill\\s*\\{' -- which matched nothing, and the rule could be
+  // deleted with every test still green.
+  // Anchored to the start of a line with indentation, so a rule nested inside a
+  // media query cannot satisfy it: `.bond__fill` inside the reduced-motion
+  // block matched an unanchored search, and the real rule could be deleted
+  // with every test still green.
+  // Checked against the CSS OUTSIDE any media query. Searching the whole
+  // stylesheet let a rule nested inside @media satisfy the check -- and the
+  // reduced-motion block holds a one-liner for .bond__fill -- so deleting the
+  // real rule left the test green. Line anchoring did not help: the nested
+  // rule sits at the same indentation as the top-level one.
+  // Remove every @media BLOCK, rather than truncating at the first one: the Bond
+  // rules sit between two of them, so `split('@media')[0]` cut the sheet short
+  // and reported rules missing that are present.
+  const cssTop = PAGE.replace(/@media[^{]*\{(?:[^{}]*\{[^}]*\}[^{}]*)*\}/g, '');
+  for (const cls of ['.bond__step', '.bond__fill', '.bond__track', '.bond__name',
+                     '.bond__reward', '.bond__at', '.bond__note']) {
+    assert.match(cssTop, new RegExp(cls.replace('.', '\\.') + '\\s*\\{'),
+      `${cls} has no rule outside a media query`);
+  }
+  // Escaped as '\\.' per dot: the earlier version doubled the backslashes and
+  // searched for the literal string '.bond__step\\.is-on', which matches nothing.
+  for (const state of ['bond__step.is-on', 'bond__step.is-next', 'bag__tab.is-on']) {
+    const rx = new RegExp(state.replace('.', '\\.') + '\\s*\\{');
+    assert.match(cssTop, rx,
+      `${state} has no rule -- a reached or next step would be invisible`);
+  }
+});
