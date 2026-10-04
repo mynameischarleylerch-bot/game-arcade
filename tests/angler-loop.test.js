@@ -13,7 +13,7 @@ import { readFileSync } from 'node:fs';
 import { JSDOM } from 'jsdom';
 import { FISH, RARITY_ORDER, fishIndex, hookLineFor, AREAS,
          RODS, RODS_BY_PRICE, SEALS, startingLoadout, TIMES, WEATHER, LOST_ITEMS,
-} from '../vendor/fru-angler/fishing.js?v=2026-10-04-g';
+} from '../vendor/fru-angler/fishing.js?v=2026-10-04-h';
 
 const PAGE = readFileSync(
   new URL('../vendor/fru-angler/index.html', import.meta.url),
@@ -2671,29 +2671,43 @@ test('a duplicate updates an open bag, because its rows carry counts', async () 
 });
 
 
-test('the bag has a Bond tab beside it, and it shows the timeline', async () => {
-  // Feeding was a real decision -- a fish is worth coins OR luck -- with no shape
-  // on screen to show where it was going. The bag showed a bare count.
-  assert.match(PAGE, /id="bag-tab-bag"/, 'the bag tab must exist');
-  assert.match(PAGE, /id="bag-tab-bond"/, 'and a Bond tab beside it');
-  assert.match(PAGE, /id="bond-timeline"/, 'the timeline needs somewhere to live');
-  assert.match(PAGE, /id="bond-head"/, 'and a head stating the current bond');
+test('Bond is its own pill on the bottom bar, beside Bag', async () => {
+  // It was a tab INSIDE the bag panel. The user wants a pill of its own on the
+  // bottom bar, next to Bag: the two are separate things you open, not views of
+  // one thing, and reaching into the bag to check your bond was a step too far.
+  // The bar is the LAST .hud, not the first: the document has a second one
+  // for the stat readout at the top of the game.
+  const barStart = PAGE.lastIndexOf('<div class="hud"');
+  const bar = PAGE.slice(barStart, PAGE.indexOf('</div>', PAGE.indexOf('bestiary', barStart)));
+  assert.match(bar, /id="bag-open"/, 'the Bag pill must stay on the bar');
+  assert.match(bar, /id="bond-open"/, 'and a Bond pill beside it');
+
+  // Bag comes before Bond, so the order is the one that was asked for.
+  assert.ok(bar.indexOf('id="bag-open"') < bar.indexOf('id="bond-open"'),
+    'Bond must sit beside Bag, not before it');
+
+  // Its own panel, with the timeline in it.
+  assert.match(PAGE, /id="bond-panel"/, 'the Bond panel must exist');
+  assert.match(PAGE, /id="bond-timeline"/, 'and hold the timeline');
+
+  // And the tab strip inside the bag is gone.
+  assert.doesNotMatch(PAGE, /bag__tabs/, 'the in-panel tab strip must be gone');
+  assert.doesNotMatch(PAGE, /id="bag-tab-bond"/, 'the in-panel Bond tab must be gone');
 
   const src = readFileSync(new URL('../vendor/fru-angler/angler.js', import.meta.url), 'utf8');
-  assert.match(src, /function paintBond/, 'something must paint it');
-  assert.match(src, /bondProgress\(/, 'from the rules, not from its own arithmetic');
+  assert.match(src, /bondPanel:\s*el\('bond-panel'\)/, 'the panel must be looked up');
+  assert.match(src, /bondOpen:\s*el\('bond-open'\)/, 'and so must the pill');
 });
 
-test('the timeline shows where the seal is and what is still ahead', async () => {
+test('the Bond panel shows where the seal is and what is still ahead', async () => {
   const ctx = await seedSave({
     coins: 0, rodId: 'bamboo', owned: ['bamboo'], bestiary: {}, areaId: 'aero-lake',
     xp: 0, ownedSeals: ['bubbles'], equippedSeal: 'bubbles', lost: [],
     giftedRods: [], sealCoins: 0, bond: { bubbles: 7 },
   }, 1600);
 
-  ctx.doc.getElementById('bag-open').dispatchEvent(
+  ctx.doc.getElementById('bond-open').dispatchEvent(
     new ctx.win.MouseEvent('click', { bubbles: true }));
-  ctx.doc.getElementById('bag-tab-bond').click();
 
   const { bondProgress } = await import('../vendor/fru-angler/fishing.js');
   const p = bondProgress(7);
@@ -2704,8 +2718,9 @@ test('the timeline shows where the seal is and what is still ahead', async () =>
     'reached steps must be marked');
   assert.ok(rows[p.reached.length]?.classList.contains('is-next'),
     'the next step must be marked as next, so the player can aim at it');
+
   // And it must say how many fish away, and which step it is aiming at. Both are
-  // the point of the tab: "12 fish" is a fact, "5 more for Trusted" is a plan.
+  // the point of the panel: "12 fish" is a fact, "5 more for Trusted" is a plan.
   const head = ctx.doc.getElementById('bond-head').textContent;
   assert.match(head, new RegExp(`\\b${p.next.at - 7}\\b`),
     `the head must say ${p.next.at - 7} more, got "${head}"`);
@@ -2715,24 +2730,23 @@ test('the timeline shows where the seal is and what is still ahead', async () =>
     `and state the luck it is heading for, got "${head}"`);
 });
 
-test('with no seal the Bond tab says so instead of showing an empty ladder', async () => {
+test('with no seal the Bond panel says so instead of an empty ladder', async () => {
   const ctx = await seedSave({
     coins: 0, rodId: 'bamboo', owned: ['bamboo'], bestiary: {}, areaId: 'aero-lake',
     xp: 0, ownedSeals: [], equippedSeal: null, lost: [], giftedRods: [], sealCoins: 0,
   }, 1601);
-  ctx.doc.getElementById('bag-open').dispatchEvent(
+  ctx.doc.getElementById('bond-open').dispatchEvent(
     new ctx.win.MouseEvent('click', { bubbles: true }));
-  ctx.doc.getElementById('bag-tab-bond').click();
   const text = ctx.doc.getElementById('bond-panel').textContent;
   assert.match(text, /seal/i, 'it must explain there is no seal');
   assert.equal(ctx.doc.querySelectorAll('#bond-timeline .bond__step').length, 0,
     'and show no steps, which would imply progress that does not exist');
 });
 
-test('feeding updates the Bond tab without reopening it', async () => {
-  // Feed a fish with the Bond tab open. The tab is the progress display, so a feed
-  // that leaves it stale is worse than no tab: it would show the count you had
-  // before you fed.
+
+test('feeding updates an open Bond panel without reopening it', async () => {
+  // The panel is the progress display, so a feed that leaves it stale is worse
+  // than no panel: it would show the count you had before you fed.
   const ctx = await seedSave({
     coins: 0, rodId: 'bamboo', owned: ['bamboo'], bestiary: {}, areaId: 'aero-lake',
     xp: 0, ownedSeals: ['bubbles'], equippedSeal: 'bubbles', lost: [],
@@ -2740,21 +2754,20 @@ test('feeding updates the Bond tab without reopening it', async () => {
     bag: [{ fishId: 'glidefin', weight: 2, mutation: null, multiplier: 1 }],
   }, 1602);
 
-  ctx.doc.getElementById('bag-open').dispatchEvent(
+  ctx.doc.getElementById('bond-open').dispatchEvent(
     new ctx.win.MouseEvent('click', { bubbles: true }));
-  ctx.doc.getElementById('bag-tab-bond').click();
   const before = ctx.doc.getElementById('bond-head').textContent;
   assert.match(before, /11 fish fed/, `setup: "${before}"`);
 
-  // Back to Fish, feed, then to Bond again -- and it must be current.
-  ctx.doc.getElementById('bag-tab-bag').click();
+  // Feed from the bag, with the Bond panel still open behind it.
+  ctx.doc.getElementById('bag-open').dispatchEvent(
+    new ctx.win.MouseEvent('click', { bubbles: true }));
   ctx.doc.querySelector('#bag-list .bag__feed').click();
-  ctx.doc.getElementById('bag-tab-bond').click();
 
-  const after = ctx.doc.getElementById('bond-head').textContent;
-  assert.match(after, /12 fish fed/, `feeding must show: "${after}"`);
-  // And 12 is a milestone, so it must now be marked reached.
+  assert.match(ctx.doc.getElementById('bond-head').textContent, /12 fish fed/,
+    `feeding must update an open Bond panel: "${ctx.doc.getElementById('bond-head').textContent}"`);
   const reached = ctx.doc.querySelectorAll('#bond-timeline .bond__step.is-on');
   assert.ok(reached.length >= 3,
     `12 fed reaches 1, 5 and 12; only ${reached.length} marked`);
 });
+

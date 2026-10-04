@@ -26,10 +26,10 @@ import {
  addToBag, fishEntrySpec, bagWorth, bagEntryValue,
  sellFromBag, feedToBond, bondLuck, bondCount, groupBag,
  buySeal, equipSeal, sealComment, sealDuplicates, sealIdleLine, sealFedLine, bondProgress,
-} from './fishing.js?v=2026-10-04-g';
+} from './fishing.js?v=2026-10-04-h';
 import {
   reelConfig, stepReel as advance, reelOutcomeFor, isCaught, lineSnapped,
-} from './reel.js?v=2026-10-04-g';
+} from './reel.js?v=2026-10-04-h';
 
 /* ------------------------------------------------------------------ tuning */
 
@@ -72,8 +72,8 @@ const ui = {
   bagPanel: el('bag-panel'), bagList: el('bag-list'),
   bagSummary: el('bag-summary'), bagOpenBtn: el('bag-open'),
   bagCloseBtn: el('bag-close'), bagCount: el('bag-count'),
-  bagTabBag: el('bag-tab-bag'), bagTabBond: el('bag-tab-bond'),
-  bagView: el('bag-view'), bondPanel: el('bond-panel'), bondHead: el('bond-head'),
+  bondOpen: el('bond-open'), bondClose: el('bond-close'),
+ bondPanel: el('bond-panel'), bondHead: el('bond-head'),
   bondFill: el('bond-fill'), bondTimeline: el('bond-timeline'),
   indexPanel: el('index-panel'), indexList: el('index-list'),
   indexOpen: el('index-open'), indexClose: el('index-close'),
@@ -1064,7 +1064,10 @@ function landFish() {
   paintBagBadge(Array.isArray(state.bag) ? state.bag.length : 0);
   // The bag may be open behind the catch card, and its grouped rows carry counts --
   // so it must be repainted, not merely badged.
-  if (ui.bagPanel && !ui.bagPanel.hasAttribute('hidden')) paintBag();
+  if (ui.bagPanel && !ui.bagPanel.hidden) paintBag();
+  // And the Bond panel, if it is open: its head states the count, which
+  // is exactly what a duplicate or a feed just changed.
+  if (ui.bondPanel && !ui.bondPanel.hidden) paintBond();
 
 }
 
@@ -1674,19 +1677,17 @@ function paintBond() {
   }
 }
 
-/** Switch the bag between its Fish and Bond views. */
-function showBagTab(which) {
-  const bond = which === 'bond';
-  if (ui.bagView) ui.bagView.hidden = bond;
-  if (ui.bondPanel) ui.bondPanel.hidden = !bond;
-  if (ui.bagTabBag && ui.bagTabBond) {
-    ui.bagTabBag.classList.toggle('is-on', !bond);
-    ui.bagTabBond.classList.toggle('is-on', bond);
-    ui.bagTabBag.setAttribute('aria-selected', String(!bond));
-    ui.bagTabBond.setAttribute('aria-selected', String(bond));
-  }
-  if (bond) paintBond();
-  else paintBag();
+/** Open the bond timeline. Its own panel, so the bag stays exactly as it was. */
+function openBond() {
+  if (!ui.bondPanel) return;
+  paintBond();
+  ui.bondPanel.hidden = false;
+  ui.bondClose?.focus();
+}
+
+function closeBond() {
+  ui.bondPanel.hidden = true;
+  ui.bondOpen?.focus();
 }
 
 function paintBagBadge(count) {
@@ -1785,6 +1786,11 @@ function sellOneFish(at, fish) {
   state.coins += result.coins;
   state.bag = result.bag;
   save(); paintChrome(); paintBag();
+  // The Bond panel states the count the feed just changed. Leaving it open
+  // while it reads 11 because you fed the twelfth is worse than no panel:
+  // it would be showing a fact that is no longer true.
+  paintBagBadge(state.bag.length);
+  if (ui.bondPanel && !ui.bondPanel.hidden) paintBond();
   say(`${fish.name} sold for ${result.coins.toLocaleString('en-US')} coins.`);
 }
 
@@ -1796,6 +1802,11 @@ function feedOneFish(at, fish, seal) {
   state.bag = result.bag;
   state.bond = result.bond;
   save(); paintChrome(); paintBag();
+  // The Bond panel states the count the feed just changed. Leaving it open
+  // while it reads 11 because you fed the twelfth is worse than no panel:
+  // it would be showing a fact that is no longer true.
+  paintBagBadge(state.bag.length);
+  if (ui.bondPanel && !ui.bondPanel.hidden) paintBond();
   // The seal reacts to THIS fish, by how rare it was. It used to call
   // sealChatter(), which picks an idle line -- so the one decision the bag exists
   // for was answered with the same words as every other moment.
@@ -1952,8 +1963,8 @@ ui.sealClose?.addEventListener('click', closeSealShop);
 ui.shopClose.addEventListener('click', closeShop);
 ui.inventoryOpen?.addEventListener('click', openBag);
 ui.bagOpenBtn?.addEventListener('click', openBagPanel);
-ui.bagTabBag?.addEventListener('click', () => showBagTab('bag'));
-ui.bagTabBond?.addEventListener('click', () => showBagTab('bond'));
+ui.bondOpen?.addEventListener('click', openBond);
+ui.bondClose?.addEventListener('click', closeBond);
 ui.indexOpen?.addEventListener('click', openIndex);
 ui.lakePicker?.addEventListener('click', openLakes);
 ui.lakeClose?.addEventListener('click', closeLakes);

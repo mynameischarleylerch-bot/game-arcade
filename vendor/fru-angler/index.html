@@ -883,21 +883,6 @@
      only hides HTML elements, so on an SVG <g> it does nothing at all --
      the seal was painted on the dock with no seal equipped, over a bubble
      that correctly stayed silent. It needs its own rule. */
-  /* The bag's two tabs: Fish and Bond. */
-  .bag__tabs { display: flex; gap: .35rem; margin: .1rem 0 .7rem; }
-  .bag__tab {
-    flex: 1; padding: .34rem .7rem; font: inherit; font-size: .88rem; font-weight: 700;
-    color: var(--ink-soft, #0e6ea8); cursor: pointer;
-    border-radius: var(--pill);
-    border: 1px solid rgba(255,255,255,.75);
-    background: linear-gradient(180deg, rgba(255,255,255,.62), rgba(255,255,255,.4));
-  }
-  .bag__tab.is-on {
-    color: #fff;
-    background: linear-gradient(180deg, #7fd3f4, #2f9fd0);
-    box-shadow: inset 0 1px 0 rgba(255,255,255,.65);
-  }
-
   /* The bond timeline. A real line with a milestone on it -- so feeding reads as
      travel, not as a number going up. */
   .bond__head { margin: 0 0 .5rem; font-size: .9rem; color: var(--ink-soft, #0e6ea8); }
@@ -1465,33 +1450,28 @@
         <div class="shop__panel" role="dialog" aria-modal="true" aria-labelledby="bag-title">
           <h2 class="shop__title" id="bag-title">Bag</h2>
 
-          <!-- Two tabs: what the fish are worth, and what feeding them is worth.
-               Feeding was a real decision -- a catch is coins OR luck -- with
-               nothing on screen to show where the luck was going. -->
-          <div class="bag__tabs" role="tablist" aria-label="Bag views">
-            <button class="bag__tab is-on" id="bag-tab-bag" type="button" role="tab"
-                    aria-selected="true" aria-controls="bag-view">Fish</button>
-            <button class="bag__tab" id="bag-tab-bond" type="button" role="tab"
-                    aria-selected="false" aria-controls="bond-panel">Bond</button>
-          </div>
-
-          <div id="bag-view" role="tabpanel" aria-labelledby="bag-tab-bag">
-            <p class="shop__wallet" id="bag-summary"></p>
-            <p class="shop__wallet">
-              Sell a fish for rod coins, or feed it to your seal to raise its bond.
-            </p>
-            <div class="shop__list" id="bag-list"></div>
-          </div>
-
-          <!-- The bond timeline: a line with a milestone at each step, filled as
-               the seal is fed. -->
-          <div id="bond-panel" role="tabpanel" aria-labelledby="bag-tab-bond" hidden>
-            <p class="bond__head" id="bond-head"></p>
-            <div class="bond__track"><div class="bond__fill" id="bond-fill"></div></div>
-            <ol class="bond__timeline" id="bond-timeline"></ol>
-          </div>
+          <p class="shop__wallet" id="bag-summary"></p>
+          <p class="shop__wallet">
+            Sell a fish for rod coins, or feed it to your seal to raise its bond.
+          </p>
+          <div class="shop__list" id="bag-list"></div>
           <p style="margin:.9rem 0 0">
             <button class="btn" id="bag-close" type="button">Close</button>
+          </p>
+        </div>
+      </div>
+
+      <!-- The bond timeline: its own panel and its own pill. Feeding is a
+           separate thing from what a fish is worth, so it gets a separate
+           place rather than a tab you dig through the bag to find. -->
+      <div class="shop" id="bond-panel" hidden>
+        <div class="shop__panel" role="dialog" aria-modal="true" aria-labelledby="bond-title">
+          <h2 class="shop__title" id="bond-title">Bond</h2>
+          <p class="bond__head" id="bond-head"></p>
+          <div class="bond__track"><div class="bond__fill" id="bond-fill"></div></div>
+          <ol class="bond__timeline" id="bond-timeline"></ol>
+          <p style="margin:.9rem 0 0">
+            <button class="btn" id="bond-close" type="button">Close</button>
           </p>
         </div>
       </div>
@@ -1566,11 +1546,12 @@
       <button class="btn" id="shop-open" type="button">Rods &amp; shop</button>
       <button class="btn" id="seal-shop-open" type="button">Seals</button>
       <button class="btn" id="bag-open" type="button">Bag <span id="bag-count"></span></button>
+      <button class="btn" id="bond-open" type="button">Bond</button>
       <span id="bestiary" class="hud__dim"></span>
       <span class="hud__dim">Hold <kbd>Space</kbd> to cast</span>
     </div>
   </div>
 
-  <script type="module" src="./angler.js?v=2026-10-04-g"></script>
+  <script type="module" src="./angler.js?v=2026-10-04-h"></script>
 </body>
 </html>
