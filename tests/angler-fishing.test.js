@@ -11,6 +11,7 @@ import {
   addToBag, fishEntrySpec, bagWorth, bagEntryValue,
   sellFromBag, feedToBond, bondLuck, bondCount,
   groupBag,
+  sealFedLine,
   fishSilhouette,} from '../vendor/fru-angler/fishing.js';
 
 test('the starting wallet can afford exactly one upgrade from the cheapest rod', () => {
@@ -2295,3 +2296,90 @@ test('grouping the bag is pure, and it groups by fish rather than by value', () 
   groupBag(source);
   assert.equal(source.length, 4, 'the bag must not be reordered in place');
 });
+
+test('a seal says something different when fed, by the rarity of the fish', () => {
+  // Feeding is the newest thing a seal reacts to, and it had no line for it: every
+  // feed got the generic chatter, so the fish you chose to feed -- the decision the
+  // bag exists for -- was the one thing the pet said nothing about.
+  const byRarity = { Common: 'common', Uncommon: 'uncommon', Rare: 'rare',
+    Epic: 'epic', Legendary: 'legendary', Mythical: 'mythical' };
+
+  for (const seal of SEALS) {
+    assert.ok(seal.fed, `${seal.id} must have feeding lines`);
+    for (const [rarity, key] of Object.entries(byRarity)) {
+      assert.equal(typeof seal.fed[key], 'string',
+        `${seal.id} needs a fed line for ${rarity} (fed.${key})`);
+      assert.ok(seal.fed[key].length > 3, `${seal.id}.fed.${key} is empty`);
+    }
+    // Every tier distinct, or "depending on rarity" is a lie.
+    const all = Object.values(byRarity).map((k) => seal.fed[k]);
+    assert.equal(new Set(all).size, all.length,
+      `${seal.id} repeats a feeding line across tiers`);
+    // And never one of its OWN catch lines: feeding is its own moment. The
+    // first version compared against a line copied from a different seal, which
+    // no fed line in this seal matched -- so it could not fail.
+    const own = new Set(Object.values(seal.catch ?? {}));
+    for (const line of all) {
+      assert.ok(!own.has(line),
+        `${seal.id} reuses one of its own catch lines when fed: "${line}"`);
+    }
+  }
+});
+
+test('sealFedLine picks the tier, and a seal with no lines still answers', () => {
+  const seal = SEALS[0];
+  for (const fish of FISH) {
+    const line = sealFedLine(seal, fish);
+    assert.equal(typeof line, 'string', `${fish.id} must get a line`);
+    assert.ok(line.length > 0, `${fish.id} got an empty line`);
+  }
+  // The tier must actually drive it: a Mythical and a Common differ.
+  const common = FISH.find((f) => f.rarity === 'Common');
+  const mythical = FISH.find((f) => f.rarity === 'Mythical');
+  assert.notEqual(sealFedLine(seal, common), sealFedLine(seal, mythical),
+    'Common and Mythical must not get the same line');
+
+  // An unknown fish falls back rather than throwing, and no seal is silent.
+  assert.ok(sealFedLine(seal, { rarity: 'Nonsense' }).length > 0, 'unknown rarity still speaks');
+  // An unknown fish falls back to the lowest tier rather than throwing.
+  assert.ok(sealFedLine(seal, { rarity: 'Nonsense' }).length > 0, 'unknown rarity still speaks');
+  // With NO seal there is nothing to say, and that is right: a bubble with nobody
+  // behind it would be worse. sealComment() returns '' in the same case.
+  assert.equal(sealFedLine(null, FISH[0]), '', 'no seal, no line');
+});
+
+
+test('each seal is fed in its own voice, and they read differently', () => {
+  // The lines are hand-written per seal, so nothing stops a rewrite drifting into
+  // generic. Compare the two extremes by their SHAPE, which is what actually
+  // distinguishes a drill sergeant from a deadpan: exclamation against flat
+  // sentences, questions against statements.
+  const fed = (id) => Object.values(SEALS.find((s) => s.id === id).fed);
+
+  // Frost shouts, and mostly in capitals. Proportion rather than "every": the
+  // first version demanded all six and one of them lands as a statement, which is
+  // correct for a sergeant running out of breath.
+  const frost = fed('frost');
+  const shouted = frost.filter((l) => l.endsWith('!')).length;
+  assert.ok(shouted >= 4, `frost should end most lines in a bang, got ${shouted}/6`);
+  assert.ok(frost.some((l) => /\b[A-Z]{3,}/.test(l)),
+    'and at least one should be all capitals');
+
+  const bubbles = fed('bubbles');
+  assert.ok(bubbles.some((l) => /[?!]/.test(l)),
+    'bubbles asks questions and cannot help interrupting');
+
+  // Tangerine and Moss are both flat, but Tangerine is pointed and Moss is short.
+  const tangerine = fed('tangerine');
+  const moss = fed('moss');
+  const avgLen = (xs) => xs.reduce((n, l) => n + l.length, 0) / xs.length;
+  assert.ok(avgLen(tangerine) > avgLen(moss),
+    `tangerine should be wordier than moss: ${avgLen(tangerine).toFixed(0)} vs ${avgLen(moss).toFixed(0)}`);
+  assert.ok(!tangerine.some((l) => /[?!]/.test(l)),
+    'tangerine never asks a question and never wows -- she lands it and stops');
+  assert.ok(!moss.some((l) => /[!]/.test(l)),
+    'moss does not exclaim. ever.');
+  assert.ok(fed('abyss').every((l) => l === l.toLowerCase() || /^[A-Z]/.test(l)),
+    'abyss trails off rather than declaiming');
+});
+

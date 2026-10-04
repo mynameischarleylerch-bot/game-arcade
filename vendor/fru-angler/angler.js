@@ -25,11 +25,11 @@ import {
  rollLostItem, lostItemsFor, sellLostItems, lostItemById,
  addToBag, fishEntrySpec, bagWorth, bagEntryValue,
  sellFromBag, feedToBond, bondLuck, bondCount, groupBag,
- buySeal, equipSeal, sealComment, sealDuplicates, sealIdleLine,
-} from './fishing.js?v=2026-10-04-b';
+ buySeal, equipSeal, sealComment, sealDuplicates, sealIdleLine, sealFedLine,
+} from './fishing.js?v=2026-10-04-c';
 import {
   reelConfig, stepReel as advance, reelOutcomeFor, isCaught, lineSnapped,
-} from './reel.js?v=2026-10-04-b';
+} from './reel.js?v=2026-10-04-c';
 
 /* ------------------------------------------------------------------ tuning */
 
@@ -1688,7 +1688,10 @@ function feedOneFish(at, fish, seal) {
   state.bag = result.bag;
   state.bond = result.bond;
   save(); paintChrome(); paintBag();
-  sealChatter();
+  // The seal reacts to THIS fish, by how rare it was. It used to call
+  // sealChatter(), which picks an idle line -- so the one decision the bag exists
+  // for was answered with the same words as every other moment.
+  sealSays(sealFedLine(seal, fish), seal);
   say(`${fish.name} fed to ${seal.name}. Bond ${bondCount(state.bond, seal.id)}.`);
 }
 

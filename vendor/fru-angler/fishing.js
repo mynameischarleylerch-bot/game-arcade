@@ -1327,6 +1327,75 @@ export function bagWorthByFish(bag) {
 /* ---------------------------------------------------------------- pet seals */
 
 /**
+ * What each seal says when you feed it a fish.
+ *
+ * Feeding is the newest thing a seal reacts to, and it had no line for it at all:
+ * every feed got the generic idle chatter. So the fish you deliberately chose to
+ * give up for luck -- the decision the whole bag exists for -- was the one moment
+ * the pet said nothing about.
+ *
+ * Six tiers, because the rarity of what you gave away should read differently.
+ * Feeding a Common is a snack; feeding a Mythical is an offering, and the seals
+ * know the difference.
+ *
+ * The voice rules are the seal's own, not generic:
+ *   bubbles    lowercase, bursts, questions, exclamation, never waits
+ *   tangerine  flat declaratives, devastating, then quiet. No questions.
+ *   moss       as few words as possible. dry. no exclamation, ever
+ *   frost      imperatives and pressure. shouts
+ *   abyss      knows things it should not. trails off, thinks out loud
+ *
+ * No line here is reused from a catch line: feeding is a different moment, and a
+ * seal that said the same thing about both would not be saying anything.
+ */
+const SEAL_FED = {
+  bubbles: {
+    // Cheerful and nosy. Short bursts, asks questions, never waits.
+    common: "oh! a snack! okay wait --",
+    uncommon: "oh that's better. that's a proper snack",
+    rare: "WAIT that's a rare one, you're just GIVING it to me??",
+    epic: "epic. epic! i'm gonna be so nice to you for like a day",
+    legendary: "you fed me a LEGENDARY. i'm not gonna be normal about this",
+    mythical: "okay hold on. mythical. MYTHICAL. i'm not okay, are you??",
+  },
+  tangerine: {
+    // The critic. Dry, exact, quietly competitive. Never shouts, always lands it.
+    common: "the small one. generous of you, considering",
+    uncommon: "acceptable. it had better be",
+    rare: "you gave me the rare one instead of selling it. noted. noted differently",
+    epic: "an epic, surrendered. you're either generous or not counting. either way",
+    legendary: "you handed me a legendary like it was loose change. i'm choosing not to comment",
+    mythical: "a mythical. fed. to me. and you didn't even look smug. fine. genuinely fine",
+  },
+  moss: {
+    // The deadpan zen. Says almost nothing, and what's there is very dry.
+    common: "small. enough",
+    uncommon: "this one has some weight to it",
+    rare: "rare. you fed it here. quiet. good",
+    epic: "epic. that one belonged in the water. you chose here instead. understood",
+    legendary: "legendary. fed. i will hold this carefully and say nothing",
+    mythical: "mythical. you could have sold that. you didn't. the water is quiet now",
+  },
+  frost: {
+    // The drill sergeant. Encourages, entirely through pressure.
+    common: "fed me a common. that's the STARTING LINE. again!",
+    uncommon: "uncommon! acceptable fuel! keep casting!",
+    rare: "a rare one, given up for BOND. do you understand what you just did?! good. do it again",
+    epic: "EPIC into the seal! that's not a snack, that's a STATEMENT. harder!",
+    legendary: "LEGENDARY! sacrificed! to a SEAL! this is how it WORKS! dig in!",
+    mythical: "A MYTHICAL. you fed me a mythical and you're still standing there?! OUTSTANDING! NOW DO IT AGAIN!",
+  },
+  abyss: {
+    // The eldritch one. Speaks like it knows things it shouldn't. Beats are mild.
+    common: "small. it is enough. it is always enough",
+    uncommon: "this one had a longer name than the last. i liked it",
+    rare: "rare things come up once. you gave it to me. it will not come back up. that is the trade",
+    epic: "an epic, freely given. the dark does not usually get offered anything. it noted it",
+    legendary: "legendary. into me. i will hold it the way you hold things you are not going to lose",
+    mythical: "mythical. you had that. and now i do. the water remembers who had it. i wonder if it will ask you too",
+  },
+};
+/**
  * The companions. One from each lake: they add luck, they occasionally hand you
  * a second copy of what you just caught, and they have opinions.
  *
@@ -1357,7 +1426,8 @@ export const SEALS = [
       junk: "oh nice, junk! that's still seal coins though so, you know, nice",
       personalBest: "that's the biggest one yet?? i'm claiming emotional credit",
     },
-  },
+  
+    fed: SEAL_FED.bubbles,},
   {
     id: 'tangerine', name: 'Tangerine', home: 'doric-delta',
     luck: 1.0, dupeChance: 0.07, level: 4, price: 2600, hue: 24,
@@ -1379,7 +1449,8 @@ export const SEALS = [
       junk: "junk. so impressive. genuinely",
       personalBest: "bigger. okay. i'm not impressed, i'm just noting it",
     },
-  },
+  
+    fed: SEAL_FED.tangerine,},
   {
     id: 'moss', name: 'Moss', home: 'eco-marsh',
     luck: 1.1, dupeChance: 0.08, level: 8, price: 5400, hue: 110,
@@ -1401,7 +1472,8 @@ export const SEALS = [
       junk: "something found you. it wasn't looking",
       personalBest: "bigger than last time. i noticed. i don't care though",
     },
-  },
+  
+    fed: SEAL_FED.moss,},
   {
     id: 'frost', name: 'Frost', home: 'glacier-fjord',
     luck: 1.2, dupeChance: 0.09, level: 13, price: 9800, hue: 198,
@@ -1423,7 +1495,8 @@ export const SEALS = [
       junk: "junk. even your junk pulled up badly. again. harder",
       personalBest: "new record. don't celebrate, cast. next one bigger",
     },
-  },
+  
+    fed: SEAL_FED.frost,},
   {
     id: 'abyss', name: 'Abyss', home: 'dark-aero-deep',
     luck: 1.4, dupeChance: 0.11, level: 19, price: 19000, hue: 232,
@@ -1445,7 +1518,8 @@ export const SEALS = [
       junk: "something came up. it brought a gift, technically",
       personalBest: "bigger. the water remembers the last one too. it's watching",
     },
-  },
+  
+    fed: SEAL_FED.abyss,},
 ];
 
 /**
@@ -1496,6 +1570,30 @@ export function sealComment(seal, fish, { bestiary = {}, personalBest = false, j
   // Below Epic, a fish you already hold is the "you could do better" beat.
   return alreadyKnown ? lines.beat : lines.favourite;
 }
+/**
+ * What the seal says when you feed it a fish.
+ *
+ * Feeding is the bag's whole point -- a catch can become luck instead of coins --
+ * and the pet had nothing to say about it, so the one decision the bag exists for
+ * was the one it passed over in silence.
+ *
+ * Tiered by the rarity of what was given away, because feeding a Common is a snack
+ * and feeding a Mythical is an offering. Always returns a string when there is a
+ * seal: a pet that goes quiet on the moment you chose to give something up is
+ * worse than no pet at all.
+ */
+/* Rarity -> feeding line. Six tiers, in RARITY_ORDER, so a Mythical reads
+ * differently from a Common and the seal's reaction matches what was given.
+ */
+const FEED_TIERS = ['common', 'uncommon', 'rare', 'epic', 'legendary', 'mythical'];
+
+export function sealFedLine(seal, fish) {
+  const lines = seal?.fed;
+  if (!lines) return '';
+  const key = FEED_TIERS[RARITY_ORDER.indexOf(fish?.rarity)] ?? 'common';
+  return lines[key] ?? lines.common ?? '';
+}
+
 /**
  * Buy a seal. Never mutates the wallet: on failure the caller gets the same coins
  * back plus a reason a player can read.

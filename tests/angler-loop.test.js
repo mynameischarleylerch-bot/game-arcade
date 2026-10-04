@@ -13,7 +13,7 @@ import { readFileSync } from 'node:fs';
 import { JSDOM } from 'jsdom';
 import { FISH, RARITY_ORDER, fishIndex, hookLineFor, AREAS,
          RODS, RODS_BY_PRICE, SEALS, startingLoadout, TIMES, WEATHER, LOST_ITEMS,
-} from '../vendor/fru-angler/fishing.js?v=2026-10-04-b';
+} from '../vendor/fru-angler/fishing.js?v=2026-10-04-c';
 
 const PAGE = readFileSync(
   new URL('../vendor/fru-angler/index.html', import.meta.url),
@@ -2522,4 +2522,43 @@ test('the bag groups identical fish into one row with Sell one and Feed one', as
   assert.equal(saved.bag.length, 2, 'leaving one Glidefin and the Sunscale');
   assert.deepEqual(saved.bag.map((e) => e.fishId).sort(), ['glidefin', 'sunscale'],
     `and they must be the right two, got ${JSON.stringify(saved.bag.map((e) => e.fishId))}`);
+});
+
+test('feeding a fish makes the seal speak about THAT fish, by its rarity', async () => {
+  // Feeding previously called sealChatter(), which picks an idle line. So the
+  // moment the bag exists for -- choosing to give up a fish for luck -- was said
+  // in the same words as every other moment.
+  const { FISH } = await import('../vendor/fru-angler/fishing.js');
+  const mythical = FISH.find((f) => f.rarity === 'Mythical');
+  const common = FISH.find((f) => f.rarity === 'Common');
+
+  async function feedOne(fish) {
+    const ctx = await seedSave({
+      coins: 0, rodId: 'bamboo', owned: ['bamboo'], bestiary: {}, areaId: 'aero-lake',
+      xp: 0, ownedSeals: ['bubbles'], equippedSeal: 'bubbles', lost: [],
+      giftedRods: [], sealCoins: 0, bond: {},
+      bag: [{ fishId: fish.id, weight: 1, mutation: null, multiplier: 1 }],
+    }, 1400 + (fish === mythical ? 1 : 0));
+    ctx.doc.getElementById('bag-open').dispatchEvent(
+      new ctx.win.MouseEvent('click', { bubbles: true }));
+    ctx.doc.querySelector('#bag-list .bag__feed').click();
+    // The seal's bubble is what it actually says, not the shared message line.
+    return ctx.doc.getElementById('fa-bubble-text').textContent;
+  }
+
+  const big = await feedOne(mythical);
+  const small = await feedOne(common);
+  assert.ok(big.length > 0, 'feeding must make the seal say something');
+  assert.notEqual(big, small,
+    `a Mythical and a Common must not get the same line:\n  ${big}\n  ${small}`);
+});
+
+test('the seal line for a feed is the fed line, not the idle chatter', async () => {
+  const { FISH, SEALS, sealFedLine, sealIdleLine } = await import('../vendor/fru-angler/fishing.js');
+  const seal = SEALS.find((s) => s.id === 'bubbles');
+  const mythical = FISH.find((f) => f.rarity === 'Mythical');
+  const fed = sealFedLine(seal, mythical);
+  const idle = sealIdleLine(seal, {});
+  assert.ok(fed.length > 0, 'a fed line must exist');
+  assert.ok(!idle.includes(fed), 'the feed must not be answered with an idle line');
 });
