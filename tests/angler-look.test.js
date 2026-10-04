@@ -1145,55 +1145,126 @@ test('the scene markup parses, which presence checks cannot tell', () => {
     'the rig must be a group, not a stray path');
 });
 
-test('the seal is a plain blob: one eye, a mouth, a nose, and nothing else', () => {
-  // It was rebuilt from three photographs with whiskers, flippers, claws, two
-  // large eyes and a mottled coat. The user then asked for "just a blob with eye
-  // mouth and nose", and that is the design: at this size the detail read as
-  // clutter and the animal stopped being a shape you recognised at a glance.
-  //
-  // So this now pins the SIMPLE version, on purpose. A later tidy-up that adds
-  // anatomy back will fail here, which is the point.
+
+/** The seal's own group, so the tests read the animal and not the lake. */
+function petGroup() {
   const start = PAGE.indexOf('<g id="fa-pet">');
-  const pet = PAGE.slice(start, PAGE.indexOf('\n        </g>', start));
+  assert.ok(start > 0, 'the seal group must exist');
+  return PAGE.slice(start, PAGE.indexOf('\n        </g>', start));
+}
 
-  // ONE body, drawn, not an ellipse -- and no separate head shape.
-  assert.match(pet, /<path id="pet-body"\s+d="M[^"]*C/, 'the blob is a drawn path');
-  assert.doesNotMatch(pet, /id="pet-head"/, 'one shape, not a head on a body');
+/** Every coordinate pair in an SVG path, for measuring. */
+function coords(d) {
+  return [...d.matchAll(/(-?\d+\.?\d*)[ ,](-?\d+\.?\d*)/g)].map((m) => [Number(m[1]), Number(m[2])]);
+}
+function xs(d) { return coords(d).map((p) => p[0]); }
+function ys(d) { return coords(d).map((p) => p[1]); }
+function extent(d) {
+  const c = coords(d);
+  return [Math.max(...c.map((p) => p[0])) - Math.min(...c.map((p) => p[0])),
+          Math.max(...c.map((p) => p[1])) - Math.min(...c.map((p) => p[1]))];
+}
+function centre(d) {
+  const c = coords(d);
+  return c.reduce((s, p) => s + p[0], 0) / c.length;
+}
+function count(s, needle) {
+  return s.split(needle).length - 1;
+}
 
-  // Exactly three features.
-  assert.match(pet, /id="pet-eye"/, 'an eye');
-  assert.match(pet, /id="pet-mouth"/, 'a mouth');
-  assert.match(pet, /id="pet-nose"/, 'a nose');
+test('the seal is drawn as the photograph shows: lying down, head up at one end', () => {
+  // From image_dff033.png, a juvenile harbour-type seal on ice:
+  //   - side view, slightly from above, LYING with its belly on the surface
+  //   - head at the RIGHT end of the body, raised, angled sideways
+  //   - only ONE eye visible, because it is a side view
+  //   - crown smoothly rounded, no brow ridge
+  //   - broad blunt muzzle that projects forward
+  //   - dark roughly triangular nose
+  //   - numerous long fine whiskers fanning sideways and slightly down
+  //   - no external ear flaps
+  //   - dark spots and ring mottles over the muzzle and cheeks, darker at the eye
+  //
+  // This replaced a "just a blob" contract from an earlier round. The blob was the
+  // wrong read of that photo: it dropped the posture, the flippers and the coat,
+  // which is most of what makes the animal recognisable.
+  const pet = petGroup();
+  const body = pet.match(/<path id="pet-body"\s+d="([^"]+)"/)?.[1];
+  const head = pet.match(/<path id="pet-head"\s+d="([^"]+)"/)?.[1];
+  assert.ok(body, 'the body must be a drawn path');
+  assert.ok(head, 'the head must be a drawn path, raised at one end');
 
-  // And nothing else: no whiskers, no flippers, no claws, no second eye.
-  for (const gone of ['pet__whisker', 'pet-flipper', 'pet__claw', 'pet-eye-l', 'pet-eye-r']) {
-    assert.equal(pet.includes(gone), false, `${gone} must be gone: it is a blob now`);
-  }
-  // Exactly one eye, one nose, one mouth.
-  for (const [what, n] of [['eye', 1], ['nose', 1], ['mouth', 1]]) {
-    const count = (pet.match(new RegExp(`id="pet-${what}"`, 'g')) ?? []).length;
-    assert.equal(count, n, `exactly ${n} ${what}, found ${count}`);
-  }
+  // Lying, not propped up: the body is longer than it is tall.
+  const [bw, bh] = extent(body);
+  assert.ok(bw > bh * 1.15,
+    `a seal LYING DOWN is longer than tall, got ${bw.toFixed(1)} x ${bh.toFixed(1)}`);
+
+  // Side view with the head at the RIGHT end: the head's centre sits right of the
+  // body's centre. A front-on or mirrored seal fails here.
+  const bx = centre(body);
+  const hx = centre(head);
+  assert.ok(hx > bx, `the head must be at the right end, body centre ${bx.toFixed(1)} head ${hx.toFixed(1)}`);
+});
+
+test('one visible eye, a blunt muzzle and a dark nose, because it is a side view', () => {
+  const pet = petGroup();
+  // Count the eye itself, not the id: adding a second eye as a bare <circle>
+  // inside the group left the id count at one and the test green.
+  const eyeGroup = pet.slice(pet.indexOf('<g id="pet-eye">'));
+  const eyes = count(eyeGroup.slice(0, eyeGroup.indexOf('</g>')), '<circle');
+  assert.equal(count(pet, 'id="pet-eye"'), 1, 'exactly one eye group');
+  assert.equal(eyes, 2,
+    `one eye drawn as a pupil and a highlight; found ${eyes} circles, so it is front-on`);
+
+  // Broad and blunt, projecting forward off the head.
+  assert.match(pet, /id="pet-muzzle"/, 'a blunt projecting muzzle');
+  // Dark, and roughly triangular.
+  const nose = pet.match(/<path id="pet-nose"\s+d="([^"]+)"\s+fill="([^"]+)"/);
+  assert.ok(nose, 'the nose must be drawn and filled');
+  assert.match(nose[2], /^#0|^#1|^#2/, `the nose must be dark, got ${nose[2]}`);
+  assert.match(nose[1], /L[^C]*L|C/, 'the nose is a wedge, not a circle');
+});
+
+test('the whiskers and the mottled coat are back -- they were in the photograph', () => {
+  const pet = petGroup();
+  // Numerous long fine whiskers fanning sideways and down. These were removed when
+  // it became "a blob" and the user then asked for the actual seal, so they are
+  // pinned again.
+  const whiskers = count(pet, 'class="pet__whisker"');
+  assert.ok(whiskers >= 4, `the photograph shows many whiskers, found ${whiskers}`);
+
+  // Dark spots and ring mottles over the muzzle and cheeks.
+  assert.match(pet, /id="pet-spots"/, 'the coat is mottled');
+  // Both kinds, because the photograph has both: ring mottles AND solid spots.
+  // A single threshold could be satisfied by either alone, so deleting all of
+  // one kind left the test green.
+  assert.ok(count(pet, '<ellipse class="pet__spot"') >= 2,
+    'the coat has ring mottles as well as spots');
+  assert.ok(count(pet, '<circle class="pet__spot"') >= 2,
+    'and solid spots as well as rings');
+  // Darker around the eye than on the back.
+  assert.match(pet, /id="pet-eye-shadow"/, 'the eye sits in a darker patch');
+});
+
+test('flippers and no ears, as photographed', () => {
+  const pet = petGroup();
+  assert.match(pet, /id="pet-flipper-front"/, 'a front flipper under the chest');
+  assert.match(pet, /id="pet-flipper-rear"/, 'rear flippers at the tail end');
+  // No external ear flaps: a harbour seal has none, and drawing them makes it a
+  // different animal.
+  assert.doesNotMatch(pet, /pet-ear|id="pet-ear/, 'a harbour seal has no external ears');
 });
 
 test('the seal is big enough to read, and clear of the angler', () => {
-  // "Bigger" was the other half of the request: the seal was drawn small enough
-  // to read as a pebble on the boards. It now has to be plainly a character --
-  // but it must still stop short of the angler, who starts at x=25.7.
-  const start = PAGE.indexOf('<g id="fa-pet">');
-  const pet = PAGE.slice(start, PAGE.indexOf('\n        </g>', start));
-  const body = pet.match(/<path id="pet-body"\s+d="([^"]+)"/)[1];
-  const pts = [...body.matchAll(/(-?[\d.]+)[ ,](-?[\d.]+)/g)].map((m) => [Number(m[1]), Number(m[2])]);
-  const xs = pts.map((q) => q[0]);
-  const ys = pts.map((q) => q[1]);
-  const width = Math.max(...xs) - Math.min(...xs);
-  const height = Math.max(...ys) - Math.min(...ys);
-
-  assert.ok(width >= 14, `the blob should be wide enough to read, got ${width.toFixed(1)} units`);
-  assert.ok(height >= 9, `and tall enough, got ${height.toFixed(1)} units`);
-  assert.ok(Math.max(...xs) < 25.7,
-    `the seal must clear the angler at x=25.7, but reaches ${Math.max(...xs).toFixed(1)}`);
-  assert.ok(Math.max(...ys) < 58, `and its belly must sit on the deck at y=58`);
+  // It has to be plainly a seal, but it must still stop short of the angler,
+  // who starts at x=25.7.
+  const pet = petGroup();
+  const all = [...pet.matchAll(/ d="([^"]+)"/g)].map((m) => m[1]).join(' ');
+  const [w, h] = extent(all);
+  assert.ok(w >= 18, `the seal should be wide enough to read, got ${w.toFixed(1)} units`);
+  assert.ok(Math.max(...xs(all)) < 25.7,
+    `it must clear the angler at x=25.7, but reaches ${Math.max(...xs(all)).toFixed(1)}`);
+  // And it sits on the deck rather than floating over the water.
+  assert.ok(Math.max(...ys(all)) < 58, `its belly must sit on the deck at y=58`);
 });
 
 

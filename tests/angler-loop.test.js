@@ -13,7 +13,7 @@ import { readFileSync } from 'node:fs';
 import { JSDOM } from 'jsdom';
 import { FISH, RARITY_ORDER, fishIndex, hookLineFor, AREAS,
          RODS, RODS_BY_PRICE, SEALS, startingLoadout, TIMES, WEATHER, LOST_ITEMS,
-} from '../vendor/fru-angler/fishing.js?v=2026-10-04-j';
+} from '../vendor/fru-angler/fishing.js?v=2026-10-04-k';
 
 const PAGE = readFileSync(
   new URL('../vendor/fru-angler/index.html', import.meta.url),
@@ -1347,8 +1347,8 @@ test('the pet is counter-scaled to the lake, so it cannot smear', async () => {
   // redrawn from the photographs and shifted clear of the angler, so the old
   // anchor of 14 was stale -- and a wrong anchor counter-scales about the wrong
   // point, which skews the seal instead of just leaving it alone.
-  assert.match(body, /translate\(12\.4 0\)/,
-    'anchored on the pet centre at x=12.4, not the angler shoulder at x=33.2');
+  assert.match(body, /translate\(12\.9 0\)/,
+    'anchored on the pet centre at x=12.9, not the angler shoulder at x=33.2');
   // And it must still lift the seal onto the deck: the drawing sits at y~47 and
   // the boards are at y=58, so without the shift it floats above them.
   assert.match(body, /translate\(0 \$\{PET_Y\}\)/,
