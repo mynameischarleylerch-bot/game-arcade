@@ -26,10 +26,10 @@ import {
  addToBag, fishEntrySpec, bagWorth, bagEntryValue,
  sellFromBag, feedToBond, bondLuck, bondCount, groupBag,
  buySeal, equipSeal, sealComment, sealDuplicates, sealIdleLine, sealFedLine, bondProgress,
-} from './fishing.js?v=2026-10-04-m';
+} from './fishing.js?v=2026-10-04-n';
 import {
   reelConfig, stepReel as advance, reelOutcomeFor, isCaught, lineSnapped,
-} from './reel.js?v=2026-10-04-m';
+} from './reel.js?v=2026-10-04-n';
 
 /* ------------------------------------------------------------------ tuning */
 
@@ -798,7 +798,7 @@ function fitPet() {
   // artwork keeps plain coordinates and stays assertable.
   const PET_Y = 9.2;
   group.setAttribute('transform',
-    `translate(11 0) scale(${scale.toFixed(4)} 1) translate(-11 0) translate(0 ${PET_Y})`);
+    `translate(13 0) scale(${scale.toFixed(4)} 1) translate(-13 0) translate(0 ${PET_Y})`);
 }
 
 /** Move the bobber, its splash and the fishing line together. */

@@ -1171,76 +1171,94 @@ function bodyOf(pet) {
   return pet.match(/<path id="pet-body"\s+d="([^"]+)"/)[1];
 }
 
-test('the seal is one blob with no limbs', () => {
-  // "i dont need it to look like it has limbs just a blob". Two earlier rounds
-  // added flippers and a raised head; this pins the simple shape so neither can
-  // creep back. A blob is ONE mass: no separate head, and nothing that reads as
-  // an arm, a leg, a flipper or a tail.
+test('it is a seal facing right, not a plain blob', () => {
+  // "its not a blob its supposed to be a seal but looks every close to a blob" --
+  // a ringed seal, so smooth and rounded it reads as a blob at a glance, but it
+  // must be facing RIGHT: the head at the right end and the snout projecting
+  // further right still.
   const pet = petGroup();
-  assert.match(pet, /<path id="pet-body"/, 'one body');
+  assert.match(pet, /<path id="pet-body"/, 'the body');
+  assert.match(pet, /<path id="pet-head"/, 'and a head at one end of it');
+  assert.match(pet, /<path id="pet-snout"/, 'and a snout, so it is not a ball');
 
-  for (const gone of ['pet-head', 'pet-muzzle', 'pet-flipper-front', 'pet-flipper-rear',
-                      'pet-nose', 'pet-ear', 'pet__whisker', 'pet-tail']) {
-    assert.equal(pet.includes(gone), false, gone + ' must be gone: it is a blob');
-  }
+  const body = pet.match(/<path id="pet-body"\s+d="([^"]+)"/)[1];
+  const head = pet.match(/<path id="pet-head"\s+d="([^"]+)"/)[1];
+  const snout = pet.match(/<path id="pet-snout"\s+d="([^"]+)"/)[1];
 
-  // Round and plump, with a band on BOTH sides. An earlier version only checked
-  // the lower bound, and squashing the whole body to a pancake still satisfied it.
-  const [w, h] = extent(bodyOf(pet));
-  assert.ok(h > w * 0.85, 'a blob is round, not a pancake: ' + w.toFixed(1) + ' x ' + h.toFixed(1));
-  assert.ok(h < w * 1.25, 'and not a tall column: ' + w.toFixed(1) + ' x ' + h.toFixed(1));
+  const mid = (d) => xs(d).reduce((s, v) => s + v, 0) / coords(d).length;
+  assert.ok(mid(head) > mid(body),
+    `the head must be at the RIGHT end: body ${mid(body).toFixed(1)}, head ${mid(head).toFixed(1)}`);
+  assert.ok(Math.max(...xs(snout)) > Math.max(...xs(head)),
+    'the snout must project past the head, so it faces right');
+
+  // Lying down: a seal on ice is longer than it is tall. That is what stops it
+  // reading as a ball.
+  const [w, h] = extent(body);
+  assert.ok(w > h * 1.15, `a seal lying down is longer than tall, got ${w.toFixed(1)} x ${h.toFixed(1)}`);
+  // And the tail end is narrower than the shoulders, so it tapers.
+  assert.ok(Math.max(...ys(body)) > 58 - 12, 'the belly sits near the deck');
 });
 
-test('the face is a :3 -- two dot eyes with glints, and a curve that bows down', () => {
+test('the flippers are tucked low, not sticking out like limbs', () => {
+  // The complaint was "it looks every close to a blob", which is what was asked
+  // for -- so a flipper must not read as an arm reaching out of the silhouette.
+  // It has to exist, and it has to stay inside the body's own height band.
+  const pet = petGroup();
+  assert.match(pet, /id="pet-flipper"/, 'a flipper, or it is not a seal');
+  const fl = pet.match(/<path id="pet-flipper"\s+d="([^"]+)"/)[1];
+  const body = pet.match(/<path id="pet-body"\s+d="([^"]+)"/)[1];
+  const top = Math.min(...ys(body));
+  const belly = Math.max(...ys(body));
+  const fTop = Math.min(...ys(fl));
+  const fBot = Math.max(...ys(fl));
+  assert.ok(fTop > top + (belly - top) * 0.45,
+    `a flipper sits low on the body; it starts at y ${fTop.toFixed(1)} of ${top.toFixed(1)}-${belly.toFixed(1)}`);
+  assert.ok(fBot <= belly + 0.4, 'and does not hang below the belly');
+});
+
+test('the face is a :3, looking right', () => {
   const pet = petGroup();
   const start = pet.indexOf('<g id="pet-eye">');
   const eye = pet.slice(start, pet.indexOf('</g>', start));
+  assert.equal(count(eye, 'r=".7"'), 2, 'two dot eyes');
+  assert.equal(count(eye, 'r=".22"'), 2, 'each with a highlight');
 
-  // Pupils and glints counted SEPARATELY. A first version counted every <circle>
-  // and called that four eyes, which would have pushed the highlights out to make
-  // the test pass; the second counted all circles again and called that the
-  // glints, so removing them left it at two and green.
-  const pupils = count(eye, 'r=".82"');
-  const glints = count(eye, 'r=".26"');
-  assert.equal(count(pet, '<g id="pet-eye">'), 1, 'one eye group');
-  assert.equal(pupils, 2, 'exactly two eyes, got ' + pupils);
-  // The glints are what make it read as a face rather than two dots.
-  assert.equal(glints, 2, 'each eye carries a highlight, got ' + glints);
+  // The ":3": ends level, middle dipping down, so it is a smile and not a frown.
+  const found = pet.match(/<path id="pet-mouth"\s+d="([^"]+)"/);
+  assert.ok(found, 'the :3 mouth must be drawn');
+  const mouth = found[1];
+  const c = coords(mouth);
+  const lowest = Math.max(...ys(mouth));
+  assert.ok(Math.abs(c[0][1] - c[c.length - 1][1]) < 0.6, 'a :3 mouth starts and ends level');
+  assert.ok(lowest > Math.max(c[0][1], c[c.length - 1][1]) + 0.8,
+    'and the curve bows DOWNWARD into a smile');
 
-  // The "3": one stroke whose ENDS sit higher than its middle, so the curve bows
-  // down and reads as a smile. A flat line reads as a mouth; a curve bowing up
-  // reads as a frown, which is the wrong emoticon entirely.
-  const mouth = pet.match(/<path id="pet-mouth"\s+d="([^"]+)"/);
-  assert.ok(mouth, 'the :3 mouth must be drawn');
-  const c = coords(mouth[1]);
-  const startY = c[0][1];
-  const endY = c[c.length - 1][1];
-  const lowest = Math.max(...ys(mouth[1]));
-  assert.ok(Math.abs(startY - endY) < 0.6,
-    'a :3 mouth starts and ends level, got ' + startY + ' and ' + endY);
-  assert.ok(lowest > Math.max(startY, endY) + 0.8,
-    'the curve must bow DOWNWARD into a smile; lowest ' + lowest + ' is not below its ends');
+  // The face sits right of the body's middle: it is looking right.
+  const body = pet.match(/<path id="pet-body"\s+d="([^"]+)"/)[1];
+  const bodyMid = xs(body).reduce((s, v) => s + v, 0) / coords(body).length;
+  const mouthMid = xs(mouth).reduce((s, v) => s + v, 0) / coords(mouth).length;
+  assert.ok(mouthMid > bodyMid,
+    'the face must be on the right-hand end, got ' + mouthMid.toFixed(1) + ' vs ' + bodyMid.toFixed(1));
 });
 
-test('the blob is spotted', () => {
+test('the coat is ringed, like the ringed seal it is inspired by', () => {
   const pet = petGroup();
-  assert.ok(count(pet, 'class="pet__spot"') >= 4,
-    'the blob is spotted; found ' + count(pet, 'class="pet__spot"'));
-  // Spots sit ON a body big enough to carry them, not floating off in space.
-  const [w, h] = extent(bodyOf(pet));
-  assert.ok(w > 8 && h > 8, 'the body is big enough for spots to sit on it');
+  // A ringed seal is named for the pale RINGS scattered over its dark coat.
+  assert.ok(count(pet, 'class="pet__ring"') >= 3,
+    'the coat must carry rings; found ' + count(pet, 'class="pet__ring"'));
+  assert.ok(count(pet, 'class="pet__spot"') >= 2, 'and a few solid spots');
 });
 
-test('the blob is big enough to read, and clear of the angler', () => {
+test('the seal is big enough to read, and clear of the angler', () => {
   const pet = petGroup();
   const all = [...pet.matchAll(/ d="([^"]+)"/g)].map((m) => m[1]).join(' ');
   const [w, h] = extent(all);
-  assert.ok(w >= 14, 'wide enough to read, got ' + w.toFixed(1) + ' units');
-  assert.ok(h >= 10, 'tall enough to read, got ' + h.toFixed(1) + ' units');
+  assert.ok(w >= 16, 'wide enough to read, got ' + w.toFixed(1) + ' units');
   assert.ok(Math.max(...xs(all)) < 25.7,
     'it must clear the angler at x=25.7, but reaches ' + Math.max(...xs(all)).toFixed(1));
   assert.ok(Math.max(...ys(all)) < 58, 'and its belly must sit on the deck at y=58');
 });
+
 
 test('every element the JS reaches for has a rule in the stylesheet', () => {
   // Deleting dead seal CSS took the whole Bond stylesheet with it -- the dead rules
