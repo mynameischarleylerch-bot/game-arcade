@@ -26,10 +26,10 @@ import {
  addToBag, fishEntrySpec, bagWorth, bagEntryValue,
  sellFromBag, feedToBond, bondLuck, bondCount, groupBag,
  buySeal, equipSeal, sealComment, sealDuplicates, sealIdleLine, sealFedLine, bondProgress,
-} from './fishing.js?v=2026-10-04-l';
+} from './fishing.js?v=2026-10-04-m';
 import {
   reelConfig, stepReel as advance, reelOutcomeFor, isCaught, lineSnapped,
-} from './reel.js?v=2026-10-04-l';
+} from './reel.js?v=2026-10-04-m';
 
 /* ------------------------------------------------------------------ tuning */
 
@@ -1683,6 +1683,23 @@ function paintBond() {
   }
 }
 
+/**
+ * Every bar button is a toggle: the one that opened a panel closes it again.
+ *
+ * Each opener only ever OPENED before, so the only ways out were the Close button
+ * inside the panel or Escape -- and clicking the thing you had just clicked did
+ * nothing at all, which reads as a broken button rather than as a one-way dialog.
+ *
+ * Closing runs the panel's own close handler rather than just hiding it, so focus
+ * returns to the button the way it does when Close is pressed. Hiding the panel
+ * alone would strand focus on a control behind the scrim.
+ */
+function togglePanel(panel, open, close) {
+  if (!panel) return;
+  if (panel.hidden) open();
+  else close();
+}
+
 /** Open the bond timeline. Its own panel, so the bag stays exactly as it was. */
 function openBond() {
   if (!ui.bondPanel) return;
@@ -1962,17 +1979,19 @@ ui.catchAgain.addEventListener('click', () => {
   say(IDLE_HINT);
   sealChatter();   // back to idle, so it has an opinion again
 });
-ui.shopOpen.addEventListener('click', openShop);
-ui.sealOpen?.addEventListener('click', openSealShop);
+ui.shopOpen.addEventListener('click', () => togglePanel(ui.shopPanel, openShop, closeShop));
+ui.sealOpen?.addEventListener('click',
+  () => togglePanel(ui.sealPanel, openSealShop, closeSealShop));
 ui.sellFinds?.addEventListener('click', sellFinds);
 ui.sealClose?.addEventListener('click', closeSealShop);
 ui.shopClose.addEventListener('click', closeShop);
-ui.inventoryOpen?.addEventListener('click', openBag);
-ui.bagOpenBtn?.addEventListener('click', openBagPanel);
-ui.bondOpen?.addEventListener('click', openBond);
+ui.inventoryOpen?.addEventListener('click', () => togglePanel(ui.inventory, openBag, closeBag));
+ui.bagOpenBtn?.addEventListener('click',
+  () => togglePanel(ui.bagPanel, openBagPanel, closeBagPanel));
+ui.bondOpen?.addEventListener('click', () => togglePanel(ui.bondPanel, openBond, closeBond));
 ui.bondClose?.addEventListener('click', closeBond);
-ui.indexOpen?.addEventListener('click', openIndex);
-ui.lakePicker?.addEventListener('click', openLakes);
+ui.indexOpen?.addEventListener('click', () => togglePanel(ui.indexPanel, openIndex, closeIndex));
+ui.lakePicker?.addEventListener('click', () => togglePanel(ui.lakePanel, openLakes, closeLakes));
 ui.lakeClose?.addEventListener('click', closeLakes);
 ui.lakePanel?.addEventListener('click', (event) => {
   if (event.target === ui.lakePanel) closeLakes();

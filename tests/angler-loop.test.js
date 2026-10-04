@@ -13,7 +13,7 @@ import { readFileSync } from 'node:fs';
 import { JSDOM } from 'jsdom';
 import { FISH, RARITY_ORDER, fishIndex, hookLineFor, AREAS,
          RODS, RODS_BY_PRICE, SEALS, startingLoadout, TIMES, WEATHER, LOST_ITEMS,
-} from '../vendor/fru-angler/fishing.js?v=2026-10-04-l';
+} from '../vendor/fru-angler/fishing.js?v=2026-10-04-m';
 
 const PAGE = readFileSync(
   new URL('../vendor/fru-angler/index.html', import.meta.url),
@@ -570,6 +570,13 @@ test('the inventory lists every fish, showing the heaviest landed', async () => 
     step(ctx);
     if (!ctx.doc.getElementById('catch').hidden) break;
   }
+  // Clicked twice, deliberately. The button is now a toggle, so a single click
+  // here would CLOSE the panel it opened before the cast, and the rows would
+  // read empty. It used to double as a refresh -- which is exactly the
+  // one-way behaviour the toggle fixes.
+  ctx.doc.getElementById('inventory-open').click();
+  assert.equal(ctx.doc.getElementById('inventory-panel').hidden, true,
+    'the same button closes it');
   ctx.doc.getElementById('inventory-open').click();
   const caught = [...ctx.doc.querySelectorAll('#inventory-fish .species')]
     .filter((r) => r.dataset.caught === 'true');
@@ -2818,4 +2825,50 @@ test('with no rod luck and no seal, the rows say so instead of showing a bare 0'
   assert.match(sealName, /no seal/i, `got "${sealName}"`);
   // And the total is still a real number.
   assert.equal(ctx.doc.getElementById('boost-total').textContent, '0.02');
+});
+
+test('every bar button toggles: click it again and its panel closes', async () => {
+  // "when you click a button to open up for example my bag i cant click the same
+  // button to close it". Every opener only ever OPENED -- the only way out was the
+  // Close button inside the panel, or Escape. That is a dead end for anyone who
+  // clicks the thing they just clicked.
+  //
+  // Driven off the real ids so a new panel added without a toggle fails here.
+  const ctx = await seedSave({
+    coins: 500, rodId: 'bamboo', owned: ['bamboo'], bestiary: { aero: ['glidefin'] },
+    areaId: 'aero-lake', xp: 0, ownedSeals: ['bubbles'], equippedSeal: 'bubbles',
+    lost: [], giftedRods: [], sealCoins: 0, bond: {},
+  }, 1901);
+
+  const pairs = [
+    ['bag-open', 'bag-panel'],
+    ['bond-open', 'bond-panel'],
+    ['inventory-open', 'inventory-panel'],
+    ['index-open', 'index-panel'],
+    ['lake-picker', 'lake-panel'],
+    ['shop-open', 'shop-panel'],
+    ['seal-shop-open', 'seal-shop-panel'],
+  ];
+
+  for (const [btnId, panelId] of pairs) {
+    const btn = ctx.doc.getElementById(btnId);
+    const panel = ctx.doc.getElementById(panelId);
+    assert.ok(btn, `${btnId} must exist`);
+    assert.ok(panel, `${panelId} must exist`);
+
+    assert.equal(panel.hidden, true, `${panelId} starts closed`);
+    btn.dispatchEvent(new ctx.win.MouseEvent('click', { bubbles: true }));
+    assert.equal(panel.hidden, false, `${btnId} must open ${panelId}`);
+
+    // The same button, again.
+    btn.dispatchEvent(new ctx.win.MouseEvent('click', { bubbles: true }));
+    assert.equal(panel.hidden, true,
+      `${btnId} must close ${panelId} when clicked again -- it only ever opened`);
+
+    // And it still opens after that, so the toggle is not one-shot.
+    btn.dispatchEvent(new ctx.win.MouseEvent('click', { bubbles: true }));
+    assert.equal(panel.hidden, false, `${btnId} must open again after being closed`);
+    btn.dispatchEvent(new ctx.win.MouseEvent('click', { bubbles: true }));
+    assert.equal(panel.hidden, true, `${btnId} must close again`);
+  }
 });
