@@ -25,11 +25,11 @@ import {
  rollLostItem, lostItemsFor, sellLostItems, lostItemById,
  addToBag, fishEntrySpec, bagWorth, bagEntryValue,
  sellFromBag, feedToBond, bondLuck, bondCount, groupBag,
- buySeal, equipSeal, sealComment, sealDuplicates, sealIdleLine, sealFedLine,
-} from './fishing.js?v=2026-10-04-e';
+ buySeal, equipSeal, sealComment, sealDuplicates, sealIdleLine, sealFedLine, bondProgress,
+} from './fishing.js?v=2026-10-04-f';
 import {
   reelConfig, stepReel as advance, reelOutcomeFor, isCaught, lineSnapped,
-} from './reel.js?v=2026-10-04-e';
+} from './reel.js?v=2026-10-04-f';
 
 /* ------------------------------------------------------------------ tuning */
 
@@ -72,6 +72,9 @@ const ui = {
   bagPanel: el('bag-panel'), bagList: el('bag-list'),
   bagSummary: el('bag-summary'), bagOpenBtn: el('bag-open'),
   bagCloseBtn: el('bag-close'), bagCount: el('bag-count'),
+  bagTabBag: el('bag-tab-bag'), bagTabBond: el('bag-tab-bond'),
+  bagView: el('bag-view'), bondPanel: el('bond-panel'), bondHead: el('bond-head'),
+  bondFill: el('bond-fill'), bondTimeline: el('bond-timeline'),
   indexPanel: el('index-panel'), indexList: el('index-list'),
   indexOpen: el('index-open'), indexClose: el('index-close'),
   lakePicker: el('lake-picker'), lakePanel: el('lake-panel'),
@@ -1602,6 +1605,90 @@ function closeShop() {
  * ever being opened, and a fish nobody can see in the HUD is a fish that looks
  * like it vanished.
  */
+/**
+ * The Bond tab: where this seal is, and what feeding more would buy.
+ *
+ * Feeding was a real decision -- a catch is worth rod coins OR luck, never both --
+ * with nothing on screen to say where the luck was going. The bag listed a bare
+ * count. This is the shape of the thing: a line with a milestone on it, filled as
+ * the seal is fed, so each fish is visibly a step somewhere.
+ *
+ * Everything is read from bondProgress(), which reads bondLuck(). The tab must not
+ * do its own arithmetic: a timeline claiming a luck the rules do not pay would be
+ * worse than no timeline at all.
+ */
+function paintBond() {
+  if (!ui.bondTimeline) return;
+  const seal = SEALS.find((s) => s.id === state.equippedSeal) ?? null;
+
+  ui.bondTimeline.textContent = '';
+
+  if (!seal) {
+    // No seal, no ladder. An empty timeline would imply progress that is not there.
+    if (ui.bondHead) {
+      ui.bondHead.textContent =
+        'No seal on the dock. Buy one and feed it a fish to start a bond.';
+    }
+    if (ui.bondFill) ui.bondFill.style.width = '0%';
+    return;
+  }
+
+  const p = bondProgress(bondCount(state.bond, seal.id));
+
+  if (ui.bondHead) {
+    ui.bondHead.textContent = p.complete
+      ? `${seal.name}: ${p.fed} fish fed. Bond is at its best \u2014 luck +${p.luck.toFixed(2)},`
+        + ' and there is nothing left on the ladder.'
+      : `${seal.name}: ${p.fed} fish fed. Luck +${p.luck.toFixed(2)}.`
+        + ` ${p.next.at - p.fed} more for ${p.next.title} (luck +${p.next.luck.toFixed(2)}).`;
+  }
+  if (ui.bondFill) ui.bondFill.style.width = `${(p.progress * 100).toFixed(1)}%`;
+
+  for (const step of p.steps) {
+    const on = p.reached.includes(step);
+    const next = p.next === step;
+    const row = document.createElement('li');
+    row.className = 'bond__step'
+      + (on ? ' is-on' : '')
+      + (next ? ' is-next' : '');
+    row.dataset.at = String(step.at);
+
+    const at = document.createElement('span');
+    at.className = 'bond__at';
+    at.textContent = on ? `${step.at} fed` : `${step.at} fish`;
+
+    const name = document.createElement('b');
+    name.className = 'bond__name';
+    name.textContent = step.title;
+
+    const reward = document.createElement('span');
+    reward.className = 'bond__reward';
+    reward.textContent = step.reward;
+
+    const note = document.createElement('span');
+    note.className = 'bond__note';
+    note.textContent = step.note;
+
+    row.append(at, name, reward, note);
+    ui.bondTimeline.appendChild(row);
+  }
+}
+
+/** Switch the bag between its Fish and Bond views. */
+function showBagTab(which) {
+  const bond = which === 'bond';
+  if (ui.bagView) ui.bagView.hidden = bond;
+  if (ui.bondPanel) ui.bondPanel.hidden = !bond;
+  if (ui.bagTabBag && ui.bagTabBond) {
+    ui.bagTabBag.classList.toggle('is-on', !bond);
+    ui.bagTabBond.classList.toggle('is-on', bond);
+    ui.bagTabBag.setAttribute('aria-selected', String(!bond));
+    ui.bagTabBond.setAttribute('aria-selected', String(bond));
+  }
+  if (bond) paintBond();
+  else paintBag();
+}
+
 function paintBagBadge(count) {
   if (!ui.bagCount) return;
   ui.bagCount.textContent = count ? `(${count})` : '';
@@ -1865,6 +1952,8 @@ ui.sealClose?.addEventListener('click', closeSealShop);
 ui.shopClose.addEventListener('click', closeShop);
 ui.inventoryOpen?.addEventListener('click', openBag);
 ui.bagOpenBtn?.addEventListener('click', openBagPanel);
+ui.bagTabBag?.addEventListener('click', () => showBagTab('bag'));
+ui.bagTabBond?.addEventListener('click', () => showBagTab('bond'));
 ui.indexOpen?.addEventListener('click', openIndex);
 ui.lakePicker?.addEventListener('click', openLakes);
 ui.lakeClose?.addEventListener('click', closeLakes);

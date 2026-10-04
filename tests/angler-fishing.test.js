@@ -12,7 +12,8 @@ import {
   sellFromBag, feedToBond, bondLuck, bondCount,
   groupBag,
   sealFedLine,
-  fishSilhouette,} from '../vendor/fru-angler/fishing.js';
+  fishSilhouette,
+  bondMilestones, bondProgress,} from '../vendor/fru-angler/fishing.js';
 
 test('the starting wallet can afford exactly one upgrade from the cheapest rod', () => {
   const loadout = startingLoadout();
@@ -2381,5 +2382,66 @@ test('each seal is fed in its own voice, and they read differently', () => {
     'moss does not exclaim. ever.');
   assert.ok(fed('abyss').every((l) => l === l.toLowerCase() || /^[A-Z]/.test(l)),
     'abyss trails off rather than declaiming');
+});
+
+
+test('the bond ladder is a real, strictly increasing set of milestones', () => {
+  // The timeline exists to show feeding is going somewhere. A ladder of made-up
+  // numbers would make it decoration, so the rule that produces it is pure and
+  // tested: milestones rise, they never repeat a count, and each one says what it
+  // actually grants.
+  const steps = bondMilestones();
+  assert.ok(steps.length >= 5,
+    `a timeline needs somewhere to go; ${steps.length} steps is not a ladder`);
+
+  let lastAt = -1;
+  for (const step of steps) {
+    assert.ok(Number.isInteger(step.at) && step.at > 0,
+      `every step needs a fish count, got ${step.at}`);
+    assert.ok(step.at > lastAt,
+      `steps must strictly increase: ${step.at} after ${lastAt}`);
+    lastAt = step.at;
+    assert.ok(typeof step.title === 'string' && step.title.length > 0,
+      `step ${step.at} needs a name`);
+    assert.ok(typeof step.reward === 'string' && step.reward.length > 0,
+      `step ${step.at} must say what it gives`);
+  }
+});
+
+test('a milestone only claims what bondLuck actually pays out', () => {
+  // The temptation is to write "+1.0 luck at 25 fed" and move on. It has to be
+  // true: bondLuck is square-rooted, so the number quoted must be the real one.
+  for (const step of bondMilestones()) {
+    assert.equal(step.luck, bondLuck(step.at),
+      `${step.at} fed pays ${bondLuck(step.at)} luck, not ${step.luck}`);
+  }
+});
+
+test('the ladder ends where the returns stop being worth feeding towards', () => {
+  // Square-rooted bond is unbounded, so "the last step" has to be a design choice
+  // and has to say so. And the final step must be reachable in a plausible game:
+  // a player who has fed 100 fish should not be told they have 60 left to go.
+  const steps = bondMilestones();
+  const last = steps[steps.length - 1];
+  assert.ok(last.at <= 100,
+    `the ladder should be finishable, but it ends at ${last.at}`);
+
+  // Luck keeps rising, and the steps stay evenly spaced enough that the bar can
+  // show one approaching.
+  const gains = steps.map((s) => s.luck);
+  for (let i = 1; i < gains.length; i += 1) {
+    assert.ok(gains[i] > gains[i - 1], 'luck must keep rising');
+  }
+
+  // Diminishing RETURNS -- luck per FISH fed, not luck gained per step. Comparing
+  // step-to-step gains instead shows the opposite, because the steps get wider:
+  // the last step buys nearly three times the luck the second does, which looks
+  // like an accelerating reward when it is really a slowing one.
+  const perFish = steps.map((s) => s.luck / s.at);
+  for (let i = 1; i < perFish.length; i += 1) {
+    assert.ok(perFish[i] < perFish[i - 1],
+      `luck per fish must fall: step ${steps[i].at} gives ${perFish[i].toFixed(4)} per fish,`
+      + ` step ${steps[i - 1].at} gave ${perFish[i - 1].toFixed(4)}`);
+  }
 });
 

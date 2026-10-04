@@ -894,6 +894,70 @@
   /* The whiskers are the single most identifying feature, so they must not
      disappear at small sizes the way a thinner stroke would. */
   #fa-pet .pet__claw { pointer-events: none; }
+
+  /* The bag's two tabs: Fish and Bond. */
+  .bag__tabs { display: flex; gap: .35rem; margin: .1rem 0 .7rem; }
+  .bag__tab {
+    flex: 1; padding: .34rem .7rem; font: inherit; font-size: .88rem; font-weight: 700;
+    color: var(--ink-soft, #0e6ea8); cursor: pointer;
+    border-radius: var(--pill);
+    border: 1px solid rgba(255,255,255,.75);
+    background: linear-gradient(180deg, rgba(255,255,255,.62), rgba(255,255,255,.4));
+  }
+  .bag__tab.is-on {
+    color: #fff;
+    background: linear-gradient(180deg, #7fd3f4, #2f9fd0);
+    box-shadow: inset 0 1px 0 rgba(255,255,255,.65);
+  }
+
+  /* The bond timeline. A real line with a milestone on it -- so feeding reads as
+     travel, not as a number going up. */
+  .bond__head { margin: 0 0 .5rem; font-size: .9rem; color: var(--ink-soft, #0e6ea8); }
+  .bond__track {
+    position: relative; height: 8px; border-radius: var(--pill); margin: 0 0 .9rem;
+    background: linear-gradient(180deg, rgba(255,255,255,.55), rgba(255,255,255,.32));
+    border: 1px solid rgba(255,255,255,.75);
+    overflow: hidden;
+  }
+  .bond__fill {
+    position: absolute; inset: 0 auto 0 0; width: 0; border-radius: var(--pill);
+    background: linear-gradient(180deg, #b6f0a0, #46b06a);
+    box-shadow: 0 0 8px rgba(120, 220, 150, .7);
+    transition: width .35s ease;
+  }
+  .bond__timeline { list-style: none; margin: 0; padding: 0; display: grid; gap: .45rem; }
+  .bond__step {
+    position: relative; display: grid; gap: .12rem;
+    padding: .45rem .6rem .5rem 2.1rem; border-radius: var(--pill);
+    background: linear-gradient(180deg, rgba(255,255,255,.5), rgba(255,255,255,.3));
+    border: 1px solid rgba(255,255,255,.6);
+  }
+  /* the node on the line */
+  .bond__step::before {
+    content: ''; position: absolute; left: .72rem; top: .85rem;
+    width: .62rem; height: .62rem; border-radius: 50%;
+    background: rgba(255,255,255,.9);
+    box-shadow: 0 0 0 2px rgba(46,140,90,.35);
+  }
+  /* and the connector to the next one */
+  .bond__step::after {
+    content: ''; position: absolute; left: 1.0rem; top: 1.55rem; bottom: -.5rem;
+    width: 2px; background: rgba(46,140,90,.28); border-radius: 1px;
+  }
+  .bond__step:last-child::after { display: none; }
+  .bond__step.is-on { background: linear-gradient(180deg, rgba(190,245,205,.75), rgba(160,225,185,.55)); }
+  .bond__step.is-on::before { background: #46b06a; box-shadow: 0 0 0 3px rgba(120,220,150,.4); }
+  .bond__step.is-on::after { background: rgba(46,140,90,.5); }
+  .bond__step.is-next { border-color: rgba(255, 214, 92, .9); box-shadow: 0 0 0 1px rgba(255,214,92,.5); }
+  .bond__step.is-next::before { background: #ffd65c; box-shadow: 0 0 0 3px rgba(255,214,92,.45); }
+  .bond__at { font-size: .72rem; font-weight: 800; letter-spacing: .06em; text-transform: uppercase;
+              color: var(--ink-soft, #0e6ea8); }
+  .bond__name { font-weight: 700; font-size: .95rem; }
+  .bond__reward { font-size: .84rem; color: #1d7a4a; font-weight: 700; }
+  .bond__note { font-size: .82rem; opacity: .8; }
+  @media (prefers-reduced-motion: reduce) {
+    .bond__fill { transition: none; }
+  }
   #fa-pet-fit[hidden] { display: none; }
   .bubble[hidden]{
     display: none;
@@ -1506,11 +1570,32 @@
       <div class="shop" id="bag-panel" hidden>
         <div class="shop__panel" role="dialog" aria-modal="true" aria-labelledby="bag-title">
           <h2 class="shop__title" id="bag-title">Bag</h2>
-          <p class="shop__wallet" id="bag-summary"></p>
-          <p class="shop__wallet">
-            Sell a fish for rod coins, or feed it to your seal to raise its bond.
-          </p>
-          <div class="shop__list" id="bag-list"></div>
+
+          <!-- Two tabs: what the fish are worth, and what feeding them is worth.
+               Feeding was a real decision -- a catch is coins OR luck -- with
+               nothing on screen to show where the luck was going. -->
+          <div class="bag__tabs" role="tablist" aria-label="Bag views">
+            <button class="bag__tab is-on" id="bag-tab-bag" type="button" role="tab"
+                    aria-selected="true" aria-controls="bag-view">Fish</button>
+            <button class="bag__tab" id="bag-tab-bond" type="button" role="tab"
+                    aria-selected="false" aria-controls="bond-panel">Bond</button>
+          </div>
+
+          <div id="bag-view" role="tabpanel" aria-labelledby="bag-tab-bag">
+            <p class="shop__wallet" id="bag-summary"></p>
+            <p class="shop__wallet">
+              Sell a fish for rod coins, or feed it to your seal to raise its bond.
+            </p>
+            <div class="shop__list" id="bag-list"></div>
+          </div>
+
+          <!-- The bond timeline: a line with a milestone at each step, filled as
+               the seal is fed. -->
+          <div id="bond-panel" role="tabpanel" aria-labelledby="bag-tab-bond" hidden>
+            <p class="bond__head" id="bond-head"></p>
+            <div class="bond__track"><div class="bond__fill" id="bond-fill"></div></div>
+            <ol class="bond__timeline" id="bond-timeline"></ol>
+          </div>
           <p style="margin:.9rem 0 0">
             <button class="btn" id="bag-close" type="button">Close</button>
           </p>
@@ -1592,6 +1677,6 @@
     </div>
   </div>
 
-  <script type="module" src="./angler.js?v=2026-10-04-e"></script>
+  <script type="module" src="./angler.js?v=2026-10-04-f"></script>
 </body>
 </html>

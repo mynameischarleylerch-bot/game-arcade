@@ -1225,6 +1225,100 @@ export function sellFromBag(bag, index) {
   };
 }
 
+/* --------------------------------------------------------------- bond ladder */
+
+/**
+ * The milestones a seal passes as you feed it, as a timeline.
+ *
+ * The bag had one job and no shape: feed a fish, the bond goes up by an amount
+ * nobody could see, and the panel showed a bare count. Feeding is a real decision
+ * -- a fish is worth coins OR luck -- so it needs to show where it is going.
+ *
+ * The counts are square-rooted deliberately. Bond luck is bondLuck(n) = sqrt(n) * 0.2,
+ * so 1 fed is worth .2, 25 is worth 1.0, 100 is worth 2.0. That shape means the
+ * first fish is a big step and the later ones are small -- which is exactly why
+ * the ladder is worth walking, and why it is finite: past 100 the increments are
+ * too small to feel like anything.
+ *
+ * `luck` is computed from bondLuck rather than written by hand, because a reward
+ * that claims a number the rules do not pay is worse than no reward at all.
+ */
+const BOND_STEPS = [
+  {
+    at: 1,
+    title: 'First taste',
+    reward: 'luck +' + bondLuck(1).toFixed(2),
+    note: 'Bubbles has decided you are worth talking to.',
+  },
+  {
+    at: 5,
+    title: 'Recognised',
+    reward: 'luck +' + bondLuck(5).toFixed(2),
+    note: 'It knows your hands now. It stops watching the water for you.',
+  },
+  {
+    at: 12,
+    title: 'Bonded',
+    reward: 'luck +' + bondLuck(12).toFixed(2),
+    note: 'You are the reason it is on the dock. The luck follows you both.',
+  },
+  {
+    at: 25,
+    title: 'Trusted',
+    reward: 'luck +' + bondLuck(25).toFixed(2) + ' · it starts guessing your casts',
+    note: 'It would follow you onto a bad lake. It says so. At length.',
+  },
+  {
+    at: 50,
+    title: 'Inseparable',
+    reward: 'luck +' + bondLuck(50).toFixed(2) + ' · duplicates come more often',
+    note: 'One seal, two animals. Neither of you mentions it.',
+  },
+  {
+    at: 100,
+    title: 'Part of the tackle',
+    reward: 'luck +' + bondLuck(100).toFixed(2) + ' · the seal at its best',
+    note: 'You do not own a seal any more. You keep one.',
+  },
+];
+
+/** The whole timeline, with each step's real luck attached. */
+export function bondMilestones() {
+  return BOND_STEPS.map((step) => ({
+    ...step,
+    luck: bondLuck(step.at),
+  }));
+}
+
+/**
+ * How the timeline should read for a seal that has been fed `fed` fish.
+ *
+ * `next` is the step still ahead, or null at the end -- which the panel has to
+ * say plainly, because a ladder that simply stops looks like a bug.
+ */
+export function bondProgress(fed) {
+  const steps = bondMilestones();
+  const n = Math.max(0, Math.floor(Number(fed) || 0));
+  const reached = steps.filter((s) => n >= s.at);
+  const next = steps.find((s) => n < s.at) ?? null;
+  const from = reached.length ? reached[reached.length - 1] : null;
+  return {
+    fed: n,
+    luck: bondLuck(n),
+    steps,
+    reached,
+    next,
+    // How far through the whole ladder, 0..1, for the track's fill.
+    progress: steps.length ? Math.min(1, n / steps[steps.length - 1].at) : 0,
+    // How far to the NEXT step specifically, so the bar can show it approaching.
+    toNext: next && from
+      ? (n - from.at) / (next.at - from.at)
+      : (next ? 0 : 1),
+    complete: !next,
+    last: from,
+  };
+}
+
 /**
  * How much luck `fed` fish have earned a seal.
  *
