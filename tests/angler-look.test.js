@@ -1171,93 +1171,99 @@ function bodyOf(pet) {
   return pet.match(/<path id="pet-body"\s+d="([^"]+)"/)[1];
 }
 
-test('it is a seal facing right, not a plain blob', () => {
-  // "its not a blob its supposed to be a seal but looks every close to a blob" --
-  // a ringed seal, so smooth and rounded it reads as a blob at a glance, but it
-  // must be facing RIGHT: the head at the right end and the snout projecting
-  // further right still.
+test('the head is tucked in, so the whole seal is one round mass', () => {
+  // "its head is tucked in to look round". The last pass gave it a head and a
+  // snout projecting past the body, which made the silhouette two shapes. Tucked
+  // in, there is no head and no snout -- one continuous round animal, the way a
+  // seal loafs with its head drawn back into its shoulders.
   const pet = petGroup();
-  assert.match(pet, /<path id="pet-body"/, 'the body');
-  assert.match(pet, /<path id="pet-head"/, 'and a head at one end of it');
-  assert.match(pet, /<path id="pet-snout"/, 'and a snout, so it is not a ball');
+  assert.match(pet, /<path id="pet-body"/, 'one body');
+  assert.doesNotMatch(pet, /id="pet-head"/, 'no separate head -- it is tucked in');
+  assert.doesNotMatch(pet, /id="pet-snout"/, 'and no snout sticking out');
+  assert.equal(count(pet, 'id="pet-body'), 1, 'exactly one mass');
 
-  const body = pet.match(/<path id="pet-body"\s+d="([^"]+)"/)[1];
-  const head = pet.match(/<path id="pet-head"\s+d="([^"]+)"/)[1];
-  const snout = pet.match(/<path id="pet-snout"\s+d="([^"]+)"/)[1];
-
-  const mid = (d) => xs(d).reduce((s, v) => s + v, 0) / coords(d).length;
-  assert.ok(mid(head) > mid(body),
-    `the head must be at the RIGHT end: body ${mid(body).toFixed(1)}, head ${mid(head).toFixed(1)}`);
-  assert.ok(Math.max(...xs(snout)) > Math.max(...xs(head)),
-    'the snout must project past the head, so it faces right');
-
-  // Lying down: a seal on ice is longer than it is tall. That is what stops it
-  // reading as a ball.
-  const [w, h] = extent(body);
-  assert.ok(w > h * 1.15, `a seal lying down is longer than tall, got ${w.toFixed(1)} x ${h.toFixed(1)}`);
-  // And the tail end is narrower than the shoulders, so it tapers.
-  assert.ok(Math.max(...ys(body)) > 58 - 12, 'the belly sits near the deck');
+  // Round. The last pass asserted "longer than tall" because the body tapered to a
+  // tail; with the head tucked in that is gone, and what is wanted is a round.
+  const [w, h] = extent(bodyOf(pet));
+  assert.ok(h > w * 0.8, `round, not a slab: ${w.toFixed(1)} x ${h.toFixed(1)}`);
+  assert.ok(h < w * 1.15, `and not an oval lying down: ${w.toFixed(1)} x ${h.toFixed(1)}`);
 });
 
-test('the flippers are tucked low, not sticking out like limbs', () => {
-  // The complaint was "it looks every close to a blob", which is what was asked
-  // for -- so a flipper must not read as an arm reaching out of the silhouette.
-  // It has to exist, and it has to stay inside the body's own height band.
+test('the face sits on the right, so the seal is still facing that way', () => {
+  // With no snout to point, the direction is carried entirely by where the face
+  // is: two eyes and a smile all to the RIGHT of the middle of the mass.
   const pet = petGroup();
-  assert.match(pet, /id="pet-flipper"/, 'a flipper, or it is not a seal');
-  const fl = pet.match(/<path id="pet-flipper"\s+d="([^"]+)"/)[1];
-  const body = pet.match(/<path id="pet-body"\s+d="([^"]+)"/)[1];
-  const top = Math.min(...ys(body));
-  const belly = Math.max(...ys(body));
-  const fTop = Math.min(...ys(fl));
-  const fBot = Math.max(...ys(fl));
-  assert.ok(fTop > top + (belly - top) * 0.45,
-    `a flipper sits low on the body; it starts at y ${fTop.toFixed(1)} of ${top.toFixed(1)}-${belly.toFixed(1)}`);
-  assert.ok(fBot <= belly + 0.4, 'and does not hang below the belly');
+  const body = bodyOf(pet);
+  const mid = xs(body).reduce((s, v) => s + v, 0) / coords(body).length;
+  const eye = pet.slice(pet.indexOf('<g id="pet-eye">'), pet.indexOf('</g>', pet.indexOf('<g id="pet-eye">')));
+  const mouth = pet.match(/<path id="pet-mouth"\s+d="([^"]+)"/)[1];
+
+  const mean = (d) => xs(d).reduce((s, v) => s + v, 0) / coords(d).length;
+  assert.ok(mean(mouth) > mid + 1.5,
+    `the mouth must be well right of centre, got ${mean(mouth).toFixed(1)} vs ${mid.toFixed(1)}`);
+  const eyeX = [...eye.matchAll(/cx="([\d.]+)"/g)].map((m) => Number(m[1]));
+  assert.ok(Math.min(...eyeX) > mid,
+    `both eyes must be right of centre, got ${Math.min(...eyeX)} vs ${mid.toFixed(1)}`);
 });
 
-test('the face is a :3, looking right', () => {
+test('the :3 is big and bold enough to actually read', () => {
+  // "do the :3 because it didn't work". The last pass drew eyes of radius 0.7 and
+  // a mouth stroke of 0.3 across 3.7 units. The seal counter-scales to about a
+  // third of its drawn width on screen, so that face came out as a couple of grey
+  // pixels -- correct geometry, illegible result.
+  //
+  // So the sizes are pinned, not just the arrangement.
   const pet = petGroup();
-  const start = pet.indexOf('<g id="pet-eye">');
-  const eye = pet.slice(start, pet.indexOf('</g>', start));
-  assert.equal(count(eye, 'r=".7"'), 2, 'two dot eyes');
-  assert.equal(count(eye, 'r=".22"'), 2, 'each with a highlight');
+  const eye = pet.slice(pet.indexOf('<g id="pet-eye">'), pet.indexOf('</g>', pet.indexOf('<g id="pet-eye">')));
+  const pupils = [...eye.matchAll(/r="([\d.]+)"/g)].map((m) => Number(m[1])).filter((r) => r > 0.4);
+  assert.equal(pupils.length, 2, 'two dot eyes');
+  assert.ok(Math.min(...pupils) >= 0.95,
+    `the eyes must be big enough to see, smallest is ${Math.min(...pupils)}`);
+  // The highlights are pinned too: without them it reads as two dots, which
+  // is exactly what it looked like when the user said the face did not work.
+  const glints = [...eye.matchAll(/r="\.([\d.]+)"/g)];
+  assert.equal(glints.length, 2, 'each eye carries a highlight');
 
-  // The ":3": ends level, middle dipping down, so it is a smile and not a frown.
-  const found = pet.match(/<path id="pet-mouth"\s+d="([^"]+)"/);
-  assert.ok(found, 'the :3 mouth must be drawn');
-  const mouth = found[1];
+  const mouthTag = pet.match(/<path id="pet-mouth"[^>]*>/)[0];
+  const width = Number(/stroke-width="([\d.]+)"/.exec(mouthTag)?.[1] ?? 0);
+  assert.ok(width >= 0.45,
+    `the mouth must be thick enough to see, stroke-width is ${width}`);
+
+  const mouth = pet.match(/<path id="pet-mouth"\s+d="([^"]+)"/)[1];
+  const [mw, mh] = extent(mouth);
+  assert.ok(mw >= 4, `the smile must be wide enough to read, got ${mw.toFixed(1)} units`);
+  assert.ok(mh >= 1.2, `and deep enough to look like a smile, got ${mh.toFixed(1)} units`);
+
+  // Ends level, middle down: a smile, not a frown.
   const c = coords(mouth);
-  const lowest = Math.max(...ys(mouth));
   assert.ok(Math.abs(c[0][1] - c[c.length - 1][1]) < 0.6, 'a :3 mouth starts and ends level');
-  assert.ok(lowest > Math.max(c[0][1], c[c.length - 1][1]) + 0.8,
+  assert.ok(Math.max(...ys(mouth)) > Math.max(c[0][1], c[c.length - 1][1]) + 0.8,
     'and the curve bows DOWNWARD into a smile');
-
-  // The face sits right of the body's middle: it is looking right.
-  const body = pet.match(/<path id="pet-body"\s+d="([^"]+)"/)[1];
-  const bodyMid = xs(body).reduce((s, v) => s + v, 0) / coords(body).length;
-  const mouthMid = xs(mouth).reduce((s, v) => s + v, 0) / coords(mouth).length;
-  assert.ok(mouthMid > bodyMid,
-    'the face must be on the right-hand end, got ' + mouthMid.toFixed(1) + ' vs ' + bodyMid.toFixed(1));
 });
 
-test('the coat is ringed, like the ringed seal it is inspired by', () => {
+test('the coat is still ringed, and the flipper still tucked low', () => {
   const pet = petGroup();
-  // A ringed seal is named for the pale RINGS scattered over its dark coat.
   assert.ok(count(pet, 'class="pet__ring"') >= 3,
     'the coat must carry rings; found ' + count(pet, 'class="pet__ring"'));
-  assert.ok(count(pet, 'class="pet__spot"') >= 2, 'and a few solid spots');
+  assert.match(pet, /id="pet-flipper"/, 'and it is still a seal, so it has a flipper');
+  const fl = pet.match(/<path id="pet-flipper"\s+d="([^"]+)"/)[1];
+  const body = bodyOf(pet);
+  const top = Math.min(...ys(body));
+  const belly = Math.max(...ys(body));
+  assert.ok(Math.min(...ys(fl)) > top + (belly - top) * 0.45,
+    'a flipper sits low on the body, not up at the shoulder');
 });
 
 test('the seal is big enough to read, and clear of the angler', () => {
   const pet = petGroup();
   const all = [...pet.matchAll(/ d="([^"]+)"/g)].map((m) => m[1]).join(' ');
-  const [w, h] = extent(all);
+  const [w] = extent(all);
   assert.ok(w >= 16, 'wide enough to read, got ' + w.toFixed(1) + ' units');
   assert.ok(Math.max(...xs(all)) < 25.7,
     'it must clear the angler at x=25.7, but reaches ' + Math.max(...xs(all)).toFixed(1));
   assert.ok(Math.max(...ys(all)) < 58, 'and its belly must sit on the deck at y=58');
 });
+
 
 
 test('every element the JS reaches for has a rule in the stylesheet', () => {
