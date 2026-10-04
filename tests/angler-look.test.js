@@ -729,17 +729,21 @@ test('the catch card is lifted above its own scrim', () => {
     'the card must sit above the scrim that dims the scene behind it');
 });
 
-test('the seal is drawn from a real seal silhouette, not a blob', () => {
-  // The reference is a bean-shaped seal: heavy rump, descending back, no visible
-  // tail or flippers, a blunt muzzle and one glossy eye. A generic ellipse with a
-  // dot for an eye does not read as a seal.
-  const page = PAGE.slice(PAGE.indexOf('id="fa-pet"'));
-  const pet = page.slice(0, page.indexOf('</g>') + 4);
-  assert.match(pet, /path\s+d="M[^"]*C/, 'the body must be a drawn path, not an ellipse');
-  assert.ok((pet.match(/circle/g) || []).length <= 2,
-    'a seal is one eye and a nose, not a scatter of circles');
+test('the seal is drawn from the photographs, and keeps its Aero finish', () => {
+  // Originally pinned against a bean-shaped seal: heavy rump, no flippers, ONE
+  // glossy eye, and "not a scatter of circles". That was right about the blob and
+  // wrong about the animal -- all three references show two large widely spaced
+  // eyes, long fanning whiskers, and splayed paddle flippers.
+  //
+  // What still holds, and is the part worth keeping: the body is drawn, not an
+  // ellipse, and it keeps the Aero gradient rather than going flat.
+  const start = PAGE.indexOf('<g id="fa-pet">');
+  const pet = PAGE.slice(start, PAGE.indexOf('\n        </g>', start));
+  assert.match(pet, /<path id="pet-body"\s+d="M[^"]*C/,
+    'the body must be a drawn path, not an ellipse');
   assert.match(pet, /fill="url\(#fa-pet-/, 'and it keeps the Aero gradient');
 });
+
 
 test('the HUD names the currency, it does not just say "seal"', () => {
   // It read "seal 0", which looks like a count of seals rather than a second
@@ -1136,3 +1140,50 @@ test('the scene markup parses, which presence checks cannot tell', () => {
   assert.equal(doc.getElementById('rod-blank')?.tagName.toLowerCase(), 'g',
     'the rig must be a group, not a stray path');
 });
+
+test('the pet seal is built from the reference, not from a bean', () => {
+  // Three photographs of the same kind of animal, and the pet was drawn from a
+  // description instead of them. What all three agree on, and what the drawing
+  // must therefore have.
+  //
+  // Sliced to the pet's own closing tag: a fixed character count stopped inside
+  // the comment that explains the reference, which is longer than the artwork.
+  const start = PAGE.indexOf('<g id="fa-pet">');
+  const pet = PAGE.slice(start, PAGE.indexOf('\n        </g>', start));
+
+  // A BARREL body far larger than the head, with no neck between them: the rump
+  // arches high over the torso and the head comes straight off the shoulder.
+  assert.match(pet, /id="pet-body"/, 'the barrel body must be its own shape');
+  assert.match(pet, /id="pet-head"/, 'and the head separate from it');
+  assert.match(pet, /<path id="pet-body"/, 'the body is a drawn path, not an ellipse');
+
+  // Whiskers: the single most consistent feature across all three photographs --
+  // long, pale, fanning outward in several directions. The old drawing had three
+  // short strokes on one side.
+  const whiskers = (pet.match(/class="pet__whisker"/g) ?? []).length;
+  assert.ok(whiskers >= 8,
+    `whiskers are what makes it a seal; expected 8+, found ${whiskers}`);
+
+  // Two large, glossy, widely spaced dark eyes -- the other consistent feature.
+  assert.match(pet, /id="pet-eye-l"/, 'a left eye');
+  assert.match(pet, /id="pet-eye-r"/, 'and a right eye, widely spaced');
+  assert.match(pet, /pet__glint/, 'both must catch a highlight');
+
+  // A blunt muzzle and a small dark nose.
+  assert.match(pet, /id="pet-nose"/, 'the nose must be drawn');
+  assert.match(pet, /id="pet-muzzle"/, 'and the pale muzzle under it');
+
+  // Paddle flippers with claw-like tips, splayed out to the sides -- visible in
+  // the front-on shot, and the clearest read of "seal" rather than "otter".
+  assert.match(pet, /id="pet-flipper-l"/, 'a left flipper');
+  assert.match(pet, /id="pet-flipper-r"/, 'and a right one');
+  assert.match(pet, /pet__claw/, 'with claw tips');
+
+  // The mottled coat: dark speckles over the body AND the pale chest, which is
+  // where they show most in the references.
+  const spots = (pet.match(/class="pet__spot"/g) ?? []).length;
+  assert.ok(spots >= 2, `the coat is mottled; expected marked spot groups, found ${spots}`);
+  assert.ok((pet.match(/<ellipse/g) ?? []).length >= 10,
+    'and it must actually be speckled, not marked');
+});
+

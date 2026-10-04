@@ -13,7 +13,7 @@ import { readFileSync } from 'node:fs';
 import { JSDOM } from 'jsdom';
 import { FISH, RARITY_ORDER, fishIndex, hookLineFor, AREAS,
          RODS, RODS_BY_PRICE, SEALS, startingLoadout, TIMES, WEATHER, LOST_ITEMS,
-} from '../vendor/fru-angler/fishing.js?v=2026-10-04-d';
+} from '../vendor/fru-angler/fishing.js?v=2026-10-04-e';
 
 const PAGE = readFileSync(
   new URL('../vendor/fru-angler/index.html', import.meta.url),
@@ -1343,8 +1343,16 @@ test('the pet is counter-scaled to the lake, so it cannot smear', async () => {
   const body = src.slice(src.indexOf('function fitPet'), src.indexOf('function placeBobber'));
   assert.match(body, /box\.height\s*\/\s*box\.width/,
     'fitPet must use the same height/width correction as fitFigure');
-  assert.match(body, /translate\(14 0\)/,
-    'anchored on the pet centre at x=14, not the angler shoulder at x=33.2');
+  // Anchored on the pet's own centre. That centre moved to x=11 when the seal was
+  // redrawn from the photographs and shifted clear of the angler, so the old
+  // anchor of 14 was stale -- and a wrong anchor counter-scales about the wrong
+  // point, which skews the seal instead of just leaving it alone.
+  assert.match(body, /translate\(11 0\)/,
+    'anchored on the pet centre at x=11, not the angler shoulder at x=33.2');
+  // And it must still lift the seal onto the deck: the drawing sits at y~47 and
+  // the boards are at y=58, so without the shift it floats above them.
+  assert.match(body, /translate\(0 \$\{PET_Y\}\)/,
+    'and it must lift the seal onto the pier deck');
   assert.match(body, /setAttribute\('transform'/,
     'and it must actually write the transform');
 });
