@@ -130,7 +130,12 @@
      card -- z-index 1 puts it under both, because a number you cannot read at the
      moment you are reeling is a number that is not doing its job. */
   .lake__boosts {
-    position: absolute; left: .8rem; bottom: .8rem; z-index: 1;
+    /* Top-left, as asked. It was bottom-left, where it sat under the reel and the
+       catch card and was easy to never look at again. */
+    /* z-index 2, not 1: .scene (the water) is 1, so at a tie the stack could be
+       hidden under the scene. Still strictly below .catch__card (2) and .reel (7),
+       which cover the lake and are what the player is actually looking at. */
+    position: absolute; left: .7rem; top: .7rem; z-index: 2;
     display: grid; gap: .2rem; justify-items: start;
     padding: .5rem .6rem .55rem; max-width: 12rem;
     border-radius: var(--pill);
@@ -396,7 +401,7 @@
   .catch[hidden], .shop[hidden]{
     display: none;
   }
-  .catch__card { position: relative; z-index: 2;
+  .catch__card { position: relative; z-index:4;
     padding: 1.4rem 1.8rem; border-radius: 18px; text-align: center;
     background: linear-gradient(180deg, rgba(255,255,255,.94), var(--glass-mid));
     border: 1px solid var(--hairline-strong);
@@ -867,7 +872,9 @@
     display: inline-flex; align-items: center; gap: .35rem; margin-left: auto;
   }
   .bubble {
-    position: absolute; left: 1.5%; top: 4%; z-index: 3;
+    /* Below the boost stack, which now owns the top-left corner. It still reads
+       as the seal's own words because it sits directly over the seal. */
+    position: absolute; left: 2%; top: 34%; z-index: 3;
     max-width: 32%; min-width: 7rem;
     padding: .45rem .7rem .5rem;
     border-radius: 1rem; border: 1px solid rgba(1, 87, 155, .26);
@@ -1188,8 +1195,8 @@
         <!-- Every boost you are carrying, always on. Luck is rod + rank + seal and
              it decides which fish you meet, but nothing on screen ever showed it --
              you can own the best rod in the game and be unable to tell it does
-             anything. Bottom-left, under the reel and the catch card, never over
-             either. -->
+             anything. Top-left of the lake, clear of the seal's speech bubble and
+             never over the reel or the catch card. -->
         <div class="lake__boosts" aria-hidden="true">
           <span class="lake__boosts-title">Boosts</span>
           <div class="lake__boost-list" id="boost-list"></div>
@@ -1552,6 +1559,6 @@
     </div>
   </div>
 
-  <script type="module" src="./angler.js?v=2026-10-04-i"></script>
+  <script type="module" src="./angler.js?v=2026-10-04-j"></script>
 </body>
 </html>

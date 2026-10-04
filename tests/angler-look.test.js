@@ -723,10 +723,15 @@ test('the catch overlay must not blank the scene, or the seal is invisible when 
 test('the catch card is lifted above its own scrim', () => {
   // The scrim is a sibling of the card, so the card needs a z-index of its own or
   // the vignette paints over the fish it is dimming everything for.
-  const card = rule('.catch__card');
-  assert.ok(card, 'the catch card must be styled');
-  assert.match(card, /z-index:\s*2/,
-    'the card must sit above the scrim that dims the scene behind it');
+  //
+  // This was pinned to exactly 2, which is a magic number that quietly collided
+  // with the boost stack: both at 2 means DOM order decides, and DOM order is not
+  // something to leave a layout to. The real requirement is "above the scrim and
+  // above the readout", so that is what it asserts.
+  const card = Number(/z-index:\s*(\d+)/.exec(rule('.catch__card'))?.[1] ?? 0);
+  const stack = Number(/z-index:\s*(\d+)/.exec(rule('.lake__boosts'))?.[1] ?? 0);
+  assert.ok(card > 0, 'the card must sit above the scrim that dims the scene behind it');
+  assert.ok(card > stack, `the card (z ${card}) must cover the boost stack (z ${stack})`);
 });
 
 test('the seal is drawn from the photographs, and keeps its Aero finish', () => {
@@ -1049,21 +1054,17 @@ test('every SVG group the controller hides by attribute has a CSS rule', () => {
   }
 });
 
-test('there is a boost panel in the bottom-left corner of the lake', () => {
+test('there is a boost panel in the corner of the lake, always visible', () => {
   // Luck is rod + rank + seal, and it decides which fish you meet -- but nothing
   // on screen ever showed it. You can own the best rod in the game and be unable
-  // to tell that it does anything. This puts the whole breakdown where the eye
-  // already is, in the corner, always visible.
+  // to tell that it does anything.
   const panel = PAGE.slice(PAGE.indexOf('id="lake"'), PAGE.indexOf('</svg>'));
-  assert.match(panel, /class="lake__boosts"/,
-    'the lake needs a boost panel');
+  assert.match(panel, /class="lake__boosts"/, 'the lake needs a boost panel');
   const css = rule('.lake__boosts');
   assert.ok(css, 'the boost panel must be styled');
   assert.match(css, /position:\s*absolute/);
-  assert.match(css, /bottom:\s*[\d.]+(rem|px|%)/,
-    'and it must sit at the BOTTOM');
   assert.match(css, /left:\s*[\d.]+(rem|px|%)/,
-    'and on the LEFT, not centred or right');
+    'and it must sit on the LEFT, not centred or right');
   assert.match(css, /pointer-events:\s*none/,
     'and never swallow a cast');
 });
@@ -1071,11 +1072,14 @@ test('there is a boost panel in the bottom-left corner of the lake', () => {
 test('the boost panel is behind the reel and the catch card, not over them', () => {
   // The reel fills the middle of the lake and the catch card covers it. A readout
   // stacked over either is a readout nobody reads at the moment it matters.
+  //
+  // Strictly less than, not equal to: .catch__card is z 2, and at a tie the DOM
+  // order decides which wins -- which is not something to leave to chance.
   const z = Number(/z-index:\s*(\d+)/.exec(rule('.lake__boosts'))?.[1] ?? 0);
   const reel = Number(/z-index:\s*(\d+)/.exec(rule('.reel'))?.[1] ?? 0);
   const card = Number(/z-index:\s*(\d+)/.exec(rule('.catch__card'))?.[1] ?? 0);
   assert.ok(z < reel, `boosts (z ${z}) must not cover the reel (z ${reel})`);
-  assert.ok(z < card, `boosts (z ${z}) must not cover the catch card (z ${card})`);
+  assert.ok(z < card, `boosts (z ${z}) must be strictly under the catch card (z ${card}), not level with it`);
 });
 
 test('the boost panel names every source, and the zero ones honestly', () => {
@@ -1222,4 +1226,46 @@ test('every element the JS reaches for has a rule in the stylesheet', () => {
   const bar = PAGE.slice(barStart, PAGE.indexOf('</div>', PAGE.indexOf('bestiary', barStart)));
   assert.match(bar, /id="bond-open"[^>]*class="btn"|class="btn"[^>]*id="bond-open"/,
     'the Bond pill must be a .btn on the bottom bar');
+});
+
+test('the boost stack is in the top-left corner, not the bottom', () => {
+  const css = rule('.lake__boosts');
+  const top = /top:\s*([\d.]+)rem/.exec(css);
+  const bottom = /bottom:\s*([\d.]+)rem/.exec(css);
+  const left = /left:\s*([\d.]+)rem/.exec(css);
+
+  assert.ok(top, 'the stack must be pinned to the top');
+  assert.equal(bottom, null, 'and must NOT still be pinned to the bottom');
+  assert.ok(left, 'and to the left');
+  assert.equal(Number(left[1]) < 2, true, 'hard against the left edge, got ' + left[1]);
+});
+
+test('the seal bubble moves clear of the boost stack', () => {
+  // Both want the top-left corner. The bubble sat at left 1.5% / top 4%, so moving
+  // the boosts there would have stacked the stack on top of the seal's own words.
+  //
+  // So they cannot both be at the top-left, and the test has to say which corner
+  // the bubble is in -- otherwise a later tidy-up can quietly put it back.
+  const boost = rule('.lake__boosts');
+  const bubble = rule('.bubble');
+
+  const bubbleTop = Number(/top:\s*([\d.]+)%/.exec(bubble)?.[1] ?? -1);
+  const bubbleLeft = Number(/left:\s*([\d.]+)%/.exec(bubble)?.[1] ?? -1);
+  assert.ok(bubbleTop >= 0, 'the bubble must have a top, got ' + bubbleTop);
+  assert.ok(bubbleLeft >= 0, 'the bubble must have a left, got ' + bubbleLeft);
+
+  // The bubble is placed in PERCENTAGES and the stack in rem, so they cannot be
+  // compared directly. What matters is that the bubble is not in the corner
+  // the stack now owns: it must be far enough down to clear a stack that
+  // runs to roughly a third of a small lake. A bubble at top 4% would sit
+  // directly on top of it.
+  assert.ok(bubbleTop >= 25,
+    `the bubble must clear the stack at the top, got ${bubbleTop}%`);
+
+
+  // And the bubble must still be ABOVE the boost stack in z, or a long line would
+  // be unreadable while the seal speaks.
+  const bz = Number(/z-index:\s*(\d+)/.exec(bubble)?.[1] ?? 0);
+  const sz = Number(/z-index:\s*(\d+)/.exec(boost)?.[1] ?? 0);
+  assert.ok(bz > sz, `the bubble (z=${bz}) must sit above the stack (z=${sz})`);
 });
