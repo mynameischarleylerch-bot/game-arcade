@@ -26,10 +26,10 @@ import {
  addToBag, fishEntrySpec, bagWorth, bagEntryValue,
  sellFromBag, feedToBond, bondLuck, bondCount, groupBag,
  buySeal, equipSeal, sealComment, sealDuplicates, sealIdleLine, sealFedLine, bondProgress,
-} from './fishing.js?v=2026-10-04-h';
+} from './fishing.js?v=2026-10-04-i';
 import {
   reelConfig, stepReel as advance, reelOutcomeFor, isCaught, lineSnapped,
-} from './reel.js?v=2026-10-04-h';
+} from './reel.js?v=2026-10-04-i';
 
 /* ------------------------------------------------------------------ tuning */
 
@@ -392,9 +392,12 @@ function paintBoosts() {
   const sky = state.sky ?? skyFor(state.areaId);
 
   const rows = [
-    { key: 'rod', name: 'Rod', value: Number(current?.luck) || 0 },
+    // Named, not labelled: a row reading "Rod" says a rod is paying you but
+    // not which one, so swapping rods changed the total with nothing on screen
+    // to account for it. Same for the seal.
+    { key: 'rod', name: current ? current.name : 'No rod', value: Number(current?.luck) || 0 },
     { key: 'rank', name: `Rank ${rank}`, value: luckFromLevel(rank) },
-    { key: 'seal', name: seal ? seal.name : 'Seal', value: Number(seal?.luck) || 0 },
+    { key: 'seal', name: seal ? seal.name : 'No seal', value: Number(seal?.luck) || 0 },
     // Fed fish. Its own row rather than folded into the seal's, so the player can
     // see what feeding bought -- otherwise the seal row would silently grow and
     // there would be no way to tell feeding from a better seal.
@@ -418,12 +421,15 @@ function paintBoosts() {
     el.className = 'lake__boost' + (row.value > 0 ? '' : ' lake__boost--none');
     // Keyed by source, not label: the seal row is titled with the seal's own name.
     el.dataset.key = row.key;
+    // Titled on the row as well, so hovering or a screen reader says which
+    // source is being quoted rather than leaving a bare figure.
+    el.title = row.name + ': ' + row.value + ' luck';
     const name = document.createElement('span');
     name.className = 'lake__boost-name';
     name.textContent = row.name;
     const value = document.createElement('span');
     value.className = 'lake__boost-value';
-    value.textContent = String(row.value);
+    value.textContent = row.value ? String(row.value) : '0';
     el.append(name, value);
     ui.boostList.appendChild(el);
   }

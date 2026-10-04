@@ -13,7 +13,7 @@ import { readFileSync } from 'node:fs';
 import { JSDOM } from 'jsdom';
 import { FISH, RARITY_ORDER, fishIndex, hookLineFor, AREAS,
          RODS, RODS_BY_PRICE, SEALS, startingLoadout, TIMES, WEATHER, LOST_ITEMS,
-} from '../vendor/fru-angler/fishing.js?v=2026-10-04-h';
+} from '../vendor/fru-angler/fishing.js?v=2026-10-04-i';
 
 const PAGE = readFileSync(
   new URL('../vendor/fru-angler/index.html', import.meta.url),
@@ -2771,3 +2771,51 @@ test('feeding updates an open Bond panel without reopening it', async () => {
     `12 fed reaches 1, 5 and 12; only ${reached.length} marked`);
 });
 
+
+test('the boosts stack names the rod and the seal it is reporting', async () => {
+  // The rows carried a generic "Rod" and a generic "Seal". Every number in the
+  // stack is luck, but nothing said WHICH rod or WHICH seal was paying it, so
+  // swapping either one changed the total with nothing on screen to explain it.
+  const ctx = await seedSave({
+    coins: 5000, rodId: 'abyss', owned: ['bamboo', 'abyss'], bestiary: {},
+    areaId: 'trenchline', xp: 4800, ownedSeals: ['moss'], equippedSeal: 'moss',
+    lost: [], giftedRods: [], sealCoins: 0, bond: { moss: 5 },
+  }, 1783);
+
+  const row = (key) => ctx.doc.querySelector(`#boost-list [data-key="${key}"]`);
+  const text = (key) => row(key).querySelector('.lake__boost-name').textContent;
+
+  // The rod row must name the rod that is equipped -- "Abyssal Rig", not "Rod".
+  assert.match(text('rod'), /Abyssal Rig/, `the rod row must name the rod, got "${text('rod')}"`);
+  assert.match(text('seal'), /Moss/, `the seal row must name the seal, got "${text('seal')}"`);
+
+  // And each must carry the actual luck, as a number, not a dash.
+  const luck = (key) => Number(row(key).querySelector('.lake__boost-value').textContent);
+  assert.equal(luck('rod'), 3, 'the rod must show its own luck');
+  // And each row says what its figure IS, so a bare number is never ambiguous.
+  assert.equal(row('rod').title, 'Abyssal Rig: 3 luck',
+    `the row must title its source and unit, got "${row('rod').title}"`);
+  assert.equal(luck('seal'), 1.1, 'the seal must show its own luck');
+  assert.equal(row('rod').classList.contains('lake__boost--none'), false,
+    'a rod that pays luck must not be dimmed as though it paid none');
+});
+
+test('with no rod luck and no seal, the rows say so instead of showing a bare 0', async () => {
+  // "Rod +0" and "Seal +0" read as a broken readout. A dash reads as "not earned
+  // yet", which is the truth on a fresh save.
+  const ctx = await seedSave({
+    coins: 0, rodId: 'bamboo', owned: ['bamboo'], bestiary: {},
+    areaId: 'aero-lake', xp: 0, ownedSeals: [], equippedSeal: null,
+    lost: [], giftedRods: [], sealCoins: 0, bond: {},
+  }, 1784);
+  const row = (key) => ctx.doc.querySelector(`#boost-list [data-key="${key}"]`);
+  for (const key of ['rod', 'seal']) {
+    assert.ok(row(key).classList.contains('lake__boost--none'),
+      `${key} pays nothing on a fresh save, so it must be dimmed`);
+  }
+  // Still named: the row is "No seal", not "Seal".
+  const sealName = row('seal').querySelector('.lake__boost-name').textContent;
+  assert.match(sealName, /no seal/i, `got "${sealName}"`);
+  // And the total is still a real number.
+  assert.equal(ctx.doc.getElementById('boost-total').textContent, '0.02');
+});
