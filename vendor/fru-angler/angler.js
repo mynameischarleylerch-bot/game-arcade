@@ -26,10 +26,10 @@ import {
  addToBag, fishEntrySpec, bagWorth, bagEntryValue,
  sellFromBag, feedToBond, bondLuck, bondCount, groupBag,
  buySeal, equipSeal, sealComment, sealDuplicates, sealIdleLine, sealFedLine, bondProgress,
-} from './fishing.js?v=2026-10-04-p';
+} from './fishing.js?v=2026-10-04-q';
 import {
   reelConfig, stepReel as advance, reelOutcomeFor, isCaught, lineSnapped,
-} from './reel.js?v=2026-10-04-p';
+} from './reel.js?v=2026-10-04-q';
 
 /* ------------------------------------------------------------------ tuning */
 
@@ -796,9 +796,11 @@ function fitPet() {
   // the deck's top edge is at y=58, so without this it floated above the boards.
   // The shift rides here rather than in the drawing so the artwork keeps plain
   // coordinates and stays assertable.
-  const PET_Y = 8.4;
+  const PET_Y = 8.2;
   // The seal is longer now, so its centre moved to x=13.
-  const FACE_X = 18;
+  // The face's own centre, which is what the inverse correction scales about.
+  // It moved from 18 to 18.1 with the bigger smile, which now spans 13.2-23.2.
+  const FACE_X = 18.2;
   group.setAttribute('transform',
     `translate(13 0) scale(${scale.toFixed(4)} 1) translate(-13 0) translate(0 ${PET_Y})`);
 

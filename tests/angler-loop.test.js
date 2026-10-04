@@ -13,7 +13,7 @@ import { readFileSync } from 'node:fs';
 import { JSDOM } from 'jsdom';
 import { FISH, RARITY_ORDER, fishIndex, hookLineFor, AREAS,
          RODS, RODS_BY_PRICE, SEALS, startingLoadout, TIMES, WEATHER, LOST_ITEMS,
-} from '../vendor/fru-angler/fishing.js?v=2026-10-04-p';
+} from '../vendor/fru-angler/fishing.js?v=2026-10-04-q';
 
 const PAGE = readFileSync(
   new URL('../vendor/fru-angler/index.html', import.meta.url),
@@ -2924,4 +2924,16 @@ test('the face is pre-compensated for the counter-scale, or it cannot be seen', 
     'the correction must scale about the face centre');
   assert.ok(faceFix.includes('translate(${-FACE_X} 0)'),
     'and translate back from that same centre');
+
+  // And FACE_X must BE the face's centre. Reading the literal instead of the
+  // name: pointing it at the body's centre -- x=12.9 -- scales the face about
+  // the wrong point, which slides it sideways by the error on every lake, and
+  // no other assertion here would notice.
+  const mouthD = face.match(/id="pet-mouth"\s+d="([^"]+)"/)[1];
+  const mx = [...mouthD.matchAll(/(-?\d+\.?\d*)[ ,](-?\d+\.?\d*)/g)]
+    .map((m) => Number(m[1]));
+  const faceCentre = mx.reduce((t, v) => t + v, 0) / mx.length;
+  const declared = Number(/const FACE_X = ([\d.]+);/.exec(body)[1]);
+  assert.ok(Math.abs(declared - faceCentre) < 0.6,
+    `FACE_X is ${declared} but the face is centred at ${faceCentre.toFixed(2)}`);
 });

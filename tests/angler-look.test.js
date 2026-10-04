@@ -1342,3 +1342,64 @@ test('the seal bubble moves clear of the boost stack', () => {
   const sz = Number(/z-index:\s*(\d+)/.exec(boost)?.[1] ?? 0);
   assert.ok(bz > sz, `the bubble (z=${bz}) must sit above the stack (z=${sz})`);
 });
+
+test('the :3 is unmistakable, not merely present', () => {
+  // "please fix the face to :3 more than anything". The squeeze fix made the face
+  // render at the size it was drawn, and it still did not read: on a body that has
+  // since been lengthened, a 7.6-unit smile is a third of the animal and reads as
+  // a crease rather than a mouth.
+  //
+  // So this pins the proportions that make a :3 legible -- big round eyes, set
+  // apart, and a smile that is both wide and deep enough to have a shape.
+  const pet = petGroup();
+  const body = bodyOf(pet);
+  const bTop = Math.min(...ys(body));
+  const bBot = Math.max(...ys(body));
+  const bodyH = bBot - bTop;
+
+  const eyeStart = pet.indexOf('<g id="pet-eye">');
+  const eye = pet.slice(eyeStart, pet.indexOf('</g>', eyeStart));
+  const pupils = [...eye.matchAll(/r="([\d.]+)"/g)].map((m) => Number(m[1])).filter((r) => r > 0.7);
+  assert.equal(pupils.length, 2, 'two dot eyes');
+
+  const eyeR = Math.min(...pupils);
+  assert.ok(eyeR >= 1.6, 'the eyes must be big round dots, smallest is ' + eyeR);
+  // Big enough to read as eyes rather than as texture: a decent slice of the head.
+  assert.ok(eyeR * 2 > bodyH * 0.16,
+    'the eyes must be a real feature, not texture: ' + (eyeR * 2).toFixed(2)
+    + ' against a body ' + bodyH.toFixed(1) + ' tall');
+
+  // Set apart, or they merge into one blob.
+  const cxs = [...eye.matchAll(/cx="([\d.]+)"[^>]*r="1\.[\d]+"/g)].map((m) => Number(m[1]));
+  assert.equal(cxs.length, 2, 'two pupil positions');
+  const gap = Math.abs(cxs[1] - cxs[0]) - eyeR * 2;
+  assert.ok(gap >= 1.8, 'the eyes must be set apart, gap is ' + gap.toFixed(2));
+
+  const mouth = pet.match(/<path id="pet-mouth"\s+d="([^"]+)"/)[1];
+  const [mw, mh] = extent(mouth);
+  assert.ok(mw >= 9, 'the smile must be wide, got ' + mw.toFixed(1) + ' units');
+  // A shallow arc reads as a line. Depth is what makes it a smile.
+  assert.ok(mh >= 3.5, 'and deep enough to have a shape, got ' + mh.toFixed(1) + ' units');
+  const tag = pet.match(/<path id="pet-mouth"[^>]*>/)[0];
+  const stroke = Number(/stroke-width="([\d.]+)"/.exec(tag)[1]);
+  assert.ok(stroke >= 0.7, 'and thick enough to see, stroke-width ' + stroke);
+
+  // Placement: eyes in the upper half, mouth below them, neither at the very edge.
+  const eyeMidY = [...eye.matchAll(/cy="([\d.]+)"[^>]*r="1\.[\d]+"/g)].map((m) => Number(m[1]));
+  const eY = eyeMidY.reduce((s, v) => s + v, 0) / eyeMidY.length;
+  const mouthTop = Math.min(...ys(mouth));
+  const mouthLow = Math.max(...ys(mouth));
+  assert.ok(eY < bTop + bodyH * 0.5, 'the eyes sit in the upper half of the face');
+  assert.ok(mouthTop > eY, 'the smile sits below the eyes');
+  assert.ok(mouthLow < bBot - bodyH * 0.06,
+    'and the smile does not run into the belly, it ends at y ' + mouthLow.toFixed(1)
+    + ' of ' + bBot.toFixed(1));
+});
+
+test('the body is as long as asked, filling the pier', () => {
+  const pet = petGroup();
+  const all = [...pet.matchAll(/ d="([^"]+)"/g)].map((m) => m[1]).join(' ');
+  const [w] = extent(all);
+  assert.ok(w >= 23.8, 'the body must fill the pier, got ' + w.toFixed(1) + ' units');
+  assert.ok(Math.max(...xs(all)) < 25.7, 'and still clear the angler at 25.7');
+});
