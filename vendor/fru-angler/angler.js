@@ -26,10 +26,10 @@ import {
  addToBag, fishEntrySpec, bagWorth, bagEntryValue,
  sellFromBag, feedToBond, bondLuck, bondCount, groupBag,
  buySeal, equipSeal, sealComment, sealDuplicates, sealIdleLine, sealFedLine, bondProgress,
-} from './fishing.js?v=2026-10-04-q';
+} from './fishing.js?v=2026-10-04-r';
 import {
   reelConfig, stepReel as advance, reelOutcomeFor, isCaught, lineSnapped,
-} from './reel.js?v=2026-10-04-q';
+} from './reel.js?v=2026-10-04-r';
 
 /* ------------------------------------------------------------------ tuning */
 
@@ -798,9 +798,8 @@ function fitPet() {
   // coordinates and stays assertable.
   const PET_Y = 8.2;
   // The seal is longer now, so its centre moved to x=13.
-  // The face's own centre, which is what the inverse correction scales about.
-  // It moved from 18 to 18.1 with the bigger smile, which now spans 13.2-23.2.
-  const FACE_X = 18.2;
+  // The mouth now spans 14.6-22.2, so its centre is 18.4.
+  const FACE_X = 18.4;
   group.setAttribute('transform',
     `translate(13 0) scale(${scale.toFixed(4)} 1) translate(-13 0) translate(0 ${PET_Y})`);
 

@@ -1361,33 +1361,38 @@
           <!-- THE COAT: pale rings over a dark ground, which is what a ringed seal
                is named for. Kept to the back half, away from the face. -->
           <g id="pet-rings" fill="none" stroke="#e8f2f7">
-            <ellipse class="pet__ring" cx="5.4" cy="39.4" rx="1.3" ry="1"
+            <ellipse class="pet__ring" cx="5" cy="38.6" rx="1.3" ry="1"
                      stroke-opacity=".5" stroke-width=".3"/>
-            <ellipse class="pet__ring" cx="4.4" cy="46.4" rx="1.1" ry=".82"
+            <ellipse class="pet__ring" cx="3.8" cy="45.8" rx="1.1" ry=".82"
                      stroke-opacity=".44" stroke-width=".28"/>
-            <ellipse class="pet__ring" cx="10.6" cy="34.2" rx="1" ry=".75"
+            <ellipse class="pet__ring" cx="9.4" cy="34.4" rx="1" ry=".75"
                      stroke-opacity=".42" stroke-width=".28"/>
           </g>
           <g id="pet-spots" fill="#2f4a5e">
-            <circle class="pet__spot" cx="2.8" cy="43.2" r=".78" opacity=".34"/>
-            <circle class="pet__spot" cx="8" cy="41.6" r=".66" opacity=".3"/>
-            <circle class="pet__spot" cx="13.2" cy="47.6" r=".6" opacity=".3"/>
+            <circle class="pet__spot" cx="2.2" cy="42.6" r=".78" opacity=".34"/>
+            <circle class="pet__spot" cx="7" cy="41.4" r=".66" opacity=".3"/>
+            <circle class="pet__spot" cx="11.6" cy="47.4" r=".6" opacity=".3"/>
           </g>
 
-          <!-- THE :3, on the RIGHT of the mass and drawn large on purpose.
-               Two big round eyes set apart, and one deep smile whose ends are level
-               and whose middle drops well below them. Deep is the part that matters:
-               a wide shallow arc reads as a crease, and that is what every previous
-               attempt produced. -->
+          <!-- THE :3.
+               The face was VISIBLE and still wrong, which is what four rounds of
+               making it bigger had established. The ratio was inverted: in ":3" the
+               colon is two SMALL dots and the "3" is the big character. Drawing 27px
+               eyes over a small mouth gave a generic smiley, and no amount of
+               enlarging it would have helped.
+
+               So: two modest dots, set apart, and one deep curve several times the
+               width of a single eye. Depth is what separates a smile from a crease --
+               a wide shallow arc is the thing that failed four times. -->
           <g id="pet-face">
             <g id="pet-eye">
-              <circle cx="15" cy="37.2" r="1.75" fill="#12212e"/>
-              <circle cx="21.4" cy="37.2" r="1.75" fill="#12212e"/>
-              <circle cx="14.48" cy="36.72" r=".58" fill="#ffffff" opacity=".92"/>
-              <circle cx="20.88" cy="36.72" r=".58" fill="#ffffff" opacity=".92"/>
+              <circle cx="16.4" cy="37.4" r="1" fill="#12212e"/>
+              <circle cx="20.4" cy="37.4" r="1" fill="#12212e"/>
+              <circle cx="16.1" cy="37.1" r=".34" fill="#ffffff" opacity=".92"/>
+              <circle cx="20.1" cy="37.1" r=".34" fill="#ffffff" opacity=".92"/>
             </g>
-            <path id="pet-mouth" d="M13.2 42.6 C14.6 48.2 21.8 48.2 23.2 42.6"
-                  fill="none" stroke="#12212e" stroke-width=".85" stroke-linecap="round"/>
+            <path id="pet-mouth" d="M14.6 41.4 C16.2 47.8 20.6 47.8 22.2 41.4"
+                  fill="none" stroke="#12212e" stroke-width=".8" stroke-linecap="round"/>
           </g>
         </g>
 
@@ -1602,6 +1607,6 @@
     </div>
   </div>
 
-  <script type="module" src="./angler.js?v=2026-10-04-q"></script>
+  <script type="module" src="./angler.js?v=2026-10-04-r"></script>
 </body>
 </html>
