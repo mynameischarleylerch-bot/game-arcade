@@ -26,10 +26,10 @@ import {
  addToBag, fishEntrySpec, bagWorth, bagEntryValue,
  sellFromBag, feedToBond, bondLuck, bondCount, groupBag,
  buySeal, equipSeal, sealComment, sealDuplicates, sealIdleLine, sealFedLine, bondProgress,
-} from './fishing.js?v=2026-10-04-f';
+} from './fishing.js?v=2026-10-04-g';
 import {
   reelConfig, stepReel as advance, reelOutcomeFor, isCaught, lineSnapped,
-} from './reel.js?v=2026-10-04-f';
+} from './reel.js?v=2026-10-04-g';
 
 /* ------------------------------------------------------------------ tuning */
 
@@ -786,13 +786,13 @@ function fitPet() {
   const box = ui.lake.getBoundingClientRect();
   if (!group || !box.width || !box.height) return;
   const scale = box.height / box.width;
-  // PET_Y lifts the seal onto the pier deck: its belly is drawn at y=47.4 and
+  // PET_Y lifts the seal onto the pier deck: its belly is drawn at y=48.8 and
   // the deck's top edge is at y=58, so without this it floated ten units
   // above the boards. The shift rides here rather than in the drawing so the
   // artwork keeps plain coordinates and stays assertable.
-  const PET_Y = 10.6;
+  const PET_Y = 9.2;
   group.setAttribute('transform',
-    `translate(11 0) scale(${scale.toFixed(4)} 1) translate(-11 0) translate(0 ${PET_Y})`);
+    `translate(12.4 0) scale(${scale.toFixed(4)} 1) translate(-12.4 0) translate(0 ${PET_Y})`);
 }
 
 /** Move the bobber, its splash and the fishing line together. */
