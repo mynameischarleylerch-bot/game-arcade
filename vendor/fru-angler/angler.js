@@ -26,10 +26,10 @@ import {
  addToBag, fishEntrySpec, bagWorth, bagEntryValue,
  sellFromBag, feedToBond, bondLuck, bondCount, groupBag,
  buySeal, equipSeal, sealComment, sealDuplicates, sealIdleLine, sealFedLine,
-} from './fishing.js?v=2026-10-04-c';
+} from './fishing.js?v=2026-10-04-d';
 import {
   reelConfig, stepReel as advance, reelOutcomeFor, isCaught, lineSnapped,
-} from './reel.js?v=2026-10-04-c';
+} from './reel.js?v=2026-10-04-d';
 
 /* ------------------------------------------------------------------ tuning */
 
@@ -124,7 +124,8 @@ const state = {
   lost: [],            // lost items recovered, newest last
   sealCoins: 0,        // the seal economy; sold finds are the ONLY way in
   giftedRods: [],      // rods handed over on arrival, so they cannot be farmed
-  bag: [],           // landed fish, unsold. They are worth nothing until you act.
+  bag: [],           // landed fish, unsold. They are worth nothing until you act.
+  duplicates: 0,        // seal copies handed over, all time
   bond: {},            // sealId -> how many fish it has been fed
 };
 
@@ -180,6 +181,10 @@ function load() {
     if (!('sealCoins' in saved)) {
       state.lost = [];
     }
+    // Duplicate count. Absent in every save written before it existed.
+    if (Number.isFinite(saved.duplicates) && saved.duplicates > 0) {
+      state.duplicates = saved.duplicates;
+    }
     // The bag. Filtered against the fish table so a save naming a fish that
     // no longer exists cannot put a ghost in the bag.
     const storedBag = Array.isArray(saved.bag) ? saved.bag : saved.creel;
@@ -229,6 +234,9 @@ function save() {
       giftedRods: state.giftedRods,
       bag: state.bag,
       bond: state.bond,
+      // Duplicates ever handed over. It was bumped in memory and never written
+      // anywhere, so it only ever existed for the session that counted it.
+      duplicates: state.duplicates ?? 0,
     }));
   } catch {
     // Storage blocked: the session still plays, it just will not persist.
@@ -1025,6 +1033,10 @@ function landFish() {
   // happens on a cast, and it used to share a line with everything else.
   const duplicated = sealDuplicates(seal, Math.random());
   if (duplicated) {
+    // A second FISH, not a number. It used to increment a counter and post a
+    // notice saying "two Glidefin, one hook" while the bag held exactly one --
+    // the perk the seal was bought for did not exist.
+    state.bag = addToBag(state.bag, fishEntrySpec(fish, kg, mutation));
     notify(`${seal.name} duplicates it \u2014 two ${fish.name}, one hook.`);
     state.duplicates = (state.duplicates ?? 0) + 1;
   }
@@ -1041,6 +1053,9 @@ function landFish() {
   save();
   paintChrome();
   paintBagBadge(Array.isArray(state.bag) ? state.bag.length : 0);
+  // The bag may be open behind the catch card, and its grouped rows carry counts --
+  // so it must be repainted, not merely badged.
+  if (ui.bagPanel && !ui.bagPanel.hasAttribute('hidden')) paintBag();
 
 }
 

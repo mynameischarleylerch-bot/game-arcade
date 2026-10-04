@@ -13,7 +13,7 @@ import { readFileSync } from 'node:fs';
 import { JSDOM } from 'jsdom';
 import { FISH, RARITY_ORDER, fishIndex, hookLineFor, AREAS,
          RODS, RODS_BY_PRICE, SEALS, startingLoadout, TIMES, WEATHER, LOST_ITEMS,
-} from '../vendor/fru-angler/fishing.js?v=2026-10-04-c';
+} from '../vendor/fru-angler/fishing.js?v=2026-10-04-d';
 
 const PAGE = readFileSync(
   new URL('../vendor/fru-angler/index.html', import.meta.url),
@@ -2562,3 +2562,103 @@ test('the seal line for a feed is the fed line, not the idle chatter', async () 
   assert.ok(fed.length > 0, 'a fed line must exist');
   assert.ok(!idle.includes(fed), 'the feed must not be answered with an idle line');
 });
+
+test('a seal duplicate is a real fish in the bag, not just a counter', async () => {
+  // The seal's perk is "it occasionally hands you a second copy". It announced one
+  // in a toast and bumped a counter -- and never added a fish, so the notification
+  // said "two Glidefin, one hook" while the bag held exactly one.
+  const src = readFileSync(new URL('../vendor/fru-angler/angler.js', import.meta.url), 'utf8');
+  const body = fnSource(src, 'landFish(');
+
+  // The add has to be INSIDE the duplicate branch. Asserting merely that addToBag
+  // appears somewhere in landFish() passes on the original code, which adds the
+  // fish exactly once and never for the duplicate.
+  const branch = body.slice(body.indexOf('if (duplicated) {'));
+  assert.match(branch, /addToBag\(state\.bag, fishEntrySpec\(fish, kg, mutation\)\)/,
+    'the duplicate branch must add a second fish to the bag');
+
+  // Each of the three steps must sit inside the block, not after it. The block ends
+  // at its own closing brace; searching for a bare '\n  }' matches inside the
+  // comments instead.
+  const end = branch.search(/\n  \}(?![\w])/);
+  assert.ok(end > 0, 'the duplicate branch must be closed');
+  const inside = branch.slice(0, end);
+  const outside = branch.slice(end);
+
+  for (const [what, rx] of [
+    // The counter is written `= (x ?? 0) + 1`, so it is an assignment whose right
+    // side is a sum -- not `+=`. An earlier version matched /\+=/ and never fired.
+    ['the second fish', /addToBag\(state\.bag, fishEntrySpec/],
+    ['the duplicate count', /state\.duplicates\s*=\s*\([^)]*\)\s*\+\s*1/],
+    ['the notice', /notify\(/],
+  ]) {
+    assert.ok(rx.test(inside), `${what} must be inside the duplicate branch`);
+    assert.ok(!rx.test(outside),
+      `${what} must not run again on a catch with no duplicate`);
+  }
+});
+
+
+test('a duplicate lands in the bag, and the notice matches the bag', async () => {
+  // End to end, with the roll pinned so the duplicate is certain.
+  const ctx = await seedSave({
+    coins: 0, rodId: 'bamboo', owned: ['bamboo'], bestiary: {}, areaId: 'aero-lake',
+    xp: 0, ownedSeals: ['bubbles'], equippedSeal: 'bubbles', lost: [],
+    giftedRods: [], sealCoins: 0, bond: {},
+  }, 1500);
+
+  // Pin the roll to 0, which is inside bubbles' 6% duplicate chance.
+  ctx.win.Math.random = () => 0;
+  globalThis.Math.random = () => 0;
+
+  await landOne(ctx, 1500);
+
+  const saved = JSON.parse(ctx.win.localStorage.getItem('fru-angler-save'));
+  assert.ok(saved.bag.length >= 2,
+    `a duplicate must put two fish in the bag, got ${JSON.stringify(saved.bag)}`);
+  const ids = saved.bag.map((e) => e.fishId);
+  assert.equal(new Set(ids).size, ids.length - 1,
+    `the two must be the same species: ${JSON.stringify(ids)}`);
+});
+
+test('a duplicate updates an open bag, because its rows carry counts', async () => {
+  // The badge was repainted on a catch but the PANEL was not, and the panel is
+  // where the counts live: a grouped row says "3 held". Land a duplicate with the
+  // bag open and the row still claimed two.
+  const save = {
+    coins: 0, rodId: 'bamboo', owned: ['bamboo'], bestiary: {}, areaId: 'aero-lake',
+    xp: 0, ownedSeals: ['bubbles'], equippedSeal: 'bubbles', lost: [],
+    giftedRods: [], sealCoins: 0, bond: {},
+    bag: [{ fishId: 'glidefin', weight: 1, mutation: null, multiplier: 1 }],
+  };
+  const ctx = await seedSave(save, 1510);
+
+  // Open the bag, so the panel is on screen when the duplicate lands.
+  ctx.doc.getElementById('bag-open').dispatchEvent(
+    new ctx.win.MouseEvent('click', { bubbles: true }));
+  const before = ctx.doc.querySelector('#bag-list .bag__row')?.textContent ?? '';
+  assert.match(before, /1 kg/, `the row must be showing, got "${before}"`);
+  assert.equal(
+    ctx.doc.getElementById('bag-panel').hasAttribute('hidden'), false,
+    'the bag must actually be open');
+
+  // Land a catch with the duplicate roll pinned to zero.
+  globalThis.Math.random = () => 0;
+  await landOne(ctx, 1510);
+
+  const after = ctx.doc.querySelector('#bag-list .bag__row')?.textContent ?? '';
+  const saved = JSON.parse(ctx.win.localStorage.getItem('fru-angler-save'));
+
+  // Two catches, and the duplicate made three.
+  assert.equal(saved.bag.length, 3,
+    `one catch plus a duplicate plus the one already there: got ${JSON.stringify(saved.bag)}`);
+  assert.equal(saved.duplicates, 1,
+    `the duplicate count must survive the save, got ${saved.duplicates}`);
+
+  // And the open row now claims two, because its counts are live.
+  // Three, not two: the save already held one Glidefin, and landOne() lands the
+  // catch plus its duplicate, so the row must now say three.
+  assert.match(after, /3 held/,
+    `an open bag must repaint on a duplicate, got "${after.replace(/\s+/g, ' ')}"`);
+});
+
