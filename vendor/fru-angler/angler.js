@@ -26,10 +26,10 @@ import {
  addToBag, fishEntrySpec, bagWorth, bagEntryValue,
  sellFromBag, feedToBond, bondLuck, bondCount, groupBag,
  buySeal, equipSeal, sealComment, sealDuplicates, sealIdleLine, sealFedLine, bondProgress,
-} from './fishing.js?v=2026-10-04-o';
+} from './fishing.js?v=2026-10-04-p';
 import {
   reelConfig, stepReel as advance, reelOutcomeFor, isCaught, lineSnapped,
-} from './reel.js?v=2026-10-04-o';
+} from './reel.js?v=2026-10-04-p';
 
 /* ------------------------------------------------------------------ tuning */
 
@@ -792,15 +792,34 @@ function fitPet() {
   const box = ui.lake.getBoundingClientRect();
   if (!group || !box.width || !box.height) return;
   const scale = box.height / box.width;
-  // PET_Y lifts the seal onto the pier deck: its belly is drawn at y=48.8 and
-  // the deck's top edge is at y=58, so without this it floated ten units
-  // above the boards. The shift rides here rather than in the drawing so the
-  // artwork keeps plain coordinates and stays assertable.
-  const PET_Y = 9.2;
+  // PET_Y lifts the seal onto the pier deck: its belly is drawn at y=49.6 and
+  // the deck's top edge is at y=58, so without this it floated above the boards.
+  // The shift rides here rather than in the drawing so the artwork keeps plain
+  // coordinates and stays assertable.
+  const PET_Y = 8.4;
+  // The seal is longer now, so its centre moved to x=13.
+  const FACE_X = 18;
   group.setAttribute('transform',
-    `translate(12 0) scale(${scale.toFixed(4)} 1) translate(-12 0) translate(0 ${PET_Y})`);
-}
+    `translate(13 0) scale(${scale.toFixed(4)} 1) translate(-13 0) translate(0 ${PET_Y})`);
 
+  // The face gets the INVERSE correction.
+  //
+  // The outer scale above exists to stop the seal being stretched by
+  // preserveAspectRatio="none", and at a typical lake aspect it is around 0.5 --
+  // which halves the eyes and thins a 0.8 mouth stroke to 0.4. On a seal about
+  // 60px wide on screen that is a sub-pixel hairline, so the :3 was correct in the
+  // markup and invisible in the game. That is what "the :3 face isnt there" meant.
+  //
+  // Correcting x here cancels the outer squeeze exactly: the face lands at the
+  // size it is drawn while the body stays round. FACE_X is the face's own centre,
+  // so it does not slide sideways as the lake changes shape.
+  const face = document.getElementById('pet-face');
+  if (face) {
+    const inv = 1 / scale;
+    face.setAttribute('transform',
+      `translate(${FACE_X} 0) scale(${inv.toFixed(4)} 1) translate(${-FACE_X} 0)`);
+  }
+}
 /** Move the bobber, its splash and the fishing line together. */
 function placeBobber(left, top) {
   ui.bobber.style.left = `${left}%`;

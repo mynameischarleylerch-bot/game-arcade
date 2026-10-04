@@ -1318,70 +1318,78 @@
              smear. fitPet() applies the same correction fitFigure() does. -->
         <g id="fa-pet-fit" hidden>
                         <g id="fa-pet">
-          <!-- The seal, head TUCKED IN. It loafs with its head drawn back into its
-               shoulders, so the whole animal is one continuous round mass: no
-               separate head, no snout projecting past the body. The previous pass
-               gave it both, which made the silhouette two shapes instead of one.
+          <!-- The seal, head TUCKED IN: it loafs with its head drawn back into its
+               shoulders, so the whole animal is one continuous round mass. No
+               separate head, no snout projecting past the body.
 
-               Which way it faces is carried entirely by the face sitting on the
-               RIGHT of that mass, not by an outline. -->
+               The body runs the full width of the pier -- as long as the angler
+               allows -- because a shorter one leaves the face too small to read.
+
+               Which way it faces is carried by the face sitting on the RIGHT of
+               the mass, not by an outline. -->
 
           <!-- the shadow it sits in -->
-          <ellipse cx="12" cy="48" rx="9.8" ry="1.5" fill="#0a4a70" opacity=".24"/>
+          <ellipse cx="13" cy="48.2" rx="11.4" ry="1.4" fill="#0a4a70" opacity=".24"/>
 
-          <!-- THE MASS: one round body, flat where it rests on the boards. -->
+          <!-- THE MASS: one long round body, flat where it rests on the boards. -->
           <path id="pet-body"
-                d="M12 32.4
-                   C17.2 32.4 21.6 37.2 21.6 42.2
-                   C21.6 46.6 17.4 49.2 12 49.2
-                   C6.6 49.2 2.4 46.6 2.4 42.2
-                   C2.4 37.2 6.8 32.4 12 32.4 Z"
-                fill="url(#fa-pet-fill)" stroke="#28405a" stroke-opacity=".32" stroke-width=".2"/>
+                d="M13 31.6
+                   C19.4 31.6 24.8 36.8 24.8 42.2
+                   C24.8 47 19.4 49.6 13 49.6
+                   C6.6 49.6 1.2 47 1.2 42.2
+                   C1.2 36.8 6.6 31.6 13 31.6 Z"
+                fill="url(#fa-pet-fill)" stroke="#28405a" stroke-opacity=".32" stroke-width=".22"/>
 
-          <!-- The head drawn in: a soft cheek where it tucks back into the shoulder.
+          <!-- The head drawn in: a soft cheek where it tucks into the shoulder.
                Shading, not an outline -- an outline here would be the second shape
                this design is trying not to have. -->
           <path id="pet-cheek"
-                d="M15.8 33.6 C18.8 34.8 20.9 37.6 21.1 41 C21.2 43 20.6 44.8 19.4 46.2
-                   C20.6 43.6 20.9 40 20.2 37 C19.6 34.8 18 33.4 15.8 33.6 Z"
+                d="M16.8 32.9 C20.8 34.4 23.8 37.6 24.1 41.4 C24.3 43.6 23.6 45.6 22.2 47
+                   C23.6 44 24 40 23.1 36.6 C22.4 34.2 20.2 32.6 16.8 32.9 Z"
                 fill="#2f4a5e" opacity=".14"/>
 
           <!-- THE FLIPPER: low on the flank and tucked in, so it reads as a seal's
                flipper rather than as an arm reaching out of the silhouette. -->
           <path id="pet-flipper"
-                d="M11.4 43.6 C12.9 43.4 14 44.6 14.2 46.2 C14.3 47.4 13.6 48.4 12.6 48.5
-                   C11.5 48.6 10.8 47.4 10.7 46 C10.6 44.9 10.8 43.8 11.4 43.6 Z"
+                d="M11 44.4 C12.8 44.2 14.1 45.6 14.3 47.4 C14.4 48.6 13.6 49.6 12.4 49.7
+                   C11.2 49.8 10.4 48.4 10.3 46.8 C10.2 45.5 10.4 44.6 11 44.4 Z"
                 fill="#3f5a6e" opacity=".4"/>
 
           <!-- THE COAT: pale rings over a dark ground, which is what a ringed seal
                is named for. -->
           <g id="pet-rings" fill="none" stroke="#e8f2f7">
-            <ellipse class="pet__ring" cx="7.2" cy="38.4" rx="1.2" ry=".9"
-                     stroke-opacity=".5" stroke-width=".28"/>
-            <ellipse class="pet__ring" cx="6.4" cy="45.4" rx="1" ry=".75"
-                     stroke-opacity=".44" stroke-width=".26"/>
-            <ellipse class="pet__ring" cx="13" cy="34.6" rx=".95" ry=".7"
-                     stroke-opacity=".42" stroke-width=".26"/>
+            <ellipse class="pet__ring" cx="7" cy="39" rx="1.3" ry="1"
+                     stroke-opacity=".5" stroke-width=".3"/>
+            <ellipse class="pet__ring" cx="5.6" cy="46.2" rx="1.1" ry=".82"
+                     stroke-opacity=".44" stroke-width=".28"/>
+            <ellipse class="pet__ring" cx="13.4" cy="34.4" rx="1" ry=".75"
+                     stroke-opacity=".42" stroke-width=".28"/>
           </g>
           <g id="pet-spots" fill="#2f4a5e">
-            <circle class="pet__spot" cx="4.6" cy="42.4" r=".72" opacity=".34"/>
-            <circle class="pet__spot" cx="9.8" cy="41.4" r=".6" opacity=".3"/>
-            <circle class="pet__spot" cx="16.4" cy="46.8" r=".55" opacity=".3"/>
+            <circle class="pet__spot" cx="3.8" cy="43" r=".78" opacity=".34"/>
+            <circle class="pet__spot" cx="10" cy="42.4" r=".66" opacity=".3"/>
+            <circle class="pet__spot" cx="18.4" cy="47.4" r=".6" opacity=".3"/>
           </g>
 
           <!-- THE :3, on the RIGHT of the mass.
-               The last attempt was geometrically correct and illegible: eyes of
-               radius 0.7 and a mouth stroke of 0.3 across 3.7 units, on a seal
-               that counter-scales to about a third of its drawn width. Everything
-               below is sized to survive that reduction. -->
-          <g id="pet-eye">
-            <circle cx="14.2" cy="38.4" r="1.05" fill="#12212e"/>
-            <circle cx="18.4" cy="38.4" r="1.05" fill="#12212e"/>
-            <circle cx="13.96" cy="38.16" r=".34" fill="#ffffff" opacity=".9"/>
-            <circle cx="18.16" cy="38.16" r=".34" fill="#ffffff" opacity=".9"/>
+               Its own group, because fitPet counter-scales the whole animal in x to
+               undo the stretched scene. That correction squashed this face too --
+               halving the eyes and thinning a 0.8 stroke to 0.4, which on a seal
+               this size is a sub-pixel hairline. The face was right and invisible.
+               fitPet() now gives this group the inverse correction, so it arrives
+               at the size it is drawn. -->
+          <g id="pet-face">
+            <g id="pet-eye">
+              <circle cx="15.4" cy="38.6" r="1.35" fill="#12212e"/>
+              <circle cx="20.6" cy="38.6" r="1.35" fill="#12212e"/>
+              <circle cx="15.02" cy="38.26" r=".45" fill="#ffffff" opacity=".92"/>
+              <circle cx="20.22" cy="38.26" r=".45" fill="#ffffff" opacity=".92"/>
+            </g>
+            <path id="pet-mouth" d="M14.2 43.4 C16 47 20 47 21.8 43.4"
+                  fill="none" stroke="#12212e" stroke-width=".8" stroke-linecap="round"/>
           </g>
-          <path id="pet-mouth" d="M13.6 42.4 C14.9 44.6 17.7 44.6 19 42.4"
-                fill="none" stroke="#12212e" stroke-width=".5" stroke-linecap="round"/>
+        </g>
+
         </g>
 
         </g>
@@ -1591,6 +1599,6 @@
     </div>
   </div>
 
-  <script type="module" src="./angler.js?v=2026-10-04-o"></script>
+  <script type="module" src="./angler.js?v=2026-10-04-p"></script>
 </body>
 </html>

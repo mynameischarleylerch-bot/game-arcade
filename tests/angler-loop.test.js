@@ -13,7 +13,7 @@ import { readFileSync } from 'node:fs';
 import { JSDOM } from 'jsdom';
 import { FISH, RARITY_ORDER, fishIndex, hookLineFor, AREAS,
          RODS, RODS_BY_PRICE, SEALS, startingLoadout, TIMES, WEATHER, LOST_ITEMS,
-} from '../vendor/fru-angler/fishing.js?v=2026-10-04-o';
+} from '../vendor/fru-angler/fishing.js?v=2026-10-04-p';
 
 const PAGE = readFileSync(
   new URL('../vendor/fru-angler/index.html', import.meta.url),
@@ -1354,8 +1354,8 @@ test('the pet is counter-scaled to the lake, so it cannot smear', async () => {
   // redrawn from the photographs and shifted clear of the angler, so the old
   // anchor of 14 was stale -- and a wrong anchor counter-scales about the wrong
   // point, which skews the seal instead of just leaving it alone.
-  assert.match(body, /translate\(12 0\)/,
-    'anchored on the pet centre at x=12, not the angler shoulder at x=33.2');
+  assert.match(body, /translate\(13 0\)/,
+    'anchored on the pet centre at x=13, not the angler shoulder at x=33.2');
   // And it must still lift the seal onto the deck: the drawing sits at y~47 and
   // the boards are at y=58, so without the shift it floats above them.
   assert.match(body, /translate\(0 \$\{PET_Y\}\)/,
@@ -2871,4 +2871,57 @@ test('every bar button toggles: click it again and its panel closes', async () =
     btn.dispatchEvent(new ctx.win.MouseEvent('click', { bubbles: true }));
     assert.equal(panel.hidden, true, `${btnId} must close again`);
   }
+});
+
+test('the face is pre-compensated for the counter-scale, or it cannot be seen', () => {
+  // THE BUG. The scene is drawn with preserveAspectRatio="none", so fitPet
+  // counter-scales x by box.height/box.width to stop the seal being stretched --
+  // around 0.5 for a typical lake. That correction applies to EVERYTHING inside
+  // the group, including the face.
+  //
+  // So a mouth drawn 0.5 thick arrives at 0.25, and eyes of radius 1.05 arrive at
+  // 0.52 horizontally against 1.05 vertically: not round, and on a seal that is
+  // already only about 60px wide, a quarter-unit horizontal stroke is a
+  // sub-pixel hairline. The face was geometrically perfect and invisible, which
+  // is what "the :3 face isnt there" means.
+  //
+  // The fix: the face carries its own inverse correction, so after the outer
+  // squeeze it lands at the size it was drawn at.
+  const html = readFileSync(new URL('../vendor/fru-angler/index.html', import.meta.url), 'utf8');
+  assert.match(html, /<g id="pet-face"/,
+    'the face needs its own group so it can be corrected separately');
+  // Sliced to the face group's OWN closing tag. An earlier version ended at the
+  // first </g> after pet-eye, which is the eye group's, so the mouth fell
+  // outside the slice and this test failed for the wrong reason.
+  const faceStart = html.indexOf('<g id="pet-face"');
+  const face = html.slice(faceStart, html.indexOf('</g>', html.indexOf('id="pet-mouth"')));
+
+  assert.match(face, /id="pet-eye"/, 'the eyes live in the face group');
+  assert.match(face, /id="pet-mouth"/, 'and so does the :3 mouth');
+
+  const src = readFileSync(new URL('../vendor/fru-angler/angler.js', import.meta.url), 'utf8');
+  const body = src.slice(src.indexOf('function fitPet'), src.indexOf('function placeBobber'));
+  assert.match(body, /pet-face|petFace/,
+    'fitPet must correct the face group -- nothing else can undo the squeeze');
+  // An INVERSE correction: 1/scale, not scale. Applying the same factor twice
+  // would leave the face exactly as squeezed as before.
+  assert.match(body, /1\s*\/\s*scale|1 \/ scale|\(1 \/ s\)|1\/scale/,
+    'the correction must be the inverse of the squeeze, not the squeeze again');
+  // Anchored on the FACE's own centre. Scoped to the lines that set the face's
+  // transform: an unscoped search matched the outer body transform, which is
+  // anchored as well, so an unanchored or mis-anchored face correction both
+  // sailed through.
+  const faceFix = body.split('pet-face')[1] ?? '';
+  assert.match(faceFix, /translate\((\$\{FACE_X\}|\d+(?:\.\d+)?) 0\)\s*scale/,
+    'the face correction must be anchored on a point');
+  assert.doesNotMatch(faceFix, /translate\(-?\d+(?:\.\d+)? 0\)\s*scale/,
+    'and not anchored on some other x, which would slide the face as the lake resizes');
+  // And it must translate back from the SAME point it translated to, or the
+  // face is offset by twice the error. Checked as two substrings rather than
+  // one regex: the scale() between them contains a nested call, and a pattern
+  // spanning it could never match.
+  assert.ok(faceFix.includes('translate(${FACE_X} 0)'),
+    'the correction must scale about the face centre');
+  assert.ok(faceFix.includes('translate(${-FACE_X} 0)'),
+    'and translate back from that same centre');
 });

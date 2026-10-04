@@ -1185,7 +1185,10 @@ test('the head is tucked in, so the whole seal is one round mass', () => {
   // Round. The last pass asserted "longer than tall" because the body tapered to a
   // tail; with the head tucked in that is gone, and what is wanted is a round.
   const [w, h] = extent(bodyOf(pet));
-  assert.ok(h > w * 0.8, `round, not a slab: ${w.toFixed(1)} x ${h.toFixed(1)}`);
+  // The body was lengthened on request, so the floor moved with it -- the seal is
+  // now longer than the 0.8 it used to hold to. The upper bound still stops it
+  // becoming an oval lying on its side.
+  assert.ok(h > w * 0.7, `round, not a slab: ${w.toFixed(1)} x ${h.toFixed(1)}`);
   assert.ok(h < w * 1.15, `and not an oval lying down: ${w.toFixed(1)} x ${h.toFixed(1)}`);
 });
 
@@ -1215,7 +1218,7 @@ test('the :3 is big and bold enough to actually read', () => {
   // So the sizes are pinned, not just the arrangement.
   const pet = petGroup();
   const eye = pet.slice(pet.indexOf('<g id="pet-eye">'), pet.indexOf('</g>', pet.indexOf('<g id="pet-eye">')));
-  const pupils = [...eye.matchAll(/r="([\d.]+)"/g)].map((m) => Number(m[1])).filter((r) => r > 0.4);
+  const pupils = [...eye.matchAll(/r="([\d.]+)"/g)].map((m) => Number(m[1])).filter((r) => r > 0.7);   // above the 0.45 glints, which are not pupils
   assert.equal(pupils.length, 2, 'two dot eyes');
   assert.ok(Math.min(...pupils) >= 0.95,
     `the eyes must be big enough to see, smallest is ${Math.min(...pupils)}`);
@@ -1258,7 +1261,9 @@ test('the seal is big enough to read, and clear of the angler', () => {
   const pet = petGroup();
   const all = [...pet.matchAll(/ d="([^"]+)"/g)].map((m) => m[1]).join(' ');
   const [w] = extent(all);
-  assert.ok(w >= 16, 'wide enough to read, got ' + w.toFixed(1) + ' units');
+  // It was lengthened on request, so 16 is no longer the bar -- that width
+  // cleared the shorter body this change replaced.
+  assert.ok(w >= 22, 'the body must be as long as was asked for, got ' + w.toFixed(1));
   assert.ok(Math.max(...xs(all)) < 25.7,
     'it must clear the angler at x=25.7, but reaches ' + Math.max(...xs(all)).toFixed(1));
   assert.ok(Math.max(...ys(all)) < 58, 'and its belly must sit on the deck at y=58');
